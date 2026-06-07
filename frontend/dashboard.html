@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background: #0a0a0f; color: white; font-family: 'Poppins', sans-serif; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100%; background: #1a1a2e; padding: 20px; }
+        .content { margin-left: 280px; padding: 20px; }
+        .stat-card { background: #1a1a2e; border-radius: 15px; padding: 20px; margin-bottom: 20px; text-align: center; }
+        .menu-item { display: block; padding: 12px; color: white; text-decoration: none; margin: 5px 0; border-radius: 10px; cursor: pointer; }
+        .menu-item:hover, .menu-item.active { background: #4361ee; }
+        .btn-logout { background: #dc3545; border: none; padding: 8px 20px; border-radius: 8px; color: white; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3 class="mb-4 text-center">TechStore</h3>
+        <div class="menu-item active" onclick="loadDashboard()">Dashboard</div>
+        <div class="menu-item" onclick="loadProdutos()">Produtos</div>
+        <div class="menu-item" onclick="loadCategorias()">Categorias</div>
+        <div class="menu-item" onclick="loadClientes()">Clientes</div>
+        <div class="menu-item" onclick="loadPedidos()">Pedidos</div>
+        <div class="menu-item mt-5" onclick="logout()">Sair</div>
+    </div>
+    <div class="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 id="pageTitle">Dashboard</h2>
+            <span id="userInfo"></span>
+        </div>
+        <div id="content"></div>
+    </div>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!token || user.role !== 'admin') window.location.href = '/';
+        document.getElementById('userInfo').innerHTML = `<i class="bi bi-person-circle"></i> ${user.nome}`;
+        
+        function logout() { localStorage.clear(); window.location.href = '/'; }
+        
+        async function loadDashboard() {
+            document.getElementById('pageTitle').innerHTML = 'Dashboard';
+            try {
+                const res = await fetch('/api/dashboard/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="row"><div class="col-md-3"><div class="stat-card"><i class="bi bi-box fs-1"></i><h2>${data.stats.totalProdutos || 0}</h2><p>Produtos</p></div></div>
+                        <div class="col-md-3"><div class="stat-card"><i class="bi bi-people fs-1"></i><h2>${data.stats.totalClientes || 0}</h2><p>Clientes</p></div></div>
+                        <div class="col-md-3"><div class="stat-card"><i class="bi bi-cart fs-1"></i><h2>${data.stats.totalPedidos || 0}</h2><p>Pedidos</p></div></div>
+                        <div class="col-md-3"><div class="stat-card"><i class="bi bi-currency-dollar fs-1"></i><h2>R$ ${(data.stats.vendasTotal || 0).toFixed(2)}</h2><p>Vendas</p></div></div></div>
+                    `;
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro</div>'; }
+        }
+        
+        async function loadProdutos() {
+            document.getElementById('pageTitle').innerHTML = 'Produtos';
+            try {
+                const res = await fetch('/api/produtos', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                let html = '<div class="card p-3"><table class="table table-dark"><thead><tr><th>Nome</th><th>SKU</th><th>Preço</th><th>Estoque</th></tr></thead><tbody>';
+                data.produtos.forEach(p => { html += `<tr><td>${p.nome}</td><td>${p.sku}</td><td>R$ ${p.preco}</td><td>${p.quantidade}</td></tr>`; });
+                html += '</tbody></table></div>';
+                document.getElementById('content').innerHTML = html;
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro</div>'; }
+        }
+        
+        async function loadCategorias() {
+            document.getElementById('pageTitle').innerHTML = 'Categorias';
+            try {
+                const res = await fetch('/api/categorias');
+                const data = await res.json();
+                let html = '<div class="card p-3"><table class="table table-dark"><thead><tr><th>Nome</th><th>Slug</th><th>Status</th></tr></thead><tbody>';
+                data.categorias.forEach(c => { html += `<tr><td>${c.nome}</td><td>${c.slug}</td><td>${c.status}</td></tr>`; });
+                html += '</tbody></table></div>';
+                document.getElementById('content').innerHTML = html;
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro</div>'; }
+        }
+        
+        async function loadClientes() {
+            document.getElementById('pageTitle').innerHTML = 'Clientes';
+            try {
+                const res = await fetch('/api/clientes', { headers: { 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                let html = '<div class="card p-3"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Compras</th></tr></thead><tbody>';
+                data.clientes.forEach(c => { html += `<tr><td>${c.usuario?.nome || '-'}</td><td>${c.usuario?.email || '-'}</td><td>${c.usuario?.telefone || '-'}</td><td>${c.totalCompras || 0}</td></tr>`; });
+                html += '</tbody></table></div>';
+                document.getElementById('content').innerHTML = html;
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-info">Nenhum cliente</div>'; }
+        }
+        
+        function loadPedidos() { document.getElementById('content').innerHTML = '<div class="card p-3"><p>Nenhum pedido</p></div>'; }
+        loadDashboard();
+    </script>
+</body>
+</html>

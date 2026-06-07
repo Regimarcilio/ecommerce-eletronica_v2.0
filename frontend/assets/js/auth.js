@@ -16,15 +16,6 @@ const Auth = {
     }
 };
 
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    toast.style.background = type === 'success' ? 'linear-gradient(135deg, #4cc9f0, #4361ee)' : 'linear-gradient(135deg, #f72585, #d90429)';
-    toast.innerHTML = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
 function updateAuthUI() {
     const authContainer = document.getElementById('authContainer');
     const user = Auth.getUser();
@@ -33,13 +24,14 @@ function updateAuthUI() {
     if (user) {
         authContainer.innerHTML = `
             <div class="dropdown">
-                <button class="btn btn-outline dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     <i class="bi bi-person-circle"></i> ${user.nome.split(' ')[0]}
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" href="/minha-conta.html">Minha Conta</a></li>
-                    ${user.role === 'admin' ? '<li><a class="dropdown-item" href="/dashboard.html">Admin</a></li>' : ''}
-                    <li><hr class="dropdown-divider"><li><a class="dropdown-item" href="#" onclick="Auth.logout()">Sair</a></li>
+                    ${user.role === 'admin' ? '<li><a class="dropdown-item" href="/dashboard.html">Dashboard Admin</a></li>' : ''}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="Auth.logout()">Sair</a></li>
                 </ul>
             </div>
         `;

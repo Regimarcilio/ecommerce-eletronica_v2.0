@@ -5,7 +5,6 @@
     --danger: #f72585;
     --dark: #0a0a0f;
     --dark-card: #1a1a2e;
-    --glass: rgba(26,26,46,0.8);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,10 +16,10 @@ body {
 }
 
 .navbar {
-    background: var(--glass);
+    background: rgba(10, 10, 15, 0.95);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(67,97,238,0.3);
-    padding: 1rem 0;
+    padding: 15px 0;
     position: fixed;
     width: 100%;
     top: 0;
@@ -33,7 +32,6 @@ body {
     background: linear-gradient(135deg, var(--primary), var(--success));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-decoration: none;
 }
 
 .hero {
@@ -80,9 +78,6 @@ body {
     right: 20px;
     padding: 12px 24px;
     border-radius: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--success));
     z-index: 9999;
-}
-
-@media (max-width: 768px) {
-    .hero h1 { font-size: 2rem; }
 }

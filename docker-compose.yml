@@ -10,35 +10,21 @@ services:
       MONGO_INITDB_DATABASE: ecommerce
     ports:
       - "27017:27017"
-    networks:
-      - ecommerce_network
   backend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.backend
+    build: .
+    dockerfile: docker/Dockerfile.backend
     container_name: ecommerce_backend
     restart: always
-    environment:
-      MONGO_URI: mongodb://admin:***REMOVED***@mongodb:27017/ecommerce?authSource=admin
-      JWT_SECRET: ***REMOVED***
     ports:
       - "5000:5000"
     depends_on:
       - mongodb
-    networks:
-      - ecommerce_network
   frontend:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.frontend
+    build: .
+    dockerfile: docker/Dockerfile.frontend
     container_name: ecommerce_frontend
     restart: always
     ports:
       - "8080:80"
     depends_on:
       - backend
-    networks:
-      - ecommerce_network
-networks:
-  ecommerce_network:
-    driver: bridge
