@@ -227,3 +227,45 @@
     </script>
 </body>
 </html>
+<script>
+    // Função para carregar apenas produtos em destaque
+    async function loadDestaqueProducts() {
+        try {
+            const res = await fetch('http://localhost:5000/api/produtos?destaque=true&limit=8');
+            const data = await res.json();
+            if (data.success && data.produtos && data.produtos.length > 0) {
+                document.getElementById('productsContainer').innerHTML = data.produtos.map((prod, index) => `
+                    <div class="col-md-3 col-6 mb-4" data-aos="fade-up" data-aos-delay="${index * 50}">
+                        <div class="product-card">
+                            <div class="product-image">
+                                <i class="bi bi-cpu"></i>
+                                ${prod.precoPromocional ? '<span class="badge bg-danger position-absolute top-0 end-0 m-2">Oferta</span>' : ''}
+                            </div>
+                            <div class="product-info">
+                                <h5 class="product-title">${prod.nome}</h5>
+                                <div class="product-price">
+                                    ${prod.precoPromocional ? 
+                                        `<span class="product-old-price">R$ ${prod.preco.toFixed(2)}</span>
+                                         R$ ${prod.precoPromocional.toFixed(2)}` : 
+                                        `R$ ${prod.preco.toFixed(2)}`
+                                    }
+                                </div>
+                                <button class="btn btn-primary-custom w-100" onclick="addToCart('${prod._id}', '${prod.nome}', ${prod.precoPromocional || prod.preco})">
+                                    <i class="bi bi-cart-plus"></i> Comprar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                document.getElementById('productsContainer').innerHTML = '<div class="col-12 text-center"><p>Nenhum produto em destaque no momento.</p></div>';
+            }
+        } catch(e) {
+            console.error('Erro ao carregar produtos em destaque:', e);
+            document.getElementById('productsContainer').innerHTML = '<div class="col-12 text-center"><p>Erro ao carregar produtos.</p></div>';
+        }
+    }
+    
+    // Substituir a chamada loadProducts() por loadDestaqueProducts()
+    loadDestaqueProducts();
+</script>

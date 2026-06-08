@@ -22,7 +22,7 @@ const ProdutoSchema = new mongoose.Schema({
     nome: { type: String, required: true },
     sku: { type: String, required: true, unique: true },
     preco: { type: Number, required: true },
-    precoPromocional: { type: Number },
+    precoPromocional: { type: Number, default: null },
     quantidade: { type: Number, default: 0 },
     descricaoCurta: { type: String },
     descricaoCompleta: { type: String },
@@ -124,19 +124,32 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ========== ROTAS DE PRODUTOS ==========
+// GET - Listar produtos (com filtro de destaque)
 app.get('/api/produtos', async (req, res) => {
     try {
         const { destaque, limit = 20 } = req.query;
         let query = {};
-        if (destaque === 'true') query.destaque = true;
         
-        const produtos = await Produto.find(query).limit(parseInt(limit)).sort({ createdAt: -1 });
+        // Filtrar por destaque se o parâmetro for 'true'
+        if (destaque === 'true') {
+            query.destaque = true;
+        }
+        
+        // Filtrar apenas produtos ativos
+        query.status = 'ativo';
+        
+        const produtos = await Produto.find(query)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit));
+            
         res.json({ success: true, produtos });
     } catch (error) {
+        console.error('Erro ao listar produtos:', error);
         res.status(500).json({ success: false, message: error.message, produtos: [] });
     }
 });
 
+// GET - Produto por ID
 app.get('/api/produtos/:id', async (req, res) => {
     try {
         const produto = await Produto.findById(req.params.id);
@@ -149,6 +162,7 @@ app.get('/api/produtos/:id', async (req, res) => {
     }
 });
 
+// POST - Criar produto
 app.post('/api/produtos', async (req, res) => {
     try {
         const produto = await Produto.create(req.body);
@@ -158,6 +172,7 @@ app.post('/api/produtos', async (req, res) => {
     }
 });
 
+// PUT - Atualizar produto
 app.put('/api/produtos/:id', async (req, res) => {
     try {
         const produto = await Produto.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -167,6 +182,7 @@ app.put('/api/produtos/:id', async (req, res) => {
     }
 });
 
+// DELETE - Excluir produto
 app.delete('/api/produtos/:id', async (req, res) => {
     try {
         await Produto.findByIdAndDelete(req.params.id);
@@ -179,7 +195,11 @@ app.delete('/api/produtos/:id', async (req, res) => {
 // ========== ROTAS DE CATEGORIAS ==========
 app.get('/api/categorias', async (req, res) => {
     try {
-        const categorias = await Categoria.find().sort({ ordem: 1 });
+        const { status } = req.query;
+        let query = {};
+        if (status === 'ativo') query.status = 'ativo';
+        
+        const categorias = await Categoria.find(query).sort({ ordem: 1 });
         res.json({ success: true, categorias });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message, categorias: [] });
@@ -286,7 +306,7 @@ mongoose.connect(MONGO_URI)
             console.log('✅ Admin criado!');
         }
         
-        // Criar categorias
+        // Criar categorias padrão
         const categoriasCount = await Categoria.countDocuments();
         if (categoriasCount === 0) {
             await Categoria.insertMany([
@@ -299,14 +319,15 @@ mongoose.connect(MONGO_URI)
             console.log('✅ Categorias criadas!');
         }
         
-        // Criar produtos
+        // Criar produtos padrão com alguns em destaque
         const produtosCount = await Produto.countDocuments();
         if (produtosCount === 0) {
             await Produto.insertMany([
-                { nome: 'Arduino Uno R3', sku: 'ARDUINO-001', preco: 89.90, quantidade: 50, destaque: true, categoria: 'Arduino' },
-                { nome: 'ESP32 DevKit', sku: 'ESP32-001', preco: 49.90, quantidade: 100, destaque: true, categoria: 'ESP32' },
-                { nome: 'Raspberry Pi 4', sku: 'RPI-001', preco: 399.90, quantidade: 25, destaque: true, categoria: 'Raspberry Pi' },
-                { nome: 'Sensor DHT22', sku: 'SENSOR-001', preco: 29.90, quantidade: 200, destaque: true, categoria: 'Sensores' }
+                { nome: 'Arduino Uno R3', sku: 'ARDUINO-001', preco: 89.90, quantidade: 50, destaque: true, status: 'ativo', categoria: 'Arduino' },
+                { nome: 'ESP32 DevKit', sku: 'ESP32-001', preco: 49.90, quantidade: 100, destaque: true, status: 'ativo', categoria: 'ESP32' },
+                { nome: 'Raspberry Pi 4', sku: 'RPI-001', preco: 399.90, quantidade: 25, destaque: true, status: 'ativo', categoria: 'Raspberry Pi' },
+                { nome: 'Sensor DHT22', sku: 'SENSOR-001', preco: 29.90, quantidade: 200, destaque: false, status: 'ativo', categoria: 'Sensores' },
+                { nome: 'Resistor 1kΩ', sku: 'RES-001', preco: 0.50, quantidade: 1000, destaque: false, status: 'ativo', categoria: 'Componentes' }
             ]);
             console.log('✅ Produtos criados!');
         }
