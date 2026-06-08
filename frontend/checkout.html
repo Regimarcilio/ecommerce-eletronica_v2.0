@@ -21,6 +21,9 @@
         .payment-option { padding: 15px; border: 1px solid rgba(67,97,238,0.3); border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
         .payment-option:hover, .payment-option.selected { background: rgba(67,97,238,0.2); border-color: #4361ee; }
         .checkout-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; gap: 15px; }
+        .loading-spinner { width: 50px; height: 50px; border: 3px solid rgba(67,97,238,0.3); border-top-color: #4361ee; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media (max-width: 768px) { .form-card, .order-summary { margin-bottom: 15px; } }
     </style>
 </head>
@@ -41,73 +44,27 @@
                     <h4 class="mb-3">Dados do Cliente</h4>
                     <form id="checkoutForm">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nome completo *</label>
-                                <input type="text" id="nome" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email *</label>
-                                <input type="email" id="email" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Telefone *</label>
-                                <input type="tel" id="telefone" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">CPF/CNPJ</label>
-                                <input type="text" id="cpf" class="form-control">
-                            </div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Nome completo *</label><input type="text" id="nome" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Email *</label><input type="email" id="email" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Telefone *</label><input type="tel" id="telefone" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">CPF</label><input type="text" id="cpf" class="form-control"></div>
                         </div>
                         
                         <h5 class="mt-3 mb-3">Endereço de Entrega</h5>
                         <div class="row">
-                            <div class="col-md-8 mb-3">
-                                <label class="form-label">Logradouro *</label>
-                                <input type="text" id="endereco" class="form-control" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Número *</label>
-                                <input type="text" id="numero" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Complemento</label>
-                                <input type="text" id="complemento" class="form-control">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Bairro *</label>
-                                <input type="text" id="bairro" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Cidade *</label>
-                                <input type="text" id="cidade" class="form-control" required>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Estado *</label>
-                                <select id="estado" class="form-select" required>
-                                    <option value="">Selecione</option>
-                                    <option value="SP">São Paulo</option>
-                                    <option value="RJ">Rio de Janeiro</option>
-                                    <option value="MG">Minas Gerais</option>
-                                    <option value="RS">Rio Grande do Sul</option>
-                                    <option value="BA">Bahia</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2 mb-3">
-                                <label class="form-label">CEP *</label>
-                                <input type="text" id="cep" class="form-control" required>
-                            </div>
+                            <div class="col-md-8 mb-3"><label class="form-label">Logradouro *</label><input type="text" id="endereco" class="form-control" required></div>
+                            <div class="col-md-4 mb-3"><label class="form-label">Número *</label><input type="text" id="numero" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Complemento</label><input type="text" id="complemento" class="form-control"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Bairro *</label><input type="text" id="bairro" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Cidade *</label><input type="text" id="cidade" class="form-control" required></div>
+                            <div class="col-md-4 mb-3"><label class="form-label">Estado *</label><select id="estado" class="form-select" required><option value="">Selecione</option><option value="SP">São Paulo</option><option value="RJ">Rio de Janeiro</option><option value="MG">Minas Gerais</option><option value="RS">Rio Grande do Sul</option><option value="BA">Bahia</option></select></div>
+                            <div class="col-md-2 mb-3"><label class="form-label">CEP *</label><input type="text" id="cep" class="form-control" required></div>
                         </div>
                         
                         <h5 class="mt-3 mb-3">Forma de Pagamento</h5>
-                        <div class="payment-option" onclick="selectPayment('pix')" id="paymentPix">
-                            <i class="bi bi-qr-code fs-4 me-2"></i> PIX (Ganhe 5% de desconto)
-                        </div>
-                        <div class="payment-option" onclick="selectPayment('card')" id="paymentCard">
-                            <i class="bi bi-credit-card fs-4 me-2"></i> Cartão de Crédito (Até 12x)
-                        </div>
-                        <div class="payment-option" onclick="selectPayment('boleto')" id="paymentBoleto">
-                            <i class="bi bi-bank fs-4 me-2"></i> Boleto Bancário (Até 3 dias úteis)
-                        </div>
+                        <div class="payment-option" onclick="selectPayment('pix')" id="paymentPix"><i class="bi bi-qr-code fs-4 me-2"></i> PIX (Ganhe 5% de desconto)</div>
+                        <div class="payment-option" onclick="selectPayment('card')" id="paymentCard"><i class="bi bi-credit-card fs-4 me-2"></i> Cartão de Crédito (Até 12x)</div>
+                        <div class="payment-option" onclick="selectPayment('boleto')" id="paymentBoleto"><i class="bi bi-bank fs-4 me-2"></i> Boleto Bancário (Até 3 dias úteis)</div>
                         <input type="hidden" id="paymentMethod" value="pix">
                     </form>
                 </div>
@@ -118,46 +75,39 @@
                     <h4 class="mb-3">Resumo do Pedido</h4>
                     <div id="orderItems"></div>
                     <hr>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <span id="orderSubtotal">R$ 0,00</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Frete:</span>
-                        <span id="orderFrete">Grátis</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2" id="discountRow" style="display: none;">
-                        <span>Desconto (5%):</span>
-                        <span id="discountAmount">R$ 0,00</span>
-                    </div>
+                    <div class="d-flex justify-content-between mb-2"><span>Subtotal:</span><span id="orderSubtotal">R$ 0,00</span></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Frete:</span><span id="orderFrete">Grátis</span></div>
+                    <div class="d-flex justify-content-between mb-2" id="discountRow" style="display: none;"><span>Desconto (5%):</span><span id="discountAmount">R$ 0,00</span></div>
                     <hr>
-                    <div class="d-flex justify-content-between mb-3">
-                        <strong>TOTAL:</strong>
-                        <strong id="orderTotal" style="color: #4361ee; font-size: 1.3rem;">R$ 0,00</strong>
-                    </div>
-                    <button class="btn btn-primary-custom w-100" onclick="confirmarPedido()">
-                        <i class="bi bi-check-circle"></i> Confirmar Pedido
-                    </button>
+                    <div class="d-flex justify-content-between mb-3"><strong>TOTAL:</strong><strong id="orderTotal" style="color: #4361ee; font-size: 1.3rem;">R$ 0,00</strong></div>
+                    <button class="btn btn-primary-custom w-100" onclick="confirmarPedido()"><i class="bi bi-check-circle"></i> Confirmar Pedido</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div>Processando seu pedido...</div>
+    </div>
+
     <script>
-        let cart = JSON.parse(localStorage.getItem('checkoutCart') || '[]');
+        const API_URL = 'http://localhost:5000/api';
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
         let selectedPayment = 'pix';
         let subtotal = 0;
+        
+        if (cart.length === 0) {
+            window.location.href = '/cart.html';
+        }
         
         function selectPayment(method) {
             selectedPayment = method;
             document.getElementById('paymentMethod').value = method;
-            
-            // Remover classe selected de todos
             ['pix', 'card', 'boleto'].forEach(m => {
                 document.getElementById(`payment${m.charAt(0).toUpperCase() + m.slice(1)}`).classList.remove('selected');
             });
             document.getElementById(`payment${method.charAt(0).toUpperCase() + method.slice(1)}`).classList.add('selected');
-            
             calcularTotal();
         }
         
@@ -185,18 +135,12 @@
             const container = document.getElementById('orderItems');
             container.innerHTML = '';
             cart.forEach(item => {
-                container.innerHTML += `
-                    <div class="checkout-item">
-                        <span>${item.name} x${item.quantity}</span>
-                        <span>R$ ${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                `;
+                container.innerHTML += `<div class="checkout-item"><span>${item.name} x${item.quantity}</span><span>R$ ${(item.price * item.quantity).toFixed(2)}</span></div>`;
             });
             calcularTotal();
         }
         
-        function confirmarPedido() {
-            // Validar campos obrigatórios
+        window.confirmarPedido = async () => {
             const nome = document.getElementById('nome').value;
             const email = document.getElementById('email').value;
             const telefone = document.getElementById('telefone').value;
@@ -208,11 +152,18 @@
                 return;
             }
             
-            // Criar objeto do pedido
+            const frete = subtotal > 100 ? 0 : 20;
+            const desconto = selectedPayment === 'pix' ? subtotal * 0.05 : 0;
+            const total = subtotal + frete - desconto;
+            
             const pedido = {
                 numero: 'PED-' + Date.now(),
-                data: new Date().toLocaleString(),
-                cliente: { nome, email, telefone },
+                cliente: {
+                    nome: nome,
+                    email: email,
+                    telefone: telefone,
+                    cpf: document.getElementById('cpf').value || ''
+                },
                 endereco: {
                     logradouro: endereco,
                     numero: numero,
@@ -223,30 +174,46 @@
                     cep: document.getElementById('cep').value
                 },
                 pagamento: selectedPayment,
-                items: cart,
+                items: cart.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                })),
                 subtotal: subtotal,
-                frete: subtotal > 100 ? 0 : 20,
-                desconto: selectedPayment === 'pix' ? subtotal * 0.05 : 0,
-                total: subtotal + (subtotal > 100 ? 0 : 20) - (selectedPayment === 'pix' ? subtotal * 0.05 : 0)
+                frete: frete,
+                desconto: desconto,
+                total: total,
+                status: 'pendente'
             };
             
-            // Salvar pedido no histórico
-            let pedidos = JSON.parse(localStorage.getItem('pedidos') || '[]');
-            pedidos.unshift(pedido);
-            localStorage.setItem('pedidos', JSON.stringify(pedidos));
+            document.getElementById('loadingOverlay').style.display = 'flex';
             
-            // Limpar carrinho
-            localStorage.removeItem('cart');
-            localStorage.removeItem('checkoutCart');
-            
-            // Mostrar mensagem de sucesso
-            alert(`Pedido ${pedido.numero} confirmado com sucesso!\nTotal: R$ ${pedido.total.toFixed(2)}\n\nVocê receberá um email com os detalhes.`);
-            
-            // Redirecionar para página de confirmação
-            window.location.href = '/';
-        }
+            try {
+                const response = await fetch(`${API_URL}/pedidos`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pedido)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.removeItem('cart');
+                    localStorage.setItem('lastOrder', JSON.stringify(data.pedido));
+                    alert(`Pedido ${pedido.numero} confirmado com sucesso!\nTotal: R$ ${total.toFixed(2)}\n\nStatus: Pendente`);
+                    window.location.href = '/';
+                } else {
+                    alert('Erro ao processar pedido: ' + data.message);
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao conectar com o servidor. Tente novamente.');
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        };
         
-        // Preencher dados do usuário logado se disponível
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.nome) {
             document.getElementById('nome').value = user.nome;

@@ -7,109 +7,67 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background: #0a0a0f; color: #fff; font-family: 'Poppins', sans-serif; }
-        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100%; background: #1a1a2e; padding: 20px; }
+        body { background: #0a0a0f; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100%; background: #0d1117; border-right: 1px solid #1f2937; padding: 20px; }
         .content { margin-left: 280px; padding: 20px; }
-        .card-stats { background: #1a1a2e; border-radius: 15px; padding: 20px; text-align: center; border: 1px solid #4361ee; }
-        .menu-item { display: block; padding: 12px; color: #fff; text-decoration: none; margin: 5px 0; border-radius: 10px; cursor: pointer; }
-        .menu-item:hover, .menu-item.active { background: #4361ee; }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: white; padding: 8px 20px; border-radius: 8px; }
-        .btn-edit { background: #ffc107; color: #000; border: none; padding: 5px 10px; border-radius: 5px; margin-right: 5px; cursor: pointer; }
-        .btn-delete { background: #dc3545; color: #fff; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-        .modal-content { background: #1a1a2e; color: #fff; border: 1px solid #4361ee; }
-        .form-control, .form-select { background: #0a0a0f; border: 1px solid #4361ee; color: #fff; }
-        .form-control:focus { background: #0a0a0f; color: #fff; border-color: #4cc9f0; }
-        .table-dark { background: #1a1a2e; }
-        .table-dark th { background: #4361ee; }
-        .badge-active { background: #28a745; }
-        .badge-inactive { background: #dc3545; }
+        .menu-item { display: block; padding: 12px 16px; color: #9ca3af; margin: 5px 0; border-radius: 10px; cursor: pointer; }
+        .menu-item:hover, .menu-item.active { background: #4361ee; color: #fff; }
+        .stat-card { background: #0d1117; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #4361ee; }
+        .data-card { background: #0d1117; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; }
+        .btn-edit { background: #0f172a; border: 1px solid #f59e0b; color: #f59e0b; padding: 5px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #0f172a; border: 1px solid #ef4444; color: #ef4444; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+        .table-dark { background: #0d1117; width: 100%; border-collapse: collapse; }
+        .table-dark th, .table-dark td { padding: 10px; text-align: left; border-bottom: 1px solid #1f2937; }
+        .badge-active { background: #10b98120; color: #10b981; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+        .badge-inactive { background: #ef444420; color: #ef4444; padding: 4px 10px; border-radius: 20px; display: inline-block; }
+        .modal-content { background: #0d1117; border: 1px solid #1f2937; }
+        .form-control { background: #0a0a0f; border: 1px solid #1f2937; color: #fff; padding: 8px 12px; border-radius: 6px; width: 100%; }
+        .form-control:focus { background: #0a0a0f; border-color: #4361ee; outline: none; }
+        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; color: #10b981; padding: 10px 20px; border-radius: 8px; z-index: 9999; font-size: 14px; }
+        .toast-error { border-left-color: #ef4444; color: #ef4444; }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h3 class="text-center mb-4">TechStore</h3>
-        <div class="menu-item active" onclick="loadDashboard()">Dashboard</div>
-        <div class="menu-item" onclick="loadProdutos()">Produtos</div>
-        <div class="menu-item" onclick="loadCategorias()">Categorias</div>
-        <div class="menu-item" onclick="loadClientes()">Clientes</div>
-        <div class="menu-item mt-5" onclick="logout()">Sair</div>
+        <h3><i class="bi bi-cpu"></i> TechStore</h3>
+        <div class="menu-item active" data-page="dashboard">Dashboard</div>
+        <div class="menu-item" data-page="produtos">Produtos</div>
+        <div class="menu-item" data-page="categorias">Categorias</div>
+        <div class="menu-item" data-page="pedidos">Pedidos</div>
+        <div class="menu-item" data-page="clientes">Clientes</div>
+        <div class="menu-item mt-5" id="logoutBtn">Sair</div>
     </div>
+    
     <div class="content">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 id="pageTitle">Dashboard</h2>
-            <span id="userInfo"></span>
+            <span id="userName"></span>
         </div>
         <div id="content"></div>
     </div>
 
     <!-- Modal Produto -->
     <div class="modal fade" id="produtoModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="produtoModalTitle">Novo Produto</h5>
+                    <h5 class="modal-title" id="produtoModalTitle">Produto</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="produtoForm">
-                        <input type="hidden" id="produtoId">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label>Nome *</label>
-                                <input type="text" id="prodNome" class="form-control" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>SKU *</label>
-                                <input type="text" id="prodSku" class="form-control" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Preço *</label>
-                                <input type="number" step="0.01" id="prodPreco" class="form-control" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Preço Promocional</label>
-                                <input type="number" step="0.01" id="prodPrecoPromo" class="form-control">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Quantidade *</label>
-                                <input type="number" id="prodQuantidade" class="form-control" required>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Marca</label>
-                                <input type="text" id="prodMarca" class="form-control">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Categoria</label>
-                                <input type="text" id="prodCategoria" class="form-control">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label>Status</label>
-                                <select id="prodStatus" class="form-select">
-                                    <option value="ativo">Ativo</option>
-                                    <option value="inativo">Inativo</option>
-                                </select>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label>Descrição Curta</label>
-                                <textarea id="prodDescCurta" class="form-control" rows="2"></textarea>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label>Descrição Completa</label>
-                                <textarea id="prodDescCompleta" class="form-control" rows="3"></textarea>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <label>Destaque</label>
-                                <select id="prodDestaque" class="form-select">
-                                    <option value="false">Não</option>
-                                    <option value="true">Sim</option>
-                                </select>
-                            </div>
-                        </div>
-                    </form>
+                    <input type="hidden" id="produtoId">
+                    <div class="mb-2"><label>Nome</label><input type="text" id="prodNome" class="form-control"></div>
+                    <div class="mb-2"><label>SKU</label><input type="text" id="prodSku" class="form-control"></div>
+                    <div class="mb-2"><label>Preço</label><input type="number" step="0.01" id="prodPreco" class="form-control"></div>
+                    <div class="mb-2"><label>Quantidade</label><input type="number" id="prodQuantidade" class="form-control"></div>
+                    <div class="mb-2"><label>Status</label><select id="prodStatus" class="form-control"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
+                    <div class="mb-2"><label>Descrição</label><textarea id="prodDesc" class="form-control" rows="2"></textarea></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary-custom" onclick="salvarProduto()">Salvar</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary-custom" id="salvarProdutoBtn">Salvar</button>
                 </div>
             </div>
         </div>
@@ -120,44 +78,18 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="categoriaModalTitle">Nova Categoria</h5>
+                    <h5 class="modal-title" id="categoriaModalTitle">Categoria</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="categoriaForm">
-                        <input type="hidden" id="categoriaId">
-                        <div class="mb-3">
-                            <label>Nome *</label>
-                            <input type="text" id="catNome" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label>Slug *</label>
-                            <input type="text" id="catSlug" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label>Ícone (Bootstrap Icon)</label>
-                            <input type="text" id="catIcone" class="form-control" placeholder="bi-cpu" value="bi-folder">
-                        </div>
-                        <div class="mb-3">
-                            <label>Descrição</label>
-                            <textarea id="catDescricao" class="form-control" rows="2"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label>Ordem</label>
-                            <input type="number" id="catOrdem" class="form-control" value="0">
-                        </div>
-                        <div class="mb-3">
-                            <label>Status</label>
-                            <select id="catStatus" class="form-select">
-                                <option value="ativo">Ativo</option>
-                                <option value="inativo">Inativo</option>
-                            </select>
-                        </div>
-                    </form>
+                    <input type="hidden" id="categoriaId">
+                    <div class="mb-2"><label>Nome</label><input type="text" id="catNome" class="form-control"></div>
+                    <div class="mb-2"><label>Ícone</label><input type="text" id="catIcone" class="form-control" value="bi-folder"></div>
+                    <div class="mb-2"><label>Status</label><select id="catStatus" class="form-control"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary-custom" onclick="salvarCategoria()">Salvar</button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary-custom" id="salvarCategoriaBtn">Salvar</button>
                 </div>
             </div>
         </div>
@@ -165,7 +97,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API = 'http://localhost:5000/api';
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
@@ -173,42 +105,41 @@
             window.location.href = '/auth.html';
         }
         
-        document.getElementById('userInfo').innerHTML = `<i class="bi bi-person-circle"></i> ${user.nome}`;
+        document.getElementById('userName').innerHTML = '<i class="bi bi-person-circle"></i> ' + user.nome;
         
         let produtoModal, categoriaModal;
         
-        document.addEventListener('DOMContentLoaded', () => {
-            produtoModal = new bootstrap.Modal(document.getElementById('produtoModal'));
-            categoriaModal = new bootstrap.Modal(document.getElementById('categoriaModal'));
-        });
+        function showToast(msg, isError) {
+            var toast = document.createElement('div');
+            toast.className = 'toast-custom';
+            if (isError) toast.classList.add('toast-error');
+            toast.innerHTML = msg;
+            document.body.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 3000);
+        }
         
         function logout() {
             localStorage.clear();
             window.location.href = '/auth.html';
         }
         
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `position-fixed bottom-0 end-0 m-3 alert alert-${type}`;
-            toast.innerHTML = message;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
+        // Dashboard
         async function loadDashboard() {
             document.getElementById('pageTitle').innerHTML = 'Dashboard';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5">Carregando...</div>';
             try {
-                const res = await fetch(`${API_URL}/dashboard/stats`);
-                const data = await res.json();
+                var res = await fetch(API + '/dashboard/stats');
+                var data = await res.json();
                 if (data.success) {
-                    const s = data.stats;
+                    var s = data.stats;
                     document.getElementById('content').innerHTML = `
                         <div class="row">
-                            <div class="col-md-3 mb-3"><div class="card-stats"><i class="bi bi-box fs-1"></i><h2>${s.totalProdutos || 0}</h2><p>Produtos</p></div></div>
-                            <div class="col-md-3 mb-3"><div class="card-stats"><i class="bi bi-tags fs-1"></i><h2>${s.totalCategorias || 0}</h2><p>Categorias</p></div></div>
-                            <div class="col-md-3 mb-3"><div class="card-stats"><i class="bi bi-people fs-1"></i><h2>${s.totalClientes || 0}</h2><p>Clientes</p></div></div>
-                            <div class="col-md-3 mb-3"><div class="card-stats"><i class="bi bi-currency-dollar fs-1"></i><h2>R$ ${(s.vendasTotal || 0).toFixed(2)}</h2><p>Vendas</p></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="bi bi-box fs-1"></i><div class="stat-value">${s.totalProdutos || 0}</div><div>Produtos</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="bi bi-tags fs-1"></i><div class="stat-value">${s.totalCategorias || 0}</div><div>Categorias</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="bi bi-people fs-1"></i><div class="stat-value">${s.totalClientes || 0}</div><div>Clientes</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="bi bi-cart fs-1"></i><div class="stat-value">${s.totalPedidos || 0}</div><div>Pedidos</div></div></div>
                         </div>
+                        <div class="row"><div class="col-md-12"><div class="stat-card"><i class="bi bi-currency-dollar fs-1"></i><div class="stat-value">R$ ${(s.vendasTotal || 0).toFixed(2)}</div><div>Faturamento</div></div></div></div>
                     `;
                 }
             } catch(e) {
@@ -216,238 +147,297 @@
             }
         }
         
-        // ========== PRODUTOS CRUD ==========
+        // Produtos
         async function loadProdutos() {
             document.getElementById('pageTitle').innerHTML = 'Produtos';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5">Carregando...</div>';
             try {
-                const res = await fetch(`${API_URL}/produtos`);
-                const data = await res.json();
+                var res = await fetch(API + '/produtos');
+                var data = await res.json();
                 if (data.success && data.produtos) {
-                    let html = `
-                        <div class="card bg-dark p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4>Lista de Produtos</h4>
-                                <button class="btn btn-primary-custom" onclick="abrirModalProduto()"><i class="bi bi-plus"></i> Novo Produto</button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-dark">
-                                    <thead><tr><th>Nome</th><th>SKU</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead>
-                                    <tbody>
-                    `;
-                    data.produtos.forEach(p => {
-                        html += `
-                            <tr>
-                                <td>${p.nome}</td>
-                                <td>${p.sku}</td>
-                                <td>R$ ${p.preco}</td>
-                                <td>${p.quantidade}</td>
-                                <td><span class="badge ${p.status === 'ativo' ? 'bg-success' : 'bg-danger'}">${p.status}</span></td>
-                                <td>
-                                    <button class="btn-edit" onclick="editarProduto('${p._id}')"><i class="bi bi-pencil"></i> Editar</button>
-                                    <button class="btn-delete" onclick="excluirProduto('${p._id}')"><i class="bi bi-trash"></i> Excluir</button>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    html += `</tbody></table></div></div>`;
+                    var html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Produtos (' + data.produtos.length + ')</h4><button class="btn-primary-custom" onclick="abrirModalProduto()">+ Novo Produto</button></div><div style="overflow-x:auto;"><table class="table-dark" style="width:100%"><thead><tr><th>Nome</th><th>SKU</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    for (var i = 0; i < data.produtos.length; i++) {
+                        var p = data.produtos[i];
+                        html += '<tr><td>' + p.nome + '</td><td>' + p.sku + '</td><td>R$ ' + p.preco + '</td><td>' + p.quantidade + '</td><td><span class="' + (p.status === 'ativo' ? 'badge-active' : 'badge-inactive') + '">' + p.status + '</span></td><td><button class="btn-edit" onclick="editarProduto(\'' + p._id + '\')">Editar</button> <button class="btn-delete" onclick="excluirProduto(\'' + p._id + '\')">Excluir</button></td></tr>';
+                    }
+                    html += '</tbody></table></div></div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) {
-                document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar produtos</div>';
+                document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro</div>';
             }
         }
         
-        function abrirModalProduto(produto = null) {
-            document.getElementById('produtoModalTitle').innerText = produto ? 'Editar Produto' : 'Novo Produto';
-            document.getElementById('produtoId').value = produto?._id || '';
-            document.getElementById('prodNome').value = produto?.nome || '';
-            document.getElementById('prodSku').value = produto?.sku || '';
-            document.getElementById('prodPreco').value = produto?.preco || '';
-            document.getElementById('prodPrecoPromo').value = produto?.precoPromocional || '';
-            document.getElementById('prodQuantidade').value = produto?.quantidade || 0;
-            document.getElementById('prodMarca').value = produto?.marca || '';
-            document.getElementById('prodCategoria').value = produto?.categoria || '';
-            document.getElementById('prodStatus').value = produto?.status || 'ativo';
-            document.getElementById('prodDescCurta').value = produto?.descricaoCurta || '';
-            document.getElementById('prodDescCompleta').value = produto?.descricaoCompleta || '';
-            document.getElementById('prodDestaque').value = produto?.destaque || 'false';
+        window.abrirModalProduto = function(produto) {
+            if (!produtoModal) produtoModal = new bootstrap.Modal(document.getElementById('produtoModal'));
+            if (produto) {
+                document.getElementById('produtoModalTitle').innerText = 'Editar Produto';
+                document.getElementById('produtoId').value = produto._id || '';
+                document.getElementById('prodNome').value = produto.nome || '';
+                document.getElementById('prodSku').value = produto.sku || '';
+                document.getElementById('prodPreco').value = produto.preco || '';
+                document.getElementById('prodQuantidade').value = produto.quantidade || 0;
+                document.getElementById('prodStatus').value = produto.status || 'ativo';
+                document.getElementById('prodDesc').value = produto.descricaoCurta || '';
+            } else {
+                document.getElementById('produtoModalTitle').innerText = 'Novo Produto';
+                document.getElementById('produtoId').value = '';
+                document.getElementById('prodNome').value = '';
+                document.getElementById('prodSku').value = '';
+                document.getElementById('prodPreco').value = '';
+                document.getElementById('prodQuantidade').value = 0;
+                document.getElementById('prodStatus').value = 'ativo';
+                document.getElementById('prodDesc').value = '';
+            }
             produtoModal.show();
-        }
-        
-        window.editarProduto = async (id) => {
-            try {
-                const res = await fetch(`${API_URL}/produtos/${id}`);
-                const data = await res.json();
-                if (data.success) abrirModalProduto(data.produto);
-            } catch(e) { showToast('Erro ao carregar produto', 'danger'); }
         };
         
-        window.salvarProduto = async () => {
-            const id = document.getElementById('produtoId').value;
-            const produto = {
+        window.editarProduto = async function(id) {
+            try {
+                showToast('Carregando produto...', false);
+                var res = await fetch(API + '/produtos/' + id);
+                var data = await res.json();
+                if (data.success && data.produto) {
+                    window.abrirModalProduto(data.produto);
+                    showToast('Produto carregado!', false);
+                } else {
+                    showToast('Erro ao carregar produto', true);
+                }
+            } catch(e) {
+                showToast('Erro: ' + e.message, true);
+            }
+        };
+        
+        window.salvarProduto = async function() {
+            var id = document.getElementById('produtoId').value;
+            var produto = {
                 nome: document.getElementById('prodNome').value,
                 sku: document.getElementById('prodSku').value,
                 preco: parseFloat(document.getElementById('prodPreco').value),
-                precoPromocional: parseFloat(document.getElementById('prodPrecoPromo').value) || null,
                 quantidade: parseInt(document.getElementById('prodQuantidade').value),
-                marca: document.getElementById('prodMarca').value,
-                categoria: document.getElementById('prodCategoria').value,
                 status: document.getElementById('prodStatus').value,
-                descricaoCurta: document.getElementById('prodDescCurta').value,
-                descricaoCompleta: document.getElementById('prodDescCompleta').value,
-                destaque: document.getElementById('prodDestaque').value === 'true'
+                descricaoCurta: document.getElementById('prodDesc').value
             };
             
+            if (!produto.nome || !produto.sku) {
+                showToast('Preencha nome e SKU!', true);
+                return;
+            }
+            
             try {
-                const url = id ? `${API_URL}/produtos/${id}` : `${API_URL}/produtos`;
-                const method = id ? 'PUT' : 'POST';
-                const res = await fetch(url, {
-                    method,
+                var url = id ? API + '/produtos/' + id : API + '/produtos';
+                var method = id ? 'PUT' : 'POST';
+                var res = await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(produto)
                 });
-                const data = await res.json();
+                var data = await res.json();
                 if (data.success) {
                     produtoModal.hide();
+                    showToast(id ? 'Produto atualizado!' : 'Produto criado!', false);
                     loadProdutos();
-                    showToast(id ? 'Produto atualizado!' : 'Produto criado!');
-                } else showToast(data.message, 'danger');
-            } catch(e) { showToast('Erro ao salvar', 'danger'); }
-        };
-        
-        window.excluirProduto = async (id) => {
-            if (confirm('Tem certeza que deseja excluir este produto?')) {
-                try {
-                    const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    if (data.success) {
-                        loadProdutos();
-                        showToast('Produto excluído!');
-                    } else showToast(data.message, 'danger');
-                } catch(e) { showToast('Erro ao excluir', 'danger'); }
+                } else {
+                    showToast(data.message || 'Erro ao salvar', true);
+                }
+            } catch(e) {
+                showToast('Erro ao salvar', true);
             }
         };
         
-        // ========== CATEGORIAS CRUD ==========
+        window.excluirProduto = async function(id) {
+            if (confirm('Excluir este produto?')) {
+                try {
+                    var res = await fetch(API + '/produtos/' + id, { method: 'DELETE' });
+                    var data = await res.json();
+                    if (data.success) {
+                        showToast('Produto excluido!', false);
+                        loadProdutos();
+                    } else {
+                        showToast(data.message || 'Erro ao excluir', true);
+                    }
+                } catch(e) {
+                    showToast('Erro ao excluir', true);
+                }
+            }
+        };
+        
+        // Categorias
         async function loadCategorias() {
             document.getElementById('pageTitle').innerHTML = 'Categorias';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5">Carregando...</div>';
             try {
-                const res = await fetch(`${API_URL}/categorias`);
-                const data = await res.json();
+                var res = await fetch(API + '/categorias');
+                var data = await res.json();
                 if (data.success && data.categorias) {
-                    let html = `
-                        <div class="card bg-dark p-3">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4>Lista de Categorias</h4>
-                                <button class="btn btn-primary-custom" onclick="abrirModalCategoria()"><i class="bi bi-plus"></i> Nova Categoria</button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-dark">
-                                    <thead><tr><th>Ícone</th><th>Nome</th><th>Slug</th><th>Status</th><th>Ações</th></tr></thead>
-                                    <tbody>
-                    `;
-                    data.categorias.forEach(c => {
-                        html += `
-                            <tr>
-                                <td><i class="bi ${c.icone || 'bi-folder'} fs-4"></i></td>
-                                <td>${c.nome}</td>
-                                <td>${c.slug}</td>
-                                <td><span class="badge ${c.status === 'ativo' ? 'bg-success' : 'bg-danger'}">${c.status}</span></td>
-                                <td>
-                                    <button class="btn-edit" onclick="editarCategoria('${c._id}')"><i class="bi bi-pencil"></i> Editar</button>
-                                    <button class="btn-delete" onclick="excluirCategoria('${c._id}')"><i class="bi bi-trash"></i> Excluir</button>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    html += `</tbody></table></div></div>`;
+                    var html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Categorias (' + data.categorias.length + ')</h4><button class="btn-primary-custom" onclick="abrirModalCategoria()">+ Nova Categoria</button></div><div style="overflow-x:auto;"><table class="table-dark" style="width:100%"><thead><tr><th>Icone</th><th>Nome</th><th>Slug</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    for (var i = 0; i < data.categorias.length; i++) {
+                        var c = data.categorias[i];
+                        html += '<tr><td><i class="bi ' + (c.icone || 'bi-folder') + '"></i></td><td>' + c.nome + '</td><td>' + c.slug + '</td><td><span class="' + (c.status === 'ativo' ? 'badge-active' : 'badge-inactive') + '">' + c.status + '</span></td><td><button class="btn-edit" onclick="editarCategoria(\'' + c._id + '\')">Editar</button> <button class="btn-delete" onclick="excluirCategoria(\'' + c._id + '\')">Excluir</button></td></tr>';
+                    }
+                    html += '</tbody></table></div></div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) {
-                document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar categorias</div>';
+                document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro</div>';
             }
         }
         
-        function abrirModalCategoria(categoria = null) {
-            document.getElementById('categoriaModalTitle').innerText = categoria ? 'Editar Categoria' : 'Nova Categoria';
-            document.getElementById('categoriaId').value = categoria?._id || '';
-            document.getElementById('catNome').value = categoria?.nome || '';
-            document.getElementById('catSlug').value = categoria?.slug || '';
-            document.getElementById('catIcone').value = categoria?.icone || 'bi-folder';
-            document.getElementById('catDescricao').value = categoria?.descricao || '';
-            document.getElementById('catOrdem').value = categoria?.ordem || 0;
-            document.getElementById('catStatus').value = categoria?.status || 'ativo';
+        window.abrirModalCategoria = function(categoria) {
+            if (!categoriaModal) categoriaModal = new bootstrap.Modal(document.getElementById('categoriaModal'));
+            if (categoria) {
+                document.getElementById('categoriaModalTitle').innerText = 'Editar Categoria';
+                document.getElementById('categoriaId').value = categoria._id || '';
+                document.getElementById('catNome').value = categoria.nome || '';
+                document.getElementById('catIcone').value = categoria.icone || 'bi-folder';
+                document.getElementById('catStatus').value = categoria.status || 'ativo';
+            } else {
+                document.getElementById('categoriaModalTitle').innerText = 'Nova Categoria';
+                document.getElementById('categoriaId').value = '';
+                document.getElementById('catNome').value = '';
+                document.getElementById('catIcone').value = 'bi-folder';
+                document.getElementById('catStatus').value = 'ativo';
+            }
             categoriaModal.show();
-        }
-        
-        window.editarCategoria = async (id) => {
-            try {
-                const res = await fetch(`${API_URL}/categorias/${id}`);
-                const data = await res.json();
-                if (data.success) abrirModalCategoria(data.categoria);
-            } catch(e) { showToast('Erro ao carregar categoria', 'danger'); }
         };
         
-        window.salvarCategoria = async () => {
-            const id = document.getElementById('categoriaId').value;
-            const categoria = {
-                nome: document.getElementById('catNome').value,
-                slug: document.getElementById('catSlug').value,
-                icone: document.getElementById('catIcone').value,
-                descricao: document.getElementById('catDescricao').value,
-                ordem: parseInt(document.getElementById('catOrdem').value),
-                status: document.getElementById('catStatus').value
-            };
-            
+        window.editarCategoria = async function(id) {
             try {
-                const url = id ? `${API_URL}/categorias/${id}` : `${API_URL}/categorias`;
-                const method = id ? 'PUT' : 'POST';
-                const res = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(categoria)
-                });
-                const data = await res.json();
+                var res = await fetch(API + '/categorias/' + id);
+                var data = await res.json();
+                if (data.success && data.categoria) {
+                    window.abrirModalCategoria(data.categoria);
+                    showToast('Categoria carregada!', false);
+                } else {
+                    showToast('Erro ao carregar categoria', true);
+                }
+            } catch(e) {
+                showToast('Erro ao carregar', true);
+            }
+        };
+        
+        window.salvarCategoria = async function() {
+            var id = document.getElementById('categoriaId').value;
+            var nome = document.getElementById('catNome').value;
+            if (!nome) {
+                showToast('Preencha o nome!', true);
+                return;
+            }
+            var categoria = {
+                nome: nome,
+                icone: document.getElementById('catIcone').value,
+                status: document.getElementById('catStatus').value,
+                slug: nome.toLowerCase().replace(/ /g, '-')
+            };
+            try {
+                var url = id ? API + '/categorias/' + id : API + '/categorias';
+                var method = id ? 'PUT' : 'POST';
+                var res = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(categoria) });
+                var data = await res.json();
                 if (data.success) {
                     categoriaModal.hide();
+                    showToast(id ? 'Categoria atualizada!' : 'Categoria criada!', false);
                     loadCategorias();
-                    showToast(id ? 'Categoria atualizada!' : 'Categoria criada!');
-                } else showToast(data.message, 'danger');
-            } catch(e) { showToast('Erro ao salvar', 'danger'); }
-        };
-        
-        window.excluirCategoria = async (id) => {
-            if (confirm('Tem certeza que deseja excluir esta categoria?')) {
-                try {
-                    const res = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
-                    const data = await res.json();
-                    if (data.success) {
-                        loadCategorias();
-                        showToast('Categoria excluída!');
-                    } else showToast(data.message, 'danger');
-                } catch(e) { showToast('Erro ao excluir', 'danger'); }
+                } else {
+                    showToast(data.message || 'Erro ao salvar', true);
+                }
+            } catch(e) {
+                showToast('Erro ao salvar', true);
             }
         };
         
+        window.excluirCategoria = async function(id) {
+            if (confirm('Excluir categoria?')) {
+                try {
+                    var res = await fetch(API + '/categorias/' + id, { method: 'DELETE' });
+                    var data = await res.json();
+                    if (data.success) {
+                        showToast('Categoria excluida!', false);
+                        loadCategorias();
+                    } else {
+                        showToast(data.message || 'Erro ao excluir', true);
+                    }
+                } catch(e) {
+                    showToast('Erro ao excluir', true);
+                }
+            }
+        };
+        
+        // Pedidos
+        async function loadPedidos() {
+            document.getElementById('pageTitle').innerHTML = 'Pedidos';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5">Carregando...</div>';
+            try {
+                var res = await fetch(API + '/pedidos');
+                var data = await res.json();
+                if (data.success && data.pedidos && data.pedidos.length > 0) {
+                    var html = '<div class="data-card"><h4>Pedidos (' + data.pedidos.length + ')</h4><div style="overflow-x:auto;"><table class="table-dark" style="width:100%"><thead><tr><th>Numero</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th></tr></thead><tbody>';
+                    for (var i = 0; i < data.pedidos.length; i++) {
+                        var p = data.pedidos[i];
+                        html += '<tr><td>' + p.numero + '</td><td>' + p.cliente.nome + '<br><small>' + p.cliente.email + '</small></td><td>' + new Date(p.createdAt).toLocaleDateString() + '</td><td>R$ ' + p.total.toFixed(2) + '</td><td><span class="badge-active">' + p.status + '</span></td></tr>';
+                    }
+                    html += '</tbody></table></div></div>';
+                    document.getElementById('content').innerHTML = html;
+                } else {
+                    document.getElementById('content').innerHTML = '<div class="data-card"><p>Nenhum pedido encontrado.</p></div>';
+                }
+            } catch(e) {
+                document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar pedidos</div>';
+            }
+        }
+        
+        // Clientes
         async function loadClientes() {
             document.getElementById('pageTitle').innerHTML = 'Clientes';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5">Carregando...</div>';
             try {
-                const res = await fetch(`${API_URL}/clientes`);
-                const data = await res.json();
-                if (data.success && data.clientes) {
-                    let html = `<div class="card bg-dark p-3"><h4>Lista de Clientes</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>`;
-                    data.clientes.forEach(c => {
-                        html += `<tr><td>${c.nome || '-'}</td><td>${c.email || '-'}</td><td>${c.telefone || '-'}</td><td>${new Date(c.createdAt).toLocaleDateString()}</td><td><span class="badge ${c.status === 'ativo' ? 'bg-success' : 'bg-danger'}">${c.status}</span></td></tr>`;
-                    });
-                    html += `</tbody></table></div></div>`;
+                var res = await fetch(API + '/clientes');
+                var data = await res.json();
+                if (data.success && data.clientes && data.clientes.length > 0) {
+                    var html = '<div class="data-card"><h4>Clientes (' + data.clientes.length + ')</h4><div style="overflow-x:auto;"><table class="table-dark" style="width:100%"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>';
+                    for (var i = 0; i < data.clientes.length; i++) {
+                        var c = data.clientes[i];
+                        html += '<tr><td>' + (c.nome || '-') + '</td><td>' + (c.email || '-') + '</td><td>' + (c.telefone || '-') + '</td><td>' + new Date(c.createdAt).toLocaleDateString() + '</td><td><span class="' + (c.status === 'ativo' ? 'badge-active' : 'badge-inactive') + '">' + c.status + '</span></td></tr>';
+                    }
+                    html += '</tbody></table></div></div>';
                     document.getElementById('content').innerHTML = html;
+                } else {
+                    document.getElementById('content').innerHTML = '<div class="data-card"><p>Nenhum cliente encontrado.</p></div>';
                 }
             } catch(e) {
                 document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>';
             }
         }
         
-        loadDashboard();
+        // Navegacao
+        function navigateTo(page) {
+            var items = document.querySelectorAll('.menu-item');
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.remove('active');
+                if (items[i].dataset.page === page) items[i].classList.add('active');
+            }
+            if (page === 'dashboard') loadDashboard();
+            else if (page === 'produtos') loadProdutos();
+            else if (page === 'categorias') loadCategorias();
+            else if (page === 'pedidos') loadPedidos();
+            else if (page === 'clientes') loadClientes();
+        }
+        
+        // Eventos
+        var menuItems = document.querySelectorAll('.menu-item');
+        for (var i = 0; i < menuItems.length; i++) {
+            if (menuItems[i].dataset.page) {
+                menuItems[i].addEventListener('click', (function(page) {
+                    return function() { navigateTo(page); };
+                })(menuItems[i].dataset.page));
+            }
+        }
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('salvarProdutoBtn').addEventListener('click', function() { window.salvarProduto(); });
+        document.getElementById('salvarCategoriaBtn').addEventListener('click', function() { window.salvarCategoria(); });
+        
+        // Iniciar
+        navigateTo('dashboard');
     </script>
 </body>
 </html>
