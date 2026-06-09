@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | TechStore</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">TechStore</h2>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchTab('login')">Entrar</button>
+                <button class="auth-tab" onclick="switchTab('register')">Cadastrar</button>
+            </div>
+            <div id="loginForm" class="auth-form active">
+                <div id="loginAlert"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="loginEmail" value="admin@techstore.com.br"></div>
+                <div class="form-group"><label>Senha</label><input type="password" id="loginPassword" value="***REMOVED***"></div>
+                <button class="btn-primary auth-btn" onclick="login()">Entrar</button>
+            </div>
+            <div id="registerForm" class="auth-form">
+                <div id="registerAlert"></div>
+                <div class="form-group"><label>Nome</label><input type="text" id="regNome"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="regEmail"></div>
+                <div class="form-group"><label>Telefone</label><input type="tel" id="regTelefone"></div>
+                <div class="form-group"><label>Senha</label><input type="password" id="regPassword"></div>
+                <div class="form-group"><label>Confirmar Senha</label><input type="password" id="regConfirm"></div>
+                <button class="btn-primary auth-btn" onclick="register()">Cadastrar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const API = 'http://localhost:5000/api';
+        
+        function showAlert(id, msg, isError) {
+            document.getElementById(id).innerHTML = `<div style="background:${isError ? '#ef444420' : '#10b98120'};padding:10px;border-radius:8px;margin-bottom:15px">${msg}</div>`;
+            setTimeout(() => document.getElementById(id).innerHTML = '', 5000);
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            if (tab === 'login') {
+                document.querySelector('.auth-tab:first-child').classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelector('.auth-tab:last-child').classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+        }
+        
+        async function login() {
+            try {
+                const res = await fetch(API + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/';
+                } else {
+                    showAlert('loginAlert', data.message, true);
+                }
+            } catch(e) { showAlert('loginAlert', 'Erro ao conectar', true); }
+        }
+        
+        async function register() {
+            if (document.getElementById('regPassword').value !== document.getElementById('regConfirm').value) {
+                showAlert('registerAlert', 'Senhas não conferem', true);
+                return;
+            }
+            try {
+                const res = await fetch(API + '/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nome: document.getElementById('regNome').value,
+                        email: document.getElementById('regEmail').value,
+                        telefone: document.getElementById('regTelefone').value,
+                        password: document.getElementById('regPassword').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/';
+                } else {
+                    showAlert('registerAlert', data.message, true);
+                }
+            } catch(e) { showAlert('registerAlert', 'Erro ao conectar', true); }
+        }
+    </script>
+</body>
+</html>

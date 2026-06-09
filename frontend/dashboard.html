@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | TechStore</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 280px; height: 100%; background: #0d1117; border-right: 1px solid #1f2937; padding: 20px; }
+        .sidebar h3 { background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
+        .sidebar .menu-item { display: block; padding: 12px 16px; color: #9ca3af; margin: 5px 0; border-radius: 10px; cursor: pointer; transition: all 0.3s; }
+        .sidebar .menu-item:hover, .sidebar .menu-item.active { background: #4361ee; color: #fff; }
+        .sidebar .menu-item i { margin-right: 12px; width: 25px; }
+        .main-content { margin-left: 300px; padding: 20px; }
+        .top-bar { background: #0d1117; border: 1px solid #1f2937; border-radius: 12px; padding: 15px 25px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .stat-card { background: #0d1117; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; text-align: center; transition: all 0.3s; }
+        .stat-card:hover { transform: translateY(-3px); border-color: #4361ee; }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #4361ee; }
+        .data-card { background: #0d1117; border: 1px solid #1f2937; border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+        .btn-edit { background: #0f172a; border: 1px solid #f59e0b; color: #f59e0b; padding: 5px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #0f172a; border: 1px solid #ef4444; color: #ef4444; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-view { background: #0f172a; border: 1px solid #06b6d4; color: #06b6d4; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+        .badge-active { background: #10b98120; color: #10b981; padding: 4px 12px; border-radius: 20px; }
+        .modal-content { background: #0d1117; border: 1px solid #1f2937; }
+        .form-control, .form-select { background: #0a0a0f; border: 1px solid #1f2937; color: #fff; }
+        .form-control:focus, .form-select:focus { background: #0a0a0f; border-color: #4361ee; box-shadow: none; }
+        .logout-btn { background: #ef4444; border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; }
+        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
+        @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar .menu-item span { display: none; } .main-content { margin-left: 90px; } }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3><i class="fas fa-microchip"></i> TechStore</h3>
+        <div class="menu-item active" onclick="loadDashboard()">
+            <i class="fas fa-chart-line"></i> <span>Dashboard</span>
+        </div>
+        <div class="menu-item" onclick="loadProdutos()">
+            <i class="fas fa-box"></i> <span>Produtos</span>
+        </div>
+        <div class="menu-item" onclick="loadCategorias()">
+            <i class="fas fa-tags"></i> <span>Categorias</span>
+        </div>
+        <div class="menu-item" onclick="loadPedidos()">
+            <i class="fas fa-shopping-cart"></i> <span>Pedidos</span>
+        </div>
+        <div class="menu-item" onclick="loadClientes()">
+            <i class="fas fa-users"></i> <span>Clientes</span>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <h2 id="pageTitle" style="margin:0;"><i class="fas fa-chart-line"></i> Dashboard</h2>
+            <div>
+                <span id="userName" class="me-3"><i class="fas fa-user-circle"></i> Admin</span>
+                <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</button>
+            </div>
+        </div>
+        <div id="content"></div>
+    </div>
+
+    <!-- Modal Produto -->
+    <div class="modal fade" id="produtoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="produtoModalTitle"><i class="fas fa-box"></i> Produto</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="produtoId">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-tag"></i> Nome</label>
+                        <input type="text" id="prodNome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-barcode"></i> SKU</label>
+                        <input type="text" id="prodSku" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-dollar-sign"></i> Preço</label>
+                            <input type="number" id="prodPreco" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-boxes"></i> Quantidade</label>
+                            <input type="number" id="prodQuantidade" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-folder"></i> Categoria</label>
+                            <select id="prodCategoria" class="form-select">
+                                <option value="">Selecione uma categoria</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-toggle-on"></i> Status</label>
+                            <select id="prodStatus" class="form-select">
+                                <option value="ativo">Ativo</option>
+                                <option value="inativo">Inativo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-align-left"></i> Descrição</label>
+                        <textarea id="prodDesc" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary-custom" onclick="salvarProduto()"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Categoria -->
+    <div class="modal fade" id="categoriaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="categoriaModalTitle"><i class="fas fa-tag"></i> Categoria</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="categoriaId">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-font"></i> Nome</label>
+                        <input type="text" id="catNome" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-icons"></i> Ícone (Font Awesome)</label>
+                        <input type="text" id="catIcone" class="form-control" value="fa-microchip">
+                        <small class="text-muted">Ex: fa-microchip, fa-wifi, fa-plug</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-toggle-on"></i> Status</label>
+                        <select id="catStatus" class="form-select">
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary-custom" onclick="salvarCategoria()"><i class="fas fa-save"></i> Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalhes Pedido -->
+    <div class="modal fade" id="pedidoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-shopping-cart"></i> Detalhes do Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="pedidoDetalhes"></div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token || user.role !== 'admin') window.location.href = '/auth.html';
+        
+        document.getElementById('userName').innerHTML = `<i class="fas fa-user-circle"></i> ${user.nome}`;
+        
+        let categoriasList = [];
+        
+        function showToast(msg, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-custom';
+            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        function logout() { localStorage.clear(); window.location.href = '/auth.html'; }
+        
+        // Dashboard
+        async function loadDashboard() {
+            document.getElementById('pageTitle').innerHTML = '<i class="fas fa-chart-line"></i> Dashboard';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/dashboard/stats');
+                const data = await res.json();
+                if (data.success) {
+                    const s = data.stats;
+                    document.getElementById('content').innerHTML = `
+                        <div class="row g-4">
+                            <div class="col-md-3"><div class="stat-card"><i class="fas fa-box fa-2x text-primary"></i><div class="stat-value">${s.totalProdutos || 0}</div><div>Produtos</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="fas fa-tags fa-2x text-primary"></i><div class="stat-value">${s.totalCategorias || 0}</div><div>Categorias</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="fas fa-users fa-2x text-primary"></i><div class="stat-value">${s.totalClientes || 0}</div><div>Clientes</div></div></div>
+                            <div class="col-md-3"><div class="stat-card"><i class="fas fa-shopping-cart fa-2x text-primary"></i><div class="stat-value">${s.totalPedidos || 0}</div><div>Pedidos</div></div></div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-12"><div class="stat-card"><i class="fas fa-dollar-sign fa-2x text-primary"></i><div class="stat-value">R$ ${(s.vendasTotal || 0).toFixed(2)}</div><div>Faturamento Total</div></div></div>
+                        </div>
+                    `;
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar dashboard</div>'; }
+        }
+        
+        // Carregar categorias para o select
+        async function loadCategoriasSelect() {
+            try {
+                const res = await fetch(API + '/categorias');
+                const data = await res.json();
+                if (data.success) {
+                    categoriasList = data.categorias;
+                    const select = document.getElementById('prodCategoria');
+                    if (select) {
+                        select.innerHTML = '<option value="">Selecione uma categoria</option>' + 
+                            data.categorias.map(c => `<option value="${c._id}">${c.nome}</option>`).join('');
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        // Produtos
+        async function loadProdutos() {
+            document.getElementById('pageTitle').innerHTML = '<i class="fas fa-box"></i> Produtos';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/produtos');
+                const data = await res.json();
+                if (data.success && data.produtos) {
+                    let html = `
+                        <div class="data-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4><i class="fas fa-box"></i> Lista de Produtos</h4>
+                                <button class="btn-primary-custom" onclick="abrirModalProduto()"><i class="fas fa-plus"></i> Novo Produto</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-dark">
+                                    <thead>
+                                        <tr><th><i class="fas fa-tag"></i> Nome</th><th><i class="fas fa-barcode"></i> SKU</th><th><i class="fas fa-folder"></i> Categoria</th><th><i class="fas fa-dollar-sign"></i> Preço</th><th><i class="fas fa-boxes"></i> Estoque</th><th><i class="fas fa-toggle-on"></i> Status</th><th><i class="fas fa-cog"></i> Ações</th></tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                    for (const p of data.produtos) {
+                        const categoria = categoriasList.find(c => c._id === p.categoria) || { nome: '-' };
+                        html += `
+                            <tr>
+                                <td>${p.nome}</td>
+                                <td>${p.sku}</td>
+                                <td><span class="badge-active"><i class="fas ${categoria.icone || 'fa-folder'}"></i> ${categoria.nome}</span></td>
+                                <td><strong>R$ ${p.preco.toFixed(2)}</strong></td>
+                                <td>${p.quantidade} unidades</div></td>
+                                <td><span class="${p.status === 'ativo' ? 'badge-active' : 'badge-inactive'}">${p.status}</span></td>
+                                <td>
+                                    <button class="btn-edit" onclick="editarProduto('${p._id}')"><i class="fas fa-edit"></i> Editar</button>
+                                    <button class="btn-delete" onclick="excluirProduto('${p._id}')"><i class="fas fa-trash"></i> Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    html += `</tbody></tr></div></div>`;
+                    document.getElementById('content').innerHTML = html;
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar produtos</div>'; }
+        }
+        
+        function abrirModalProduto(produto = null) {
+            loadCategoriasSelect();
+            const modal = new bootstrap.Modal(document.getElementById('produtoModal'));
+            if (produto) {
+                document.getElementById('produtoModalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Produto';
+                document.getElementById('produtoId').value = produto._id;
+                document.getElementById('prodNome').value = produto.nome;
+                document.getElementById('prodSku').value = produto.sku;
+                document.getElementById('prodPreco').value = produto.preco;
+                document.getElementById('prodQuantidade').value = produto.quantidade;
+                document.getElementById('prodStatus').value = produto.status;
+                document.getElementById('prodDesc').value = produto.descricao || '';
+                setTimeout(() => {
+                    document.getElementById('prodCategoria').value = produto.categoria || '';
+                }, 200);
+            } else {
+                document.getElementById('produtoModalTitle').innerHTML = '<i class="fas fa-plus"></i> Novo Produto';
+                document.getElementById('produtoId').value = '';
+                document.getElementById('prodNome').value = '';
+                document.getElementById('prodSku').value = '';
+                document.getElementById('prodPreco').value = '';
+                document.getElementById('prodQuantidade').value = 0;
+                document.getElementById('prodStatus').value = 'ativo';
+                document.getElementById('prodDesc').value = '';
+                document.getElementById('prodCategoria').value = '';
+            }
+            modal.show();
+        }
+        
+        async function editarProduto(id) {
+            try {
+                const res = await fetch(API + '/produtos/' + id);
+                const data = await res.json();
+                if (data.success) {
+                    await loadCategoriasSelect();
+                    abrirModalProduto(data.produto);
+                }
+            } catch(e) { showToast('Erro ao carregar produto', true); }
+        }
+        
+        async function salvarProduto() {
+            const id = document.getElementById('produtoId').value;
+            const produto = {
+                nome: document.getElementById('prodNome').value,
+                sku: document.getElementById('prodSku').value,
+                preco: parseFloat(document.getElementById('prodPreco').value),
+                quantidade: parseInt(document.getElementById('prodQuantidade').value),
+                status: document.getElementById('prodStatus').value,
+                categoria: document.getElementById('prodCategoria').value,
+                descricao: document.getElementById('prodDesc').value
+            };
+            
+            if (!produto.nome || !produto.sku) {
+                showToast('Preencha nome e SKU!', true);
+                return;
+            }
+            
+            try {
+                const url = id ? API + '/produtos/' + id : API + '/produtos';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(produto)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('produtoModal')).hide();
+                    showToast(id ? 'Produto atualizado!' : 'Produto criado!');
+                    loadProdutos();
+                } else {
+                    showToast(data.message || 'Erro ao salvar', true);
+                }
+            } catch(e) { showToast('Erro ao salvar', true); }
+        }
+        
+        async function excluirProduto(id) {
+            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                try {
+                    await fetch(API + '/produtos/' + id, { method: 'DELETE' });
+                    showToast('Produto excluído!');
+                    loadProdutos();
+                } catch(e) { showToast('Erro ao excluir', true); }
+            }
+        }
+        
+        // Categorias
+        async function loadCategorias() {
+            document.getElementById('pageTitle').innerHTML = '<i class="fas fa-tags"></i> Categorias';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/categorias');
+                const data = await res.json();
+                if (data.success && data.categorias) {
+                    let html = `
+                        <div class="data-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4><i class="fas fa-tags"></i> Lista de Categorias</h4>
+                                <button class="btn-primary-custom" onclick="abrirModalCategoria()"><i class="fas fa-plus"></i> Nova Categoria</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-dark">
+                                    <thead>
+                                        <tr><th><i class="fas fa-icons"></i> Ícone</th><th><i class="fas fa-font"></i> Nome</th><th><i class="fas fa-link"></i> Slug</th><th><i class="fas fa-toggle-on"></i> Status</th><th><i class="fas fa-cog"></i> Ações</th></tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                    for (const c of data.categorias) {
+                        html += `
+                            <tr>
+                                <td><i class="fas ${c.icone || 'fa-folder'} fa-2x text-primary"></i></td>
+                                <td><strong>${c.nome}</strong></td>
+                                <td><code>${c.slug}</code></td>
+                                <td><span class="${c.status === 'ativo' ? 'badge-active' : 'badge-inactive'}">${c.status}</span></td>
+                                <td>
+                                    <button class="btn-edit" onclick="editarCategoria('${c._id}')"><i class="fas fa-edit"></i> Editar</button>
+                                    <button class="btn-delete" onclick="excluirCategoria('${c._id}')"><i class="fas fa-trash"></i> Excluir</button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    html += `</tbody></table></div></div>`;
+                    document.getElementById('content').innerHTML = html;
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar categorias</div>'; }
+        }
+        
+        function abrirModalCategoria(categoria = null) {
+            const modal = new bootstrap.Modal(document.getElementById('categoriaModal'));
+            if (categoria) {
+                document.getElementById('categoriaModalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Categoria';
+                document.getElementById('categoriaId').value = categoria._id;
+                document.getElementById('catNome').value = categoria.nome;
+                document.getElementById('catIcone').value = categoria.icone || 'fa-microchip';
+                document.getElementById('catStatus').value = categoria.status;
+            } else {
+                document.getElementById('categoriaModalTitle').innerHTML = '<i class="fas fa-plus"></i> Nova Categoria';
+                document.getElementById('categoriaId').value = '';
+                document.getElementById('catNome').value = '';
+                document.getElementById('catIcone').value = 'fa-microchip';
+                document.getElementById('catStatus').value = 'ativo';
+            }
+            modal.show();
+        }
+        
+        async function editarCategoria(id) {
+            try {
+                const res = await fetch(API + '/categorias/' + id);
+                const data = await res.json();
+                if (data.success) abrirModalCategoria(data.categoria);
+            } catch(e) { showToast('Erro ao carregar categoria', true); }
+        }
+        
+        async function salvarCategoria() {
+            const id = document.getElementById('categoriaId').value;
+            const nome = document.getElementById('catNome').value;
+            if (!nome) { showToast('Preencha o nome!', true); return; }
+            
+            const categoria = {
+                nome: nome,
+                icone: document.getElementById('catIcone').value,
+                status: document.getElementById('catStatus').value,
+                slug: nome.toLowerCase().replace(/ /g, '-')
+            };
+            
+            try {
+                const url = id ? API + '/categorias/' + id : API + '/categorias';
+                const method = id ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(categoria)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('categoriaModal')).hide();
+                    showToast(id ? 'Categoria atualizada!' : 'Categoria criada!');
+                    loadCategorias();
+                    loadCategoriasSelect();
+                } else {
+                    showToast(data.message || 'Erro ao salvar', true);
+                }
+            } catch(e) { showToast('Erro ao salvar', true); }
+        }
+        
+        async function excluirCategoria(id) {
+            if (confirm('Tem certeza que deseja excluir esta categoria?')) {
+                try {
+                    await fetch(API + '/categorias/' + id, { method: 'DELETE' });
+                    showToast('Categoria excluída!');
+                    loadCategorias();
+                    loadCategoriasSelect();
+                } catch(e) { showToast('Erro ao excluir', true); }
+            }
+        }
+        
+        // Pedidos
+        async function loadPedidos() {
+            document.getElementById('pageTitle').innerHTML = '<i class="fas fa-shopping-cart"></i> Pedidos';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/pedidos');
+                const data = await res.json();
+                if (data.success && data.pedidos && data.pedidos.length > 0) {
+                    let html = `
+                        <div class="data-card">
+                            <h4><i class="fas fa-shopping-cart"></i> Lista de Pedidos</h4>
+                            <div class="table-responsive">
+                                <table class="table table-dark">
+                                    <thead>
+                                        <tr><th><i class="fas fa-hashtag"></i> Nº Pedido</th><th><i class="fas fa-user"></i> Cliente</th><th><i class="fas fa-calendar"></i> Data</th><th><i class="fas fa-dollar-sign"></i> Total</th><th><i class="fas fa-toggle-on"></i> Status</th><th><i class="fas fa-eye"></i> Ações</th></tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                    for (const p of data.pedidos) {
+                        html += `
+                            <tr>
+                                <td><strong>${p.numero}</strong></td>
+                                <td>${p.cliente.nome}<br><small class="text-muted">${p.cliente.email}</small></td>
+                                <td>${new Date(p.createdAt).toLocaleDateString()}</div></td>
+                                <td><strong class="text-primary">R$ ${p.total.toFixed(2)}</strong></td>
+                                <td><span class="badge-active">${p.status}</span></td>
+                                <td><button class="btn-view" onclick="verPedido('${p._id}')"><i class="fas fa-eye"></i> Ver Detalhes</button></td>
+                            </tr>
+                        `;
+                    }
+                    html += `</tbody></table></div></div>`;
+                    document.getElementById('content').innerHTML = html;
+                } else {
+                    document.getElementById('content').innerHTML = '<div class="data-card"><p class="text-center">Nenhum pedido encontrado.</p></div>';
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar pedidos</div>'; }
+        }
+        
+        async function verPedido(id) {
+            try {
+                const res = await fetch(API + '/pedidos/' + id);
+                const data = await res.json();
+                if (data.success) {
+                    const p = data.pedido;
+                    let itensHtml = '';
+                    for (const item of p.items) {
+                        itensHtml += `
+                            <tr>
+                                <td>${item.name}</div></td>
+                                <td>${item.quantity} x</div></td>
+                                <td>R$ ${item.price.toFixed(2)}</div></td>
+                                <td><strong>R$ ${(item.price * item.quantity).toFixed(2)}</strong></td>
+                            </tr>
+                        `;
+                    }
+                    document.getElementById('pedidoDetalhes').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-user"></i> Dados do Cliente</h5>
+                                <p><strong>Nome:</strong> ${p.cliente.nome}<br>
+                                <strong>Email:</strong> ${p.cliente.email}<br>
+                                <strong>Telefone:</strong> ${p.cliente.telefone || 'Não informado'}<br>
+                                <strong>CPF:</strong> ${p.cliente.cpf || 'Não informado'}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h5>
+                                <p>${p.endereco.logradouro}, ${p.endereco.numero}<br>
+                                ${p.endereco.bairro}<br>
+                                ${p.endereco.cidade} - ${p.endereco.estado}<br>
+                                CEP: ${p.endereco.cep}</p>
+                            </div>
+                        </div>
+                        <hr>
+                        <h5><i class="fas fa-boxes"></i> Itens do Pedido</h5>
+                        <div class="table-responsive">
+                            <table class="table table-dark">
+                                <thead><tr><th>Produto</th><th>Quantidade</th><th>Preço Unit.</th><th>Subtotal</th></tr></thead>
+                                <tbody>${itensHtml}</tbody>
+                                <tfoot>
+                                    <tr><td colspan="3" class="text-end"><strong>Subtotal:</strong></td><td>R$ ${p.subtotal.toFixed(2)}</td></tr>
+                                    <tr><td colspan="3" class="text-end"><strong>Frete:</strong></td><td>${p.frete === 0 ? 'Grátis' : 'R$ ' + p.frete.toFixed(2)}</td></tr>
+                                    ${p.desconto > 0 ? `<tr><td colspan="3" class="text-end"><strong>Desconto:</strong></td><td class="text-success">- R$ ${p.desconto.toFixed(2)}</td></tr>` : ''}
+                                    <tr><td colspan="3" class="text-end"><strong>TOTAL:</strong></td><td><strong class="text-primary">R$ ${p.total.toFixed(2)}</strong></td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-md-6"><strong><i class="fas fa-credit-card"></i> Pagamento:</strong> ${p.pagamento === 'pix' ? 'PIX' : p.pagamento === 'card' ? 'Cartão de Crédito' : 'Boleto Bancário'}</div>
+                            <div class="col-md-6"><strong><i class="fas fa-toggle-on"></i> Status:</strong> <span class="badge-active">${p.status}</span></div>
+                        </div>
+                        <div class="mt-3"><strong><i class="fas fa-calendar"></i> Data do Pedido:</strong> ${new Date(p.createdAt).toLocaleString()}</div>
+                    `;
+                    new bootstrap.Modal(document.getElementById('pedidoModal')).show();
+                }
+            } catch(e) { showToast('Erro ao carregar detalhes', true); }
+        }
+        
+        // Clientes
+        async function loadClientes() {
+            document.getElementById('pageTitle').innerHTML = '<i class="fas fa-users"></i> Clientes';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/clientes');
+                const data = await res.json();
+                if (data.success && data.clientes && data.clientes.length > 0) {
+                    let html = `
+                        <div class="data-card">
+                            <h4><i class="fas fa-users"></i> Lista de Clientes</h4>
+                            <div class="table-responsive">
+                                <table class="table table-dark">
+                                    <thead>
+                                        <tr><th><i class="fas fa-user"></i> Nome</th><th><i class="fas fa-envelope"></i> Email</th><th><i class="fas fa-phone"></i> Telefone</th><th><i class="fas fa-calendar"></i> Cadastro</th><th><i class="fas fa-toggle-on"></i> Status</th></tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                    for (const c of data.clientes) {
+                        html += `
+                            <tr>
+                                <td>${c.nome || '-'}</td>
+                                <td>${c.email || '-'}</td>
+                                <td>${c.telefone || '-'}</td>
+                                <td>${new Date(c.createdAt).toLocaleDateString()}</div></td>
+                                <td><span class="${c.status === 'ativo' ? 'badge-active' : 'badge-inactive'}">${c.status}</span></td>
+                            </tr>
+                        `;
+                    }
+                    html += `</tbody></tr></div></div>`;
+                    document.getElementById('content').innerHTML = html;
+                } else {
+                    document.getElementById('content').innerHTML = '<div class="data-card"><p class="text-center">Nenhum cliente encontrado.</p></div>';
+                }
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>'; }
+        }
+        
+        loadDashboard();
+    </script>
+</body>
+</html>
