@@ -87,6 +87,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const API = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token) window.location.href = '/auth.html';
+        
         let cart = JSON.parse(localStorage.getItem('checkoutCart') || '[]');
         let selectedPayment = 'pix';
         let subtotal = 0;
@@ -161,20 +167,21 @@
             };
             
             try {
-                const res = await fetch('http://localhost:5000/api/pedidos', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pedido)
+                const res = await fetch(API + '/pedidos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(pedido)
                 });
                 const data = await res.json();
                 if (data.success) {
                     localStorage.removeItem('cart');
                     localStorage.removeItem('checkoutCart');
                     showToast(`Pedido ${pedido.numero} confirmado! Total: R$ ${total.toFixed(2)}`);
-                    setTimeout(() => window.location.href = '/', 3000);
+                    setTimeout(() => window.location.href = '/pedidos.html', 3000);
                 } else showToast('Erro ao processar pedido', true);
             } catch(e) { showToast('Erro ao conectar', true); }
         }
         
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (user.nome) {
             document.getElementById('nome').value = user.nome;
             document.getElementById('email').value = user.email;

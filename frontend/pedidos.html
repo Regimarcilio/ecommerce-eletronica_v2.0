@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus Pedidos | TechStore</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
+        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .order-card { background: #1a1a2e; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #4361ee33; transition: all 0.3s; }
+        .order-card:hover { transform: translateY(-3px); border-color: #4361ee; }
+        .status-pendente { background: #f59e0b20; color: #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .status-pago { background: #10b98120; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 10px 25px; border-radius: 30px; }
+        .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="logo" href="/"><i class="fas fa-microchip"></i> TechStore</a>
+            <a href="/minha-conta.html" class="btn btn-outline-light"><i class="fas fa-arrow-left"></i> Voltar</a>
+        </div>
+    </nav>
+
+    <div class="container py-5" style="margin-top: 60px;">
+        <h2 class="mb-4"><i class="fas fa-box text-primary"></i> Meus Pedidos</h2>
+        <div id="pedidosContainer"></div>
+    </div>
+
+    <footer class="footer">
+        <div class="container text-center"><p>&copy; 2024 TechStore - Todos os direitos reservados.</p></div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token) window.location.href = '/auth.html';
+        
+        async function loadPedidos() {
+            try {
+                const res = await fetch(API + '/pedidos');
+                const data = await res.json();
+                const container = document.getElementById('pedidosContainer');
+                
+                if (data.success && data.pedidos && data.pedidos.length > 0) {
+                    container.innerHTML = data.pedidos.map(p => {
+                        let statusClass = '';
+                        if (p.status === 'pendente') statusClass = 'status-pendente';
+                        else if (p.status === 'pago') statusClass = 'status-pago';
+                        else statusClass = 'status-pendente';
+                        
+                        return `
+                            <div class="order-card">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap">
+                                    <div>
+                                        <h5>Pedido: ${p.numero}</h5>
+                                        <p class="text-muted mb-1">Data: ${new Date(p.createdAt).toLocaleDateString()}</p>
+                                        <p class="mb-1"><strong>Total:</strong> R$ ${p.total.toFixed(2)}</p>
+                                        <p><strong>Itens:</strong> ${p.items.length} produtos</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="${statusClass}">${p.status.toUpperCase()}</span>
+                                        <button class="btn btn-primary-custom btn-sm ms-3" onclick="verDetalhes('${p._id}')">
+                                            <i class="fas fa-eye"></i> Ver Detalhes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<div class="text-center py-5"><i class="fas fa-box-open fa-3x text-muted mb-3"></i><h4>Nenhum pedido encontrado</h4><a href="/" class="btn btn-primary-custom mt-3">Começar a comprar</a></div>';
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        function verDetalhes(id) {
+            window.location.href = `/pedido-detalhes.html?id=${id}`;
+        }
+        
+        loadPedidos();
+    </script>
+</body>
+</html>
