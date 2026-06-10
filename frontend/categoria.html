@@ -4,42 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TechStore - Produtos da Categoria</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
         .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .category-header { background: linear-gradient(135deg, #1a1a2e, #0f0f1a); padding: 120px 0 60px; margin-top: 56px; border-bottom: 1px solid #4361ee33; }
-        .product-card { background: #1a1a2e; border: 1px solid #4361ee33; border-radius: 20px; overflow: hidden; transition: all 0.3s; height: 100%; cursor: pointer; }
-        .product-card:hover { transform: translateY(-5px); border-color: #4361ee; box-shadow: 0 10px 30px rgba(67,97,238,0.2); }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; transition: all 0.3s; }
-        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 20px #4361ee66; }
-        .btn-outline-custom { background: transparent; border: 2px solid #4361ee; color: #4361ee; padding: 10px 25px; border-radius: 30px; transition: all 0.3s; }
+        .category-header { background: linear-gradient(135deg, #1a1a2e, #0f0f1a); padding: 120px 0 60px; margin-top: 56px; border-bottom: 1px solid #4361ee33; text-align: center; }
+        .product-card { background: #1a1a2e; border: 1px solid #4361ee33; border-radius: 20px; overflow: hidden; transition: all 0.3s; height: 100%; }
+        .product-card:hover { transform: translateY(-5px); border-color: #4361ee; }
+        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; }
+        .btn-outline-custom { background: transparent; border: 2px solid #4361ee; color: #4361ee; padding: 8px 20px; border-radius: 30px; text-decoration: none; }
         .btn-outline-custom:hover { background: #4361ee; color: #fff; }
-        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
         .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
         .back-to-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: linear-gradient(135deg, #4361ee, #3a0ca3); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: all 0.3s; z-index: 1000; }
         .back-to-top.show { opacity: 1; }
-        .breadcrumb-custom { background: transparent; padding: 0; margin-bottom: 20px; }
-        .breadcrumb-custom a { color: #4361ee; text-decoration: none; }
-        .breadcrumb-custom a:hover { text-decoration: underline; }
-        .empty-products { text-align: center; padding: 80px 20px; }
-        .price { font-size: 1.5rem; font-weight: bold; color: #4361ee; }
-        .old-price { text-decoration: line-through; color: #6c757d; font-size: 0.9rem; margin-right: 10px; }
-        .search-box { max-width: 400px; margin: 0 auto 30px; }
         .category-icon { font-size: 4rem; color: #4361ee; margin-bottom: 1rem; }
-        @media (max-width: 768px) {
-            .category-header { padding: 100px 0 40px; }
-            .category-icon { font-size: 3rem; }
-        }
+        .breadcrumb-custom { background: transparent; padding: 15px 0; }
+        .breadcrumb-custom a { color: #4361ee; text-decoration: none; }
     </style>
 </head>
 <body>
-    <!-- ==================== HEADER / NAVBAR ==================== -->
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="logo" href="/"><i class="fas fa-microchip"></i> TechStore</a>
@@ -50,50 +36,38 @@
                 <div class="mx-auto">
                     <div class="input-group">
                         <input type="text" id="searchInput" class="form-control bg-dark text-white border-primary" placeholder="Buscar nesta categoria..." style="width: 300px;">
-                        <button class="btn btn-primary" onclick="searchProductsInCategory()"><i class="fas fa-search"></i></button>
+                        <button class="btn btn-primary" onclick="searchProducts()"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link text-white" href="/"><i class="fas fa-home"></i> Início</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/#produtos"><i class="fas fa-box"></i> Produtos</a></li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-tags"></i> Categorias
-                        </a>
-                        <ul class="dropdown-menu bg-dark" id="categoriesMenu"></ul>
-                    </li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/cart.html"><i class="fas fa-shopping-cart"></i> Carrinho</a></li>
-                    <li class="nav-item" id="authLink"></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="#" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Voltar</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- ==================== BANNER DA CATEGORIA ==================== -->
     <section class="category-header" id="categoryHeader">
-        <div class="container text-center">
+        <div class="container">
             <i class="fas fa-microchip category-icon" id="categoryIcon"></i>
             <h1 id="categoryName" class="display-4 fw-bold mb-3">Carregando...</h1>
-            <p class="lead text-muted mb-3" id="categoryDescription">Produtos disponíveis nesta categoria</p>
+            <p class="lead text-muted mb-3" id="categoryDesc">Produtos disponíveis nesta categoria</p>
             <div class="d-flex justify-content-center gap-3 flex-wrap">
                 <span class="badge bg-primary fs-6 px-3 py-2" id="productCount">0 produtos</span>
             </div>
         </div>
     </section>
 
-    <!-- ==================== LISTAGEM DE PRODUTOS ==================== -->
     <section class="py-5">
         <div class="container">
             <div class="breadcrumb-custom">
-                <nav aria-label="breadcrumb">
+                <nav>
                     <ol class="breadcrumb bg-transparent">
                         <li class="breadcrumb-item"><a href="/">Início</a></li>
-                        <li class="breadcrumb-item"><a href="/#categorias">Categorias</a></li>
                         <li class="breadcrumb-item active text-white" id="breadcrumbCategory">Carregando...</li>
                     </ol>
                 </nav>
             </div>
-
             <div class="row g-4" id="productsContainer">
                 <div class="col-12 text-center py-5">
                     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
@@ -103,7 +77,6 @@
         </div>
     </section>
 
-    <!-- ==================== FOOTER ==================== -->
     <footer class="footer">
         <div class="container">
             <div class="row">
@@ -150,7 +123,6 @@
         </div>
     </footer>
 
-    <!-- ==================== BACK TO TOP ==================== -->
     <div class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
         <i class="fas fa-arrow-up"></i>
     </div>
@@ -158,11 +130,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const API = 'http://localhost:5000/api';
-        let categoriaAtual = null;
         let allProducts = [];
-        let currentSearchTerm = '';
+        let currentCategoryId = null;
+        let currentCategory = null;
 
-        // ==================== UTILITÁRIOS ====================
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
             toast.className = 'toast-custom';
@@ -172,18 +143,6 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        function updateAuthUI() {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const authLink = document.getElementById('authLink');
-            if (user.nome) {
-                authLink.innerHTML = `<div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fas fa-user-circle"></i> ${user.nome.split(' ')[0]}</button><ul class="dropdown-menu dropdown-menu-end bg-dark"><li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>${user.role === 'admin' ? '<li><a class="dropdown-item text-white" href="/dashboard.html"><i class="fas fa-chart-line"></i> Admin</a></li>' : ''}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-white" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a></li></ul></div>`;
-            } else {
-                authLink.innerHTML = '<a href="/auth.html" class="btn btn-primary-custom">Entrar / Cadastrar</a>';
-            }
-        }
-
-        function logout() { localStorage.clear(); window.location.href = '/'; }
-
         function addToCart(id, name, price) {
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             cart.push({ id, name, price, quantity: 1 });
@@ -191,72 +150,15 @@
             showToast(`${name} adicionado ao carrinho!`);
         }
 
-        // ==================== CARREGAR CATEGORIAS PARA O DROPDOWN ====================
-        async function loadCategoriesMenu() {
-            try {
-                const res = await fetch(API + '/categorias?status=ativo');
-                const data = await res.json();
-                if (data.success && data.categorias) {
-                    document.getElementById('categoriesMenu').innerHTML = data.categorias.map(cat => 
-                        `<li><a class="dropdown-item text-white" href="categoria.html?id=${cat._id}"><i class="fas ${cat.icone || 'fa-microchip'}"></i> ${cat.nome}</a></li>`
-                    ).join('');
-                }
-            } catch(e) { console.error(e); }
-        }
-
-        // ==================== CARREGAR INFORMAÇÕES DA CATEGORIA ====================
-        async function loadCategoriaInfo(categoriaId) {
-            try {
-                const res = await fetch(`${API}/categorias/${categoriaId}`);
-                const data = await res.json();
-                if (data.success && data.categoria) {
-                    categoriaAtual = data.categoria;
-                    document.getElementById('categoryName').textContent = categoriaAtual.nome;
-                    document.getElementById('categoryIcon').className = `fas ${categoriaAtual.icone || 'fa-microchip'} category-icon`;
-                    document.getElementById('categoryDescription').textContent = categoriaAtual.descricao || `Confira os melhores produtos da categoria ${categoriaAtual.nome}`;
-                    document.getElementById('breadcrumbCategory').textContent = categoriaAtual.nome;
-                    document.title = `${categoriaAtual.nome} - TechStore`;
-                } else {
-                    document.getElementById('categoryName').textContent = 'Categoria não encontrada';
-                    showToast('Categoria não encontrada', true);
-                }
-            } catch(e) {
-                console.error('Erro ao carregar categoria:', e);
-                document.getElementById('categoryName').textContent = 'Erro ao carregar';
-                showToast('Erro ao carregar dados da categoria', true);
-            }
-        }
-
-        // ==================== CARREGAR PRODUTOS DA CATEGORIA ====================
-        async function loadProdutosDaCategoria(categoriaId) {
-            try {
-                const res = await fetch(`${API}/produtos?categoria=${categoriaId}&status=ativo`);
-                const data = await res.json();
-                if (data.success) {
-                    allProducts = data.produtos || [];
-                    document.getElementById('productCount').textContent = `${allProducts.length} ${allProducts.length === 1 ? 'produto' : 'produtos'}`;
-                    displayProducts(allProducts);
-                } else {
-                    displayProducts([]);
-                    showToast('Erro ao carregar produtos', true);
-                }
-            } catch(e) {
-                console.error('Erro ao carregar produtos:', e);
-                displayProducts([]);
-                showToast('Erro ao conectar com o servidor', true);
-            }
-        }
-
-        // ==================== EXIBIR PRODUTOS ====================
         function displayProducts(products) {
             const container = document.getElementById('productsContainer');
             if (!products || products.length === 0) {
                 container.innerHTML = `
-                    <div class="col-12 empty-products">
+                    <div class="col-12 text-center py-5">
                         <i class="fas fa-box-open fa-5x text-muted mb-4"></i>
                         <h3 class="text-muted">Nenhum produto encontrado</h3>
-                        <p class="text-muted mb-4">Não há produtos cadastrados nesta categoria ainda.</p>
-                        <a href="/#categorias" class="btn btn-outline-custom">Ver outras categorias</a>
+                        <p class="text-muted">Não há produtos cadastrados nesta categoria ainda.</p>
+                        <a href="/" class="btn btn-outline-custom mt-3">Voltar ao início</a>
                     </div>
                 `;
                 return;
@@ -264,18 +166,15 @@
 
             container.innerHTML = products.map(p => `
                 <div class="col-md-3 col-6">
-                    <div class="product-card h-100" onclick="verProduto('${p._id}')">
+                    <div class="product-card h-100">
                         <div class="product-image p-4 text-center">
                             <i class="fas fa-microchip fa-4x text-primary"></i>
                         </div>
                         <div class="product-info p-3">
-                            <h6 class="fw-bold mb-2">${p.nome}</h6>
-                            <p class="small text-muted mb-2">SKU: ${p.sku || '---'}</p>
-                            <div class="mb-3">
-                                <span class="price">R$ ${(p.preco || 0).toFixed(2)}</span>
-                                ${p.preco_antigo ? `<span class="old-price">R$ ${p.preco_antigo.toFixed(2)}</span>` : ''}
-                            </div>
-                            <button class="btn btn-primary-custom w-100" onclick="event.stopPropagation(); addToCart('${p._id}', '${p.nome.replace(/'/g, "\\'")}', ${p.preco || 0})">
+                            <h6 class="fw-bold">${p.nome}</h6>
+                            <p class="small text-muted">SKU: ${p.sku || '---'}</p>
+                            <p class="text-primary fw-bold fs-5">R$ ${(p.preco || 0).toFixed(2)}</p>
+                            <button class="btn btn-primary-custom w-100" onclick="addToCart('${p._id}', '${p.nome.replace(/'/g, "\\'")}', ${p.preco || 0})">
                                 <i class="fas fa-cart-plus"></i> Comprar
                             </button>
                         </div>
@@ -284,63 +183,93 @@
             `).join('');
         }
 
-        // ==================== BUSCAR PRODUTOS DENTRO DA CATEGORIA ====================
-        function searchProductsInCategory() {
+        function searchProducts() {
             const term = document.getElementById('searchInput').value.toLowerCase().trim();
-            currentSearchTerm = term;
-            
             if (!term) {
-                displayProducts(allProducts);
-                document.getElementById('productCount').textContent = `${allProducts.length} ${allProducts.length === 1 ? 'produto' : 'produtos'}`;
+                // Filtra pelos produtos da categoria atual
+                const filtered = allProducts.filter(p => p.categoria === currentCategoryId);
+                displayProducts(filtered);
+                document.getElementById('productCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'produto' : 'produtos'}`;
             } else {
+                // Filtra pela busca dentro da categoria atual
                 const filtered = allProducts.filter(p => 
-                    p.nome.toLowerCase().includes(term) || 
-                    (p.sku && p.sku.toLowerCase().includes(term)) ||
-                    (p.descricao && p.descricao.toLowerCase().includes(term))
+                    p.categoria === currentCategoryId && 
+                    (p.nome.toLowerCase().includes(term) || (p.sku && p.sku.toLowerCase().includes(term)))
                 );
                 displayProducts(filtered);
                 document.getElementById('productCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`;
             }
         }
 
-        // ==================== VER DETALHE DO PRODUTO ====================
-        function verProduto(id) {
-            window.location.href = `/produto.html?id=${id}`;
-        }
-
-        // ==================== SCROLL PARA BACK TO TOP ====================
         window.addEventListener('scroll', () => {
             const btn = document.querySelector('.back-to-top');
             if (window.scrollY > 300) btn.classList.add('show');
             else btn.classList.remove('show');
         });
 
-        // ==================== INICIALIZAÇÃO ====================
-        const urlParams = new URLSearchParams(window.location.search);
-        const categoriaId = urlParams.get('id');
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchProducts();
+        });
 
-        if (categoriaId) {
-            loadCategoriaInfo(categoriaId);
-            loadProdutosDaCategoria(categoriaId);
+        // PEGAR ID DA CATEGORIA NA URL
+        const urlParams = new URLSearchParams(window.location.search);
+        currentCategoryId = urlParams.get('id');
+
+        if (currentCategoryId) {
+            // Buscar informações da categoria
+            fetch(`${API}/categorias/${currentCategoryId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.categoria) {
+                        currentCategory = data.categoria;
+                        document.getElementById('categoryName').textContent = currentCategory.nome;
+                        document.getElementById('categoryIcon').className = `fas ${currentCategory.icone || 'fa-microchip'} category-icon`;
+                        document.getElementById('categoryDesc').textContent = currentCategory.descricao || `Confira os melhores produtos da categoria ${currentCategory.nome}`;
+                        document.getElementById('breadcrumbCategory').textContent = currentCategory.nome;
+                        document.title = `${currentCategory.nome} - TechStore`;
+                    } else {
+                        document.getElementById('categoryName').textContent = 'Categoria não encontrada';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('categoryName').textContent = 'Erro ao carregar categoria';
+                });
+
+            // Buscar TODOS os produtos e filtrar pela categoria no frontend
+            fetch(`${API}/produtos?status=ativo`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // FILTRA OS PRODUTOS PELA CATEGORIA ATUAL
+                        allProducts = (data.produtos || []).filter(p => p.categoria === currentCategoryId);
+                        document.getElementById('productCount').textContent = `${allProducts.length} ${allProducts.length === 1 ? 'produto' : 'produtos'}`;
+                        displayProducts(allProducts);
+                        
+                        if (allProducts.length === 0) {
+                            showToast(`Nenhum produto encontrado para esta categoria`, false);
+                        }
+                    } else {
+                        displayProducts([]);
+                        showToast('Erro ao carregar produtos', true);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    displayProducts([]);
+                    showToast('Erro ao conectar com o servidor', true);
+                });
         } else {
             document.getElementById('categoryName').textContent = 'Categoria não especificada';
             document.getElementById('productsContainer').innerHTML = `
-                <div class="col-12 empty-products">
+                <div class="col-12 text-center py-5">
                     <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
                     <h3>Nenhuma categoria selecionada</h3>
-                    <p class="text-muted mb-4">Por favor, selecione uma categoria para visualizar os produtos.</p>
-                    <a href="/#categorias" class="btn btn-primary-custom">Ver categorias</a>
+                    <p class="text-muted">Por favor, selecione uma categoria para visualizar os produtos.</p>
+                    <a href="/" class="btn btn-primary-custom mt-3">Voltar ao início</a>
                 </div>
             `;
         }
-
-        loadCategoriesMenu();
-        updateAuthUI();
-
-        // Enter key no campo de busca
-        document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchProductsInCategory();
-        });
     </script>
 </body>
 </html>
