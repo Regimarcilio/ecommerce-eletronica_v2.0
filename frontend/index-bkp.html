@@ -45,7 +45,7 @@
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link text-white" href="#"><i class="fas fa-home"></i> Início</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#" onclick="scrollToProdutos()"><i class="fas fa-box"></i> Produtos</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="#" onclick="filterByCategoria('')"><i class="fas fa-box"></i> Produtos</a></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-tags"></i> Categorias
@@ -134,6 +134,7 @@
     <script>
         const API = 'http://localhost:5000/api';
         let allProducts = [];
+        let currentFilter = '';
         
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
@@ -162,10 +163,6 @@
             else btn.classList.remove('show');
         });
         
-        function scrollToProdutos() {
-            document.getElementById('produtos').scrollIntoView({behavior:'smooth'});
-        }
-        
         async function loadCategories() {
             try {
                 const res = await fetch(API + '/categorias?status=ativo');
@@ -173,14 +170,14 @@
                 if (data.success && data.categorias) {
                     document.getElementById('categoriesContainer').innerHTML = data.categorias.map(cat => `
                         <div class="col-md-3 col-6">
-                            <div class="category-card" onclick="window.location.href='categoria.html?id=${cat._id}'">
+                            <div class="category-card" onclick="filterByCategoria('${cat._id}')">
                                 <i class="fas ${cat.icone || 'fa-microchip'} fa-3x text-primary mb-3"></i>
                                 <h5>${cat.nome}</h5>
                                 <small class="text-muted">Ver produtos →</small>
                             </div>
                         </div>
                     `).join('');
-                    document.getElementById('categoriesMenu').innerHTML = data.categorias.map(cat => `<li><a class="dropdown-item text-white" href="#" onclick="window.location.href='categoria.html?id=${cat._id}'"><i class="fas ${cat.icone || 'fa-microchip'}"></i> ${cat.nome}</a></li>`).join('');
+                    document.getElementById('categoriesMenu').innerHTML = data.categorias.map(cat => `<li><a class="dropdown-item text-white" href="#" onclick="filterByCategoria('${cat._id}')"><i class="fas ${cat.icone || 'fa-microchip'}"></i> ${cat.nome}</a></li>`).join('');
                 }
             } catch(e) { console.error(e); }
         }
@@ -217,12 +214,22 @@
             `).join('');
         }
         
+        function filterByCategoria(categoriaId) {
+            if (!categoriaId) {
+                displayProducts(allProducts);
+            } else {
+                const filtered = allProducts.filter(p => p.categoria === categoriaId);
+                displayProducts(filtered);
+            }
+            document.getElementById('produtos').scrollIntoView({behavior:'smooth'});
+        }
+        
         function searchProducts() {
             const term = document.getElementById('searchInput').value.toLowerCase();
             if (!term) {
                 displayProducts(allProducts);
             } else {
-                const filtered = allProducts.filter(p => p.nome.toLowerCase().includes(term) || (p.sku && p.sku.toLowerCase().includes(term)));
+                const filtered = allProducts.filter(p => p.nome.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term));
                 displayProducts(filtered);
             }
         }
