@@ -1,49 +1,48 @@
-cd /media/project/Novo\ volume/ecommerce-eletronica_v2.0
+# TechStore — inicializacao local (execute na RAIZ do repositorio)
+# Pre-requisitos: Docker + plugin compose (ou Node 20 + Mongo local p/ modo manual)
 
-# 1. Matar processos antigos
-pkill node
-pkill python3
-sudo fuser -k 5000/tcp 2>/dev/null
-sudo fuser -k 5500/tcp 2>/dev/null
+# 0. Configurar segredos (primeira vez; arquivos nao versionados)
+cp -n .env.example .env
+cp -n backend/.env.example backend/.env
+# Edite .env (MONGO_PASSWORD) e backend/.env (MONGODB_URI com a MESMA senha,
+# JWT_SECRET, ADMIN_PASSWORD) antes de subir.
 
-# 2. Iniciar MongoDB (se não estiver rodando)
-docker start ecommerce_mongodb 2>/dev/null || \
-docker run -d \
-  --name ecommerce_mongodb \
-  -p 27017:27017 \
-  -e MONGO_INITDB_ROOT_USERNAME=admin \
-  -e MONGO_INITDB_ROOT_PASSWORD="$MONGO_PASSWORD" \
-  -e MONGO_INITDB_DATABASE=ecommerce \
-  mongo:7
-# Defina MONGO_PASSWORD com o valor do backend/.env antes de executar.
+# 1. Subir stack (mongo:7 + backend + frontend com healthchecks)
+docker compose up -d --build
+docker compose ps
 
-# 3. Instalar dependências do backend
-cd backend
-npm install
+# 2. Acompanhar saude (aguarde backend "healthy")
+curl http://localhost:5010/health
+docker logs ecommerce_backend --tail 5
 
-# 4. Iniciar backend
-node server.js &
+# 3. Testes (unitarios + E2E contra a stack)
+cd backend && npm test
+E2E_BASE_URL=http://localhost:5010 \
+E2E_ADMIN_EMAIL=admin@techstore.com.br \
+E2E_ADMIN_PASSWORD="<ADMIN_PASSWORD do backend/.env>" \
+npm run test:e2e
 
-# 5. Aguardar backend
-sleep 3
+# 4. Derrubar (mantem dados do volume mongo_data; use -v p/ resetar)
+docker compose down
 
-# 6. Iniciar frontend
-cd ../frontend
-python3 -m http.server 5500 &
+# ---- MODO MANUAL (sem Docker) ----
+# cd backend && npm install && node server.js &
+# cd ../frontend && python3 -m http.server 5500 &
 
 echo ""
 echo "========================================="
-echo "✅ SISTEMA INICIADO!"
+echo "SISTEMA INICIADO (via compose)"
 echo "========================================="
 echo ""
-echo "📍 ACESSOS:"
-echo "   🏠 Loja: http://localhost:5500"
-echo "   🛒 Carrinho: http://localhost:5500/cart.html"
-echo "   📦 Checkout: http://localhost:5500/checkout.html"
-echo "   📊 Dashboard Admin: http://localhost:5500/dashboard.html"
-echo "   🔐 Login: http://localhost:5500/auth.html"
+echo "ACESSOS:"
+echo "   Loja: http://localhost:8083"
+echo "   Login: http://localhost:8083/auth.html"
+echo "   Carrinho: http://localhost:8083/cart.html"
+echo "   Checkout: http://localhost:8083/checkout.html"
+echo "   Dashboard Admin: http://localhost:8083/dashboard.html"
+echo "   API: http://localhost:5010/health"
 echo ""
-echo "🔑 CREDENCIAIS (definidas no backend/.env):"
+echo "CREDENCIAIS (definidas no backend/.env):"
 echo "   Email: admin@techstore.com.br"
 echo "   Senha: <valor de ADMIN_PASSWORD no backend/.env>"
 echo ""
