@@ -140,13 +140,22 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
-        if (!token || user.role !== 'admin') window.location.href = '/auth.html';
-        document.getElementById('userName').innerHTML = '<i class="fas fa-user-circle"></i> ' + user.nome;
+        if (!token) window.location.href = '/auth.html';
+        // Guard real: valida no servidor (localStorage é burlável)
+        fetch(API + '/auth/me', { headers: window.getAuthHeaders() }).then(async (r) => {
+            if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
+            const d = await r.json();
+            if (!d.success || d.user?.role !== 'admin') { window.location.href = '/auth.html'; return; }
+            localStorage.setItem('user', JSON.stringify({ id: d.user._id, nome: d.user.nome, email: d.user.email, role: d.user.role }));
+            document.getElementById('userName').textContent = d.user.nome || 'Admin';
+        }).catch(() => window.location.href = '/auth.html');
+        document.getElementById('userName').textContent = (user && user.nome) || 'Admin';
         
         let produtoModal, categoriaModal, pedidoModal, statusModal, novaCategoriaRapidaModal;
         let pedidoAtualId = null;
@@ -158,12 +167,13 @@
             const toast = document.createElement('div');
             toast.className = 'toast-custom';
             toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = '<i class="fas ' + (isError ? 'fa-exclamation-triangle' : 'fa-check-circle') + '"></i> ' + msg;
+            toast.innerHTML = '<i class="fas ' + (isError ? 'fa-exclamation-triangle' : 'fa-check-circle') + '"></i> ';
+            toast.appendChild(document.createTextNode(String(msg ?? '')));
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
         
-        function logout() { localStorage.clear(); window.location.href = '/auth.html'; }
+        function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; }
         
         function getStatusClass(status) {
             const classes = { 'pendente': 'badge-warning', 'pago': 'badge-info', 'enviado': 'badge-info', 'entregue': 'badge-success', 'cancelado': 'badge-warning' };

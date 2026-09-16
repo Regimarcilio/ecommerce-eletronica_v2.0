@@ -137,7 +137,8 @@
             const toast = document.createElement('div');
             toast.className = 'toast-custom';
             toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> `;
+            toast.appendChild(document.createTextNode(String(msg ?? '')));
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
@@ -146,13 +147,13 @@
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const authLink = document.getElementById('authLink');
             if (user.nome) {
-                authLink.innerHTML = `<div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fas fa-user-circle"></i> ${user.nome.split(' ')[0]}</button><ul class="dropdown-menu dropdown-menu-end bg-dark"><li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>${user.role === 'admin' ? '<li><a class="dropdown-item text-white" href="/dashboard.html"><i class="fas fa-chart-line"></i> Admin</a></li>' : ''}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-white" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a></li></ul></div>`;
+                authLink.innerHTML = `<div class="dropdown"><button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}</button><ul class="dropdown-menu dropdown-menu-end bg-dark"><li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>${user.role === 'admin' ? '<li><a class="dropdown-item text-white" href="/dashboard.html"><i class="fas fa-chart-line"></i> Admin</a></li>' : ''}<li><hr class="dropdown-divider"></li><li><a class="dropdown-item text-white" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a></li></ul></div>`;
             } else {
                 authLink.innerHTML = '<a href="/auth.html" class="btn btn-primary-custom">Entrar / Cadastrar</a>';
             }
         }
         
-        function logout() { localStorage.clear(); window.location.href = '/'; }
+        function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/'; }
         
         window.addEventListener('scroll', () => {
             const btn = document.querySelector('.back-to-top');

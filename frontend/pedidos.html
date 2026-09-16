@@ -55,8 +55,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         let pedidoModal;
@@ -65,30 +66,34 @@
         
         async function loadPedidos() {
             try {
-                const res = await fetch(API + '/pedidos', { headers: getHeaders() });
-                const data = await res.json();
-                const container = document.getElementById('pedidosContainer');
+                const res = await fetch(API + '/pedidos', { headers: window.getAuthHeaders() });
                 if (res.status === 401) {
-                    localStorage.clear();
+                    localStorage.removeItem('token'); localStorage.removeItem('user');
                     window.location.href = '/auth.html';
                     return;
                 }
+                const data = await res.json();
+                const container = document.getElementById('pedidosContainer');
                 
                 if (data.success && data.pedidos && data.pedidos.length > 0) {
                     container.innerHTML = data.pedidos.map(p => {
                         const statusClass = getStatusClass(p.status);
-                        
+                        const numero = window.escapeHtml(p.numero);
+                        const total = (Number(p.total) || 0).toFixed(2);
+                        const qtd = Array.isArray(p.items) ? p.items.length : 0;
+                        const status = window.escapeHtml((p.status || '').toUpperCase());
+                        const dataFmt = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '-';
                         return `
                             <div class="order-card">
                                 <div class="d-flex justify-content-between align-items-start flex-wrap">
                                     <div>
-                                        <h5>Pedido: ${p.numero}</h5>
-                                        <p class="text-muted mb-1">Data: ${new Date(p.createdAt).toLocaleDateString()}</p>
-                                        <p class="mb-1"><strong>Total:</strong> R$ ${p.total.toFixed(2)}</p>
-                                        <p><strong>Itens:</strong> ${p.items.length} produtos</p>
+                                        <h5>Pedido: ${numero}</h5>
+                                        <p class="text-muted mb-1">Data: ${dataFmt}</p>
+                                        <p class="mb-1"><strong>Total:</strong> R$ ${total}</p>
+                                        <p><strong>Itens:</strong> ${qtd} produtos</p>
                                     </div>
                                     <div class="text-end">
-                                        <span class="${statusClass}">${p.status.toUpperCase()}</span>
+                                        <span class="${statusClass}">${status}</span>
                                         <button class="btn btn-primary-custom btn-sm ms-3" onclick="verDetalhes('${p._id}')">
                                             <i class="fas fa-eye"></i> Ver Detalhes
                                         </button>
@@ -127,13 +132,13 @@
         
         async function verDetalhes(id) {
             try {
-                const res = await fetch(API + '/pedidos/' + id, { headers: getHeaders() });
+                const res = await fetch(API + '/pedidos/' + id, { headers: window.getAuthHeaders() });
                 const data = await res.json();
                 if (!data.success || !data.pedido) return;
                 const p = data.pedido;
                 const itensHtml = (p.items || []).map(item => `
                     <tr>
-                        <td>${item.name}</td>
+                        <td>${window.escapeHtml(item.nome ?? item.name ?? '-')}</td>
                         <td>${item.quantity}</td>
                         <td>R$ ${(item.price || 0).toFixed(2)}</td>
                         <td>R$ ${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
@@ -141,10 +146,10 @@
                 `).join('');
 
                 document.getElementById('pedidoDetalhesBody').innerHTML = `
-                    <p><strong>Número:</strong> ${p.numero}</p>
-                    <p><strong>Status:</strong> <span class="${getStatusClass(p.status)}">${(p.status || '').toUpperCase()}</span></p>
-                    <p><strong>Pagamento:</strong> ${getPaymentLabel(p.pagamento)}</p>
-                    <p><strong>Entrega:</strong> ${p.endereco.logradouro}, ${p.endereco.numero} - ${p.endereco.bairro}, ${p.endereco.cidade}/${p.endereco.estado}</p>
+                    <p><strong>Número:</strong> ${window.escapeHtml(p.numero)}</p>
+                    <p><strong>Status:</strong> <span class="${getStatusClass(p.status)}">${window.escapeHtml((p.status || '').toUpperCase())}</span></p>
+                    <p><strong>Pagamento:</strong> ${window.escapeHtml(getPaymentLabel(p.pagamento))}</p>
+                    <p><strong>Entrega:</strong> ${window.escapeHtml(p.endereco?.logradouro || '-')}, ${window.escapeHtml(p.endereco?.numero || '-')} - ${window.escapeHtml(p.endereco?.bairro || '-')}, ${window.escapeHtml(p.endereco?.cidade || '-')}/${window.escapeHtml(p.endereco?.estado || '-')}</p>
                     <div class="table-responsive">
                         <table class="table table-dark table-sm">
                             <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>

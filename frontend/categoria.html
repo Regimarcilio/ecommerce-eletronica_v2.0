@@ -128,8 +128,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         let allProducts = [];
         let currentCategoryId = null;
         let currentCategory = null;
@@ -138,15 +139,14 @@
             const toast = document.createElement('div');
             toast.className = 'toast-custom';
             toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> `;
+            toast.appendChild(document.createTextNode(String(msg ?? '')));
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
 
         function addToCart(id, name, price) {
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            cart.push({ id, name, price, quantity: 1 });
-            localStorage.setItem('cart', JSON.stringify(cart));
+            window.cartAdd(id, name, price);
             showToast(`${name} adicionado ao carrinho!`);
         }
 
@@ -171,8 +171,8 @@
                             <i class="fas fa-microchip fa-4x text-primary"></i>
                         </div>
                         <div class="product-info p-3">
-                            <h6 class="fw-bold">${p.nome}</h6>
-                            <p class="small text-muted">SKU: ${p.sku || '---'}</p>
+                            <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
+                            <p class="small text-muted">SKU: ${window.escapeHtml(p.sku || '---')}</p>
                             <p class="text-primary fw-bold fs-5">R$ ${(p.preco || 0).toFixed(2)}</p>
                             <button class="btn btn-primary-custom w-100" onclick="addToCart('${p._id}', '${p.nome.replace(/'/g, "\\'")}', ${p.preco || 0})">
                                 <i class="fas fa-cart-plus"></i> Comprar
@@ -215,7 +215,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         currentCategoryId = urlParams.get('id');
 
-        if (currentCategoryId) {
+        if (currentCategoryId && /^[a-f0-9]{24}$/i.test(currentCategoryId)) {
             // Buscar informações da categoria
             fetch(`${API}/categorias/${currentCategoryId}`)
                 .then(res => res.json())
@@ -237,12 +237,12 @@
                 });
 
             // Buscar TODOS os produtos e filtrar pela categoria no frontend
-            fetch(`${API}/produtos?status=ativo`)
+            fetch(`${API}/produtos?status=ativo&categoria=${currentCategoryId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
                         // FILTRA OS PRODUTOS PELA CATEGORIA ATUAL
-                        allProducts = (data.produtos || []).filter(p => p.categoria === currentCategoryId);
+                        allProducts = (data.produtos || []);
                         document.getElementById('productCount').textContent = `${allProducts.length} ${allProducts.length === 1 ? 'produto' : 'produtos'}`;
                         displayProducts(allProducts);
                         
@@ -260,7 +260,7 @@
                     showToast('Erro ao conectar com o servidor', true);
                 });
         } else {
-            document.getElementById('categoryName').textContent = 'Categoria não especificada';
+            document.getElementById('categoryName').textContent = currentCategoryId ? 'Categoria inválida' : 'Categoria não especificada';
             document.getElementById('productsContainer').innerHTML = `
                 <div class="col-12 text-center py-5">
                     <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>

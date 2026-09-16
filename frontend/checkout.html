@@ -86,8 +86,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
@@ -126,7 +127,10 @@
             const container = document.getElementById('orderItems');
             container.innerHTML = '';
             cart.forEach(item => {
-                container.innerHTML += `<div class="d-flex justify-content-between mb-2"><span>${item.name} x${item.quantity}</span><span>R$ ${(item.price * item.quantity).toFixed(2)}</span></div>`;
+                const name = window.escapeHtml(item.name);
+                const qty = Number(item.quantity) || 0;
+                const line = (Number(item.price) || 0) * qty;
+                container.innerHTML += `<div class="d-flex justify-content-between mb-2"><span>${name} x${qty}</span><span>R$ ${line.toFixed(2)}</span></div>`;
             });
             calcularTotal();
         }
@@ -135,50 +139,55 @@
             const toast = document.createElement('div');
             toast.className = 'toast-custom';
             toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${msg}`;
+            const icon = isError ? 'fa-exclamation-triangle' : 'fa-check-circle';
+            toast.innerHTML = `<i class="fas ${icon}"></i> `;
+            toast.appendChild(document.createTextNode(String(msg ?? '')));
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
         }
         
         async function confirmarPedido() {
-            const nome = document.getElementById('nome').value;
-            const email = document.getElementById('email').value;
-            const endereco = document.getElementById('endereco').value;
-            const numero = document.getElementById('numero').value;
+            const nome = document.getElementById('nome').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const telefone = document.getElementById('telefone').value.trim();
+            const endereco = document.getElementById('endereco').value.trim();
+            const numero = document.getElementById('numero').value.trim();
+            const bairro = document.getElementById('bairro').value.trim();
+            const cidade = document.getElementById('cidade').value.trim();
+            const estado = document.getElementById('estado').value;
+            const cep = document.getElementById('cep').value.trim();
             
-            if (!nome || !email || !endereco || !numero) {
+            if (!nome || !email || !telefone || !endereco || !numero || !bairro || !cidade || !estado || !cep) {
                 showToast('Preencha todos os campos obrigatórios!', true);
                 return;
             }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
+            if (!['pix', 'card', 'boleto'].includes(selectedPayment)) { showToast('Pagamento inválido', true); return; }
             
-            const frete = subtotal > 100 ? 0 : 20;
-            const desconto = selectedPayment === 'pix' ? subtotal * 0.05 : 0;
-            const total = subtotal + frete - desconto;
-            
+            // Backend recalcula subtotal/frete/desconto/total — envia apenas o essencial
             const pedido = {
-                numero: 'PED-' + Date.now(),
-                cliente: { nome, email, telefone: document.getElementById('telefone').value, cpf: document.getElementById('cpf').value },
+                cliente: { nome, email, telefone, cpf: document.getElementById('cpf').value.trim() },
                 endereco: {
-                    logradouro: endereco, numero: numero, complemento: document.getElementById('complemento').value,
-                    bairro: document.getElementById('bairro').value, cidade: document.getElementById('cidade').value,
-                    estado: document.getElementById('estado').value, cep: document.getElementById('cep').value
+                    logradouro: endereco, numero, complemento: document.getElementById('complemento').value.trim(),
+                    bairro, cidade, estado, cep
                 },
-                pagamento: selectedPayment, items: cart, subtotal, frete, desconto, total, status: 'pendente'
+                pagamento: selectedPayment,
+                items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 }))
             };
             
             try {
                 const res = await fetch(API + '/pedidos', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    headers: window.getAuthHeaders(),
                     body: JSON.stringify(pedido)
                 });
                 const data = await res.json();
-                if (data.success) {
+                if (res.ok && data.success) {
                     localStorage.removeItem('cart');
                     localStorage.removeItem('checkoutCart');
-                    showToast(`Pedido ${pedido.numero} confirmado! Total: R$ ${total.toFixed(2)}`);
-                    setTimeout(() => window.location.href = '/pedidos.html', 3000);
-                } else showToast('Erro ao processar pedido', true);
+                    showToast(`Pedido ${data.pedido.numero} confirmado! Total: R$ ${Number(data.pedido.total).toFixed(2)}`);
+                    setTimeout(() => window.location.href = '/pedidos.html', 2000);
+                } else showToast(data.message || 'Erro ao processar pedido', true);
             } catch(e) { showToast('Erro ao conectar', true); }
         }
         

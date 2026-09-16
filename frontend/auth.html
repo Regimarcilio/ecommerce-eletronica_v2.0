@@ -32,12 +32,18 @@
             </div>
         </div>
     </div>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         
         function showAlert(id, msg, isError) {
-            document.getElementById(id).innerHTML = `<div style="background:${isError ? '#ef444420' : '#10b98120'};padding:10px;border-radius:8px;margin-bottom:15px">${msg}</div>`;
-            setTimeout(() => document.getElementById(id).innerHTML = '', 5000);
+            const el = document.getElementById(id);
+            el.innerHTML = '';
+            const box = document.createElement('div');
+            box.style.cssText = `background:${isError ? '#ef444420' : '#10b98120'};padding:10px;border-radius:8px;margin-bottom:15px`;
+            box.textContent = String(msg ?? '');
+            el.appendChild(box);
+            setTimeout(() => el.innerHTML = '', 5000);
         }
         
         function switchTab(tab) {
