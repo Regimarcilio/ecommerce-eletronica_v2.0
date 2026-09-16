@@ -5,44 +5,67 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:***REMOVED***@localhost:27017/ecommerce?authSource=admin';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@techstore.com.br';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '***REMOVED***';
+const CORS_ORIGIN = process.env.CORS_ORIGIN || true;
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(helmet());
+app.use(cors(CORS_ORIGIN === true ? undefined : { origin: CORS_ORIGIN }));
+app.use(express.json({ limit: '100kb' }));
 
-// Schemas
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
+
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const err = (res, status, message, code) => res.status(status).json({ success: false, message, code });
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Schemas com validacao basica server-side
 const UsuarioSchema = new mongoose.Schema({
-    nome: String, email: { type: String, unique: true }, password: String, telefone: String,
-    role: { type: String, default: 'user' }, status: { type: String, default: 'ativo' }
+    nome: { type: String, required: true, trim: true, maxlength: 120 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true, select: false },
+    telefone: { type: String, trim: true, default: '' },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' }
 }, { timestamps: true });
 
 const ProdutoSchema = new mongoose.Schema({
-    nome: String, sku: { type: String, unique: true }, preco: Number, quantidade: Number,
-    status: { type: String, default: 'ativo' }, destaque: { type: Boolean, default: false },
+    nome: { type: String, required: true, trim: true },
+    sku: { type: String, required: true, unique: true, trim: true },
+    preco: { type: Number, required: true, min: 0 },
+    quantidade: { type: Number, required: true, min: 0, default: 0 },
+    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
+    destaque: { type: Boolean, default: false },
     categoria: { type: mongoose.Schema.Types.ObjectId, ref: 'Categoria' }
 }, { timestamps: true });
 
 const CategoriaSchema = new mongoose.Schema({
-    nome: { type: String, unique: true }, slug: String, icone: String, status: { type: String, default: 'ativo' }
+    nome: { type: String, required: true, unique: true, trim: true },
+    slug: { type: String, trim: true },
+    icone: { type: String, trim: true, default: 'fa-microchip' },
+    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' }
 }, { timestamps: true });
 
 const PedidoSchema = new mongoose.Schema({
-    numero: String,
+    numero: { type: String, required: true, unique: true },
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
-    cliente: Object,
-    endereco: Object,
-    pagamento: String,
-    items: Array,
-    subtotal: Number,
-    frete: Number,
-    desconto: Number,
-    total: Number,
-    status: { type: String, default: 'pendente' }
+    cliente: { type: Object, required: true },
+    endereco: { type: Object, required: true },
+    pagamento: { type: String, enum: ['pix', 'card', 'boleto'], required: true },
+    items: { type: Array, required: true },
+    subtotal: { type: Number, required: true, min: 0 },
+    frete: { type: Number, required: true, min: 0 },
+    desconto: { type: Number, required: true, min: 0, default: 0 },
+    total: { type: Number, required: true, min: 0 },
+    status: { type: String, enum: ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'], default: 'pendente' }
 }, { timestamps: true });
 
 const Usuario = mongoose.model('Usuario', UsuarioSchema);
@@ -50,17 +73,19 @@ const Produto = mongoose.model('Produto', ProdutoSchema);
 const Categoria = mongoose.model('Categoria', CategoriaSchema);
 const Pedido = mongoose.model('Pedido', PedidoSchema);
 
-// Middleware de autenticação
+// Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
-        if (!token) return res.status(401).json({ success: false, message: 'Token não fornecido' });
+        if (!token) return err(res, 401, 'Token não fornecido', 'NO_TOKEN');
         const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await Usuario.findById(decoded.id).select('role status');
+        if (!user || user.status !== 'ativo') return err(res, 401, 'Token inválido', 'INVALID_TOKEN');
         req.usuarioId = decoded.id;
-        req.usuarioRole = decoded.role;
+        req.usuarioRole = user.role;
         next();
     } catch (error) {
-        res.status(401).json({ success: false, message: 'Token inválido' });
+        return err(res, 401, 'Token inválido', 'INVALID_TOKEN');
     }
 };
 
@@ -72,174 +97,219 @@ const admin = (req, res, next) => {
 };
 
 // ========== ROTAS DE AUTH ==========
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
     try {
         const { nome, email, telefone, password } = req.body;
-        const exists = await Usuario.findOne({ email });
-        if (exists) return res.status(400).json({ success: false, message: 'Email já cadastrado' });
+        if (!nome?.trim() || !email?.trim() || !password) return err(res, 400, 'Nome, e-mail e senha são obrigatórios', 'VALIDATION');
+        if (password.length < 8) return err(res, 400, 'Senha deve ter ao menos 8 caracteres', 'WEAK_PASSWORD');
+        const emailNorm = String(email).toLowerCase().trim();
+        const exists = await Usuario.findOne({ email: emailNorm });
+        if (exists) return err(res, 400, 'Email já cadastrado', 'EMAIL_EXISTS');
         const hash = await bcrypt.hash(password, 10);
-        const user = await Usuario.create({ nome, email, telefone, password: hash });
-        const token = jwt.sign({ id: user._id, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ success: true, token, user: { id: user._id, nome, email, role: 'user' } });
+        const user = await Usuario.create({ nome: String(nome).trim(), email: emailNorm, telefone: String(telefone || '').trim(), password: hash, role: 'user' });
+        const token = jwt.sign({ id: user._id, email: emailNorm, role: 'user' }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({ success: true, token, user: { id: user._id, nome: user.nome, email: emailNorm, role: 'user' } });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        if (error.code === 11000) return err(res, 400, 'Email já cadastrado', 'EMAIL_EXISTS');
+        console.error('register:', error.message);
+        return err(res, 500, 'Erro interno', 'INTERNAL');
     }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await Usuario.findOne({ email });
-        if (!user) return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+        if (!email || !password) return err(res, 400, 'E-mail e senha são obrigatórios', 'VALIDATION');
+        const user = await Usuario.findOne({ email: String(email).toLowerCase().trim() }).select('+password nome email role status');
+        if (!user || user.status !== 'ativo') return err(res, 401, 'Credenciais inválidas', 'AUTH');
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
-        const token = jwt.sign({ id: user._id, email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ success: true, token, user: { id: user._id, nome: user.nome, email, role: user.role } });
+        if (!valid) return err(res, 401, 'Credenciais inválidas', 'AUTH');
+        const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({ success: true, token, user: { id: user._id, nome: user.nome, email: user.email, role: user.role } });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('login:', error.message);
+        return err(res, 500, 'Erro interno', 'INTERNAL');
     }
 });
 
-app.get('/api/auth/me', auth, async (req, res) => {
+app.get('/api/auth/me', auth, asyncHandler(async (req, res) => {
     const user = await Usuario.findById(req.usuarioId).select('-password');
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
     res.json({ success: true, user });
-});
+}));
 
 // ========== ROTAS DE PRODUTOS ==========
-app.get('/api/produtos', async (req, res) => {
+app.get('/api/produtos', asyncHandler(async (req, res) => {
     const query = {};
     if (req.query.status) query.status = req.query.status;
-    if (req.query.categoria) query.categoria = req.query.categoria;
+    if (req.query.categoria) {
+        if (!isValidId(req.query.categoria)) return err(res, 400, 'Categoria inválida', 'VALIDATION');
+        query.categoria = req.query.categoria;
+    }
     const produtos = await Produto.find(query).sort({ createdAt: -1 });
     res.json({ success: true, produtos });
-});
+}));
 
-app.get('/api/produtos/:id', async (req, res) => {
+app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
     const produto = await Produto.findById(req.params.id);
+    if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
     res.json({ success: true, produto });
-});
+}));
 
-app.post('/api/produtos', auth, admin, async (req, res) => {
-    const produto = await Produto.create(req.body);
+const pickProduto = (b) => ({ nome: b.nome, sku: b.sku, preco: b.preco, quantidade: b.quantidade, status: b.status, destaque: b.destaque, categoria: b.categoria || undefined });
+
+app.post('/api/produtos', auth, admin, asyncHandler(async (req, res) => {
+    const produto = await Produto.create(pickProduto(req.body));
     res.json({ success: true, produto });
-});
+}));
 
-app.put('/api/produtos/:id', auth, admin, async (req, res) => {
-    const produto = await Produto.findByIdAndUpdate(req.params.id, req.body, { new: true });
+app.put('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const produto = await Produto.findByIdAndUpdate(req.params.id, pickProduto(req.body), { new: true, runValidators: true });
+    if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
     res.json({ success: true, produto });
-});
+}));
 
-app.delete('/api/produtos/:id', auth, admin, async (req, res) => {
-    await Produto.findByIdAndDelete(req.params.id);
+app.delete('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const produto = await Produto.findByIdAndDelete(req.params.id);
+    if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
     res.json({ success: true });
-});
+}));
 
 // ========== ROTAS DE CATEGORIAS ==========
-app.get('/api/categorias', async (req, res) => {
+app.get('/api/categorias', asyncHandler(async (req, res) => {
     const query = {};
     if (req.query.status) query.status = req.query.status;
     const categorias = await Categoria.find(query).sort({ createdAt: -1 });
     res.json({ success: true, categorias });
-});
+}));
 
-app.get('/api/categorias/:id', async (req, res) => {
+app.get('/api/categorias/:id', asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
     const categoria = await Categoria.findById(req.params.id);
+    if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
     res.json({ success: true, categoria });
-});
+}));
 
-app.post('/api/categorias', auth, admin, async (req, res) => {
-    const categoria = await Categoria.create(req.body);
+const pickCategoria = (b) => ({ nome: b.nome, slug: b.slug, icone: b.icone, status: b.status });
+
+app.post('/api/categorias', auth, admin, asyncHandler(async (req, res) => {
+    const categoria = await Categoria.create(pickCategoria(req.body));
     res.json({ success: true, categoria });
-});
+}));
 
-app.put('/api/categorias/:id', auth, admin, async (req, res) => {
-    const categoria = await Categoria.findByIdAndUpdate(req.params.id, req.body, { new: true });
+app.put('/api/categorias/:id', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const categoria = await Categoria.findByIdAndUpdate(req.params.id, pickCategoria(req.body), { new: true, runValidators: true });
+    if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
     res.json({ success: true, categoria });
-});
+}));
 
-app.delete('/api/categorias/:id', auth, admin, async (req, res) => {
-    await Categoria.findByIdAndDelete(req.params.id);
+app.delete('/api/categorias/:id', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const categoria = await Categoria.findByIdAndDelete(req.params.id);
+    if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
     res.json({ success: true });
-});
+}));
 
 // ========== ROTAS DE PEDIDOS ==========
 // Listar pedidos do usuário logado
-app.get('/api/pedidos', auth, async (req, res) => {
-    try {
-        let query = { usuarioId: req.usuarioId };
-        // Admin vê todos os pedidos
-        if (req.usuarioRole === 'admin') query = {};
-        const pedidos = await Pedido.find(query).sort({ createdAt: -1 });
-        res.json({ success: true, pedidos });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+app.get('/api/pedidos', auth, asyncHandler(async (req, res) => {
+    let query = { usuarioId: req.usuarioId };
+    // Admin vê todos os pedidos
+    if (req.usuarioRole === 'admin') query = {};
+    const pedidos = await Pedido.find(query).sort({ createdAt: -1 });
+    res.json({ success: true, pedidos });
+}));
 
 // Buscar pedido por ID (só se for do usuário ou admin)
-app.get('/api/pedidos/:id', auth, async (req, res) => {
-    try {
-        const pedido = await Pedido.findById(req.params.id);
-        if (!pedido) return res.status(404).json({ success: false, message: 'Pedido não encontrado' });
-        if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
-            return res.status(403).json({ success: false, message: 'Acesso negado' });
-        }
-        res.json({ success: true, pedido });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+app.get('/api/pedidos/:id', auth, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(req.params.id);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
+        return err(res, 403, 'Acesso negado', 'FORBIDDEN');
     }
-});
+    res.json({ success: true, pedido });
+}));
 
-// Criar pedido
-app.post('/api/pedidos', auth, async (req, res) => {
-    try {
-        const pedido = await Pedido.create({
-            ...req.body,
-            usuarioId: req.usuarioId
-        });
-        res.status(201).json({ success: true, pedido });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+// Criar pedido — totais recalculados no servidor (fonte da verdade)
+app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
+    const { items, cliente, endereco, pagamento } = req.body;
+    if (!Array.isArray(items) || items.length === 0) return err(res, 400, 'Itens do pedido são obrigatórios', 'VALIDATION');
+    if (!cliente?.nome || !endereco?.logradouro) return err(res, 400, 'Dados de cliente/endereço incompletos', 'VALIDATION');
+    if (!['pix', 'card', 'boleto'].includes(pagamento)) return err(res, 400, 'Pagamento inválido', 'VALIDATION');
+
+    let subtotal = 0;
+    const itemsCalc = [];
+    for (const it of items) {
+        const id = it.produtoId || it.id || it._id;
+        const qtd = Number(it.quantity ?? it.qtd ?? 1);
+        if (!isValidId(id) || !Number.isInteger(qtd) || qtd <= 0) return err(res, 400, 'Item inválido', 'VALIDATION');
+        const prod = await Produto.findById(id);
+        if (!prod || prod.status !== 'ativo') return err(res, 400, `Produto indisponível`, 'OUT_OF_STOCK');
+        if ((prod.quantidade ?? 0) < qtd) return err(res, 409, `Estoque insuficiente para ${prod.nome}`, 'OUT_OF_STOCK');
+        subtotal += prod.preco * qtd;
+        itemsCalc.push({ produtoId: prod._id, nome: prod.nome, preco: prod.preco, quantity: qtd });
     }
-});
+    const frete = subtotal > 100 ? 0 : 20;
+    const desconto = pagamento === 'pix' ? subtotal * 0.05 : 0;
+    const total = subtotal + frete - desconto;
+
+    // Baixa atomica de estoque
+    for (const it of itemsCalc) {
+        const updated = await Produto.findOneAndUpdate({ _id: it.produtoId, quantidade: { $gte: it.quantity } }, { $inc: { quantidade: -it.quantity } });
+        if (!updated) return err(res, 409, 'Estoque insuficiente (concorrência)', 'OUT_OF_STOCK');
+    }
+
+    const pedido = await Pedido.create({
+        numero: 'PED-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        usuarioId: req.usuarioId, cliente, endereco, pagamento,
+        items: itemsCalc, subtotal, frete, desconto, total, status: 'pendente'
+    });
+    res.status(201).json({ success: true, pedido });
+}));
 
 // Atualizar status do pedido (admin apenas)
-app.put('/api/pedidos/:id/status', auth, async (req, res) => {
-    if (req.usuarioRole !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
-    try {
-        const pedido = await Pedido.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
-        res.json({ success: true, pedido });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const allowed = ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'];
+    if (!allowed.includes(req.body.status)) return err(res, 400, 'Status inválido', 'VALIDATION');
+    const pedido = await Pedido.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    res.json({ success: true, pedido });
+}));
 
 // ========== ROTAS DE CLIENTES ==========
-app.get('/api/clientes', auth, async (req, res) => {
-    if (req.usuarioRole !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
-    const clientes = await Usuario.find({ role: 'user' });
+app.get('/api/clientes', auth, admin, asyncHandler(async (req, res) => {
+    const clientes = await Usuario.find({ role: 'user' }).select('-password');
     res.json({ success: true, clientes });
-});
+}));
 
 // ========== DASHBOARD STATS ==========
-app.get('/api/dashboard/stats', auth, async (req, res) => {
-    if (req.usuarioRole !== 'admin') {
-        return res.status(403).json({ success: false, message: 'Acesso negado' });
-    }
+app.get('/api/dashboard/stats', auth, admin, asyncHandler(async (req, res) => {
     const totalProdutos = await Produto.countDocuments();
     const totalCategorias = await Categoria.countDocuments();
     const totalClientes = await Usuario.countDocuments({ role: 'user' });
     const totalPedidos = await Pedido.countDocuments();
-    const pedidos = await Pedido.find();
-    const vendasTotal = pedidos.reduce((sum, p) => sum + p.total, 0);
+    const pedidos = await Pedido.find().select('total');
+    const vendasTotal = pedidos.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
     res.json({ success: true, stats: { totalProdutos, totalCategorias, totalClientes, totalPedidos, vendasTotal } });
-});
+}));
 
 app.get('/health', (req, res) => res.json({ status: 'OK' }));
+
+// Handler central — nunca vaza stack/message interno
+// eslint-disable-next-line no-unused-vars
+app.use((error, req, res, next) => {
+    console.error('unhandled:', error.message);
+    if (error.name === 'ValidationError') return err(res, 400, 'Dados inválidos', 'VALIDATION');
+    if (error.code === 11000) return err(res, 400, 'Registro duplicado', 'DUPLICATE');
+    if (error.name === 'CastError') return err(res, 400, 'ID inválido', 'VALIDATION');
+    return err(res, 500, 'Erro interno', 'INTERNAL');
+});
 
 // ========== INICIALIZAÇÃO ==========
 async function init() {
