@@ -57,6 +57,13 @@ const auth = async (req, res, next) => {
     }
 };
 
+const admin = (req, res, next) => {
+    if (req.usuarioRole !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Acesso negado' });
+    }
+    next();
+};
+
 // ========== ROTAS DE AUTH ==========
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -105,17 +112,17 @@ app.get('/api/produtos/:id', async (req, res) => {
     res.json({ success: true, produto });
 });
 
-app.post('/api/produtos', async (req, res) => {
+app.post('/api/produtos', auth, admin, async (req, res) => {
     const produto = await Produto.create(req.body);
     res.json({ success: true, produto });
 });
 
-app.put('/api/produtos/:id', async (req, res) => {
+app.put('/api/produtos/:id', auth, admin, async (req, res) => {
     const produto = await Produto.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ success: true, produto });
 });
 
-app.delete('/api/produtos/:id', async (req, res) => {
+app.delete('/api/produtos/:id', auth, admin, async (req, res) => {
     await Produto.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });
@@ -133,17 +140,17 @@ app.get('/api/categorias/:id', async (req, res) => {
     res.json({ success: true, categoria });
 });
 
-app.post('/api/categorias', async (req, res) => {
+app.post('/api/categorias', auth, admin, async (req, res) => {
     const categoria = await Categoria.create(req.body);
     res.json({ success: true, categoria });
 });
 
-app.put('/api/categorias/:id', async (req, res) => {
+app.put('/api/categorias/:id', auth, admin, async (req, res) => {
     const categoria = await Categoria.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ success: true, categoria });
 });
 
-app.delete('/api/categorias/:id', async (req, res) => {
+app.delete('/api/categorias/:id', auth, admin, async (req, res) => {
     await Categoria.findByIdAndDelete(req.params.id);
     res.json({ success: true });
 });
