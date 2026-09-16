@@ -89,6 +89,11 @@
             <div class="row g-4" id="productsContainer">
                 <div class="col-12 text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Carregando...</p></div>
             </div>
+            <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="prodPager" style="display:none;">
+                <button class="btn btn-outline-light btn-sm" id="prodPrev" onclick="mudarPagina(-1)">← Anterior</button>
+                <span class="text-muted small" id="prodPageInfo">Página 1</span>
+                <button class="btn btn-outline-light btn-sm" id="prodNext" onclick="mudarPagina(1)">Próxima →</button>
+            </nav>
         </div>
     </section>
 
@@ -193,15 +198,39 @@
             } catch(e) { console.error(e); }
         }
         
+        let prodPage = 1;
+        const PROD_LIMIT = 12;
+        let prodPages = 1;
+        let searching = false;
+
         async function loadProducts() {
             try {
-                const res = await fetch(API + '/produtos?status=ativo');
+                const res = await fetch(`${API}/produtos?status=ativo&page=${prodPage}&limit=${PROD_LIMIT}`);
                 const data = await res.json();
                 if (data.success) {
-                    allProducts = data.produtos;
+                    allProducts = data.produtos || [];
+                    prodPages = data.pages || 1;
                     displayProducts(allProducts);
+                    renderPager();
                 }
             } catch(e) { console.error(e); }
+        }
+
+        function renderPager() {
+            const nav = document.getElementById('prodPager');
+            if (!nav) return;
+            nav.style.display = searching ? 'none' : 'flex';
+            document.getElementById('prodPageInfo').textContent = `Página ${prodPage} de ${prodPages}`;
+            document.getElementById('prodPrev').disabled = prodPage <= 1;
+            document.getElementById('prodNext').disabled = prodPage >= prodPages;
+        }
+
+        function mudarPagina(delta) {
+            const next = prodPage + delta;
+            if (next < 1 || next > prodPages) return;
+            prodPage = next;
+            loadProducts();
+            document.getElementById('produtos').scrollIntoView({ behavior: 'smooth' });
         }
         
         function displayProducts(products) {
@@ -227,14 +256,23 @@
             `).join('');
         }
         
-        function searchProducts() {
+        async function searchProducts() {
             const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             if (!term) {
-                displayProducts(allProducts);
-            } else {
-                const filtered = (allProducts || []).filter(p => String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term));
-                displayProducts(filtered);
+                searching = false;
+                prodPage = 1;
+                loadProducts();
+                return;
             }
+            try {
+                searching = true;
+                const res = await fetch(`${API}/produtos?status=ativo&limit=100`);
+                const data = await res.json();
+                const filtered = ((data.success && data.produtos) || []).filter(p => String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term));
+                allProducts = filtered;
+                displayProducts(filtered);
+                renderPager();
+            } catch(e) { console.error(e); }
         }
         
         function addToCart(id, name, price) {

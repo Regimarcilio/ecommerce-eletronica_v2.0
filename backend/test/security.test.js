@@ -56,6 +56,14 @@ describe('icone seguro (allowlist)', () => {
   it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
 });
 
+describe('paginacao UI', () => {
+  const pages = (total, limit) => Math.max(1, Math.ceil(total / limit));
+  const clamp = (p, pages) => Math.min(Math.max(1, p), pages);
+  it('13 itens com limit 12 = 2 paginas', () => assert.equal(pages(13, 12), 2));
+  it('0 itens = 1 pagina vazia', () => assert.equal(pages(0, 12), 1));
+  it('navegacao nao sai dos limites', () => assert.equal(clamp(0, 3), 1) && assert.equal(clamp(9, 3), 3));
+});
+
 describe('endereco', () => {
   const cepOk = (v) => /^\d{5}-?\d{3}$/.test(String(v || '').trim());
   const ufOk = (v) => /^[A-Z]{2}$/.test(String(v || '').toUpperCase());

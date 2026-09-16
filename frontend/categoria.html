@@ -74,6 +74,11 @@
                     <p class="mt-3 text-muted">Carregando produtos...</p>
                 </div>
             </div>
+            <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="catPager" style="display:none;">
+                <button class="btn btn-outline-light btn-sm" id="catPrev" onclick="mudarPaginaCat(-1)">← Anterior</button>
+                <span class="text-muted small" id="catPageInfo">Página 1</span>
+                <button class="btn btn-outline-light btn-sm" id="catNext" onclick="mudarPaginaCat(1)">Próxima →</button>
+            </nav>
         </div>
     </section>
 
@@ -191,20 +196,26 @@
         }
 
         function searchProducts() {
-            const term = document.getElementById('searchInput').value.toLowerCase().trim();
+            const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             if (!term) {
-                // Filtra pelos produtos da categoria atual
-                const filtered = allProducts.filter(p => p.categoria === currentCategoryId);
-                displayProducts(filtered);
-                document.getElementById('productCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'produto' : 'produtos'}`;
-            } else {
-                // Filtra pela busca dentro da categoria atual
-                const filtered = (allProducts || []).filter(p =>
-                    String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term)
-                );
-                displayProducts(filtered);
-                document.getElementById('productCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`;
+                catSearching = false;
+                catPage = 1;
+                loadCategoryProducts();
+                return;
             }
+            catSearching = true;
+            fetch(`${API}/produtos?status=ativo&categoria=${currentCategoryId}&limit=100`)
+                .then(res => res.json())
+                .then(data => {
+                    const filtered = ((data.success && data.produtos) || []).filter(p =>
+                        String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term)
+                    );
+                    allProducts = filtered;
+                    displayProducts(filtered);
+                    document.getElementById('productCount').textContent = `${filtered.length} ${filtered.length === 1 ? 'produto encontrado' : 'produtos encontrados'}`;
+                    renderCatPager();
+                })
+                .catch(err => { console.error(err); showToast('Erro ao buscar', true); });
         }
 
         window.addEventListener('scroll', () => {
@@ -229,7 +240,7 @@
                     if (data.success && data.categoria) {
                         currentCategory = data.categoria;
                         document.getElementById('categoryName').textContent = currentCategory.nome;
-                        document.getElementById('categoryIcon').className = `fas ${currentCategory.icone || 'fa-microchip'} category-icon`;
+                        document.getElementById('categoryIcon').className = `fas ${window.safeIcon(currentCategory.icone)} category-icon`;
                         document.getElementById('categoryDesc').textContent = currentCategory.descricao || `Confira os melhores produtos da categoria ${currentCategory.nome}`;
                         document.getElementById('breadcrumbCategory').textContent = currentCategory.nome;
                         document.title = `${currentCategory.nome} - TechStore`;
@@ -242,29 +253,55 @@
                     document.getElementById('categoryName').textContent = 'Erro ao carregar categoria';
                 });
 
-            // Buscar TODOS os produtos e filtrar pela categoria no frontend
-            fetch(`${API}/produtos?status=ativo&categoria=${currentCategoryId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        // FILTRA OS PRODUTOS PELA CATEGORIA ATUAL
-                        allProducts = (data.produtos || []);
-                        document.getElementById('productCount').textContent = `${allProducts.length} ${allProducts.length === 1 ? 'produto' : 'produtos'}`;
-                        displayProducts(allProducts);
-                        
-                        if (allProducts.length === 0) {
-                            showToast(`Nenhum produto encontrado para esta categoria`, false);
+            // Produtos da categoria com paginacao server-side
+            let catPage = 1;
+            const CAT_LIMIT = 12;
+            let catPages = 1;
+            let catSearching = false;
+
+            function renderCatPager() {
+                const nav = document.getElementById('catPager');
+                if (!nav) return;
+                nav.style.display = catSearching ? 'none' : 'flex';
+                document.getElementById('catPageInfo').textContent = `Página ${catPage} de ${catPages}`;
+                document.getElementById('catPrev').disabled = catPage <= 1;
+                document.getElementById('catNext').disabled = catPage >= catPages;
+            }
+
+            function mudarPaginaCat(delta) {
+                const next = catPage + delta;
+                if (next < 1 || next > catPages) return;
+                catPage = next;
+                loadCategoryProducts();
+            }
+
+            function loadCategoryProducts() {
+                fetch(`${API}/produtos?status=ativo&categoria=${currentCategoryId}&page=${catPage}&limit=${CAT_LIMIT}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            allProducts = (data.produtos || []);
+                            catPages = data.pages || 1;
+                            const total = data.total ?? allProducts.length;
+                            document.getElementById('productCount').textContent = `${total} ${total === 1 ? 'produto' : 'produtos'}`;
+                            displayProducts(allProducts);
+                            renderCatPager();
+                            if (allProducts.length === 0) {
+                                showToast(`Nenhum produto encontrado para esta categoria`, false);
+                            }
+                        } else {
+                            displayProducts([]);
+                            showToast('Erro ao carregar produtos', true);
                         }
-                    } else {
+                    })
+                    .catch(err => {
+                        console.error(err);
                         displayProducts([]);
-                        showToast('Erro ao carregar produtos', true);
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    displayProducts([]);
-                    showToast('Erro ao conectar com o servidor', true);
-                });
+                        showToast('Erro ao conectar com o servidor', true);
+                    });
+            }
+
+            loadCategoryProducts();
         } else {
             document.getElementById('categoryName').textContent = currentCategoryId ? 'Categoria inválida' : 'Categoria não especificada';
             document.getElementById('productsContainer').innerHTML = `
