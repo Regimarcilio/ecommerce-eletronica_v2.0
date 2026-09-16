@@ -783,6 +783,10 @@ Validar paginacao `?page&limit` com meta `{page,limit,total,pages}`.
 
 Executar `npm test` no backend (19 asserts: paging, pedido, auth, XSS, carrinho).
 
+E2E de pedido validado: total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.
+
+CI (`.github/workflows/ci.yml`): `npm ci` + `npm test` + `node --check` e `docker compose config/build` a cada push/PR em `main`.
+
 Validar calculo de indicadores do dashboard.
 
 ## 17.3 Criterios de aceite
