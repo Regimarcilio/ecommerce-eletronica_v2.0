@@ -523,14 +523,14 @@ Tabela 5 - Endpoints da API REST
 | GET | `/api/auth/me` | Sim | Usuario/Admin | Retornar usuario autenticado |
 | GET | `/api/produtos` | Nao | Publico | Listar produtos |
 | GET | `/api/produtos/:id` | Nao | Publico | Buscar produto por ID |
-| POST | `/api/produtos` | Nao no codigo atual | Administrativo previsto | Criar produto |
-| PUT | `/api/produtos/:id` | Nao no codigo atual | Administrativo previsto | Atualizar produto |
-| DELETE | `/api/produtos/:id` | Nao no codigo atual | Administrativo previsto | Excluir produto |
+| POST | `/api/produtos` | Sim | Admin | Criar produto |
+| PUT | `/api/produtos/:id` | Sim | Admin | Atualizar produto |
+| DELETE | `/api/produtos/:id` | Sim | Admin | Excluir produto |
 | GET | `/api/categorias` | Nao | Publico | Listar categorias |
 | GET | `/api/categorias/:id` | Nao | Publico | Buscar categoria por ID |
-| POST | `/api/categorias` | Nao no codigo atual | Administrativo previsto | Criar categoria |
-| PUT | `/api/categorias/:id` | Nao no codigo atual | Administrativo previsto | Atualizar categoria |
-| DELETE | `/api/categorias/:id` | Nao no codigo atual | Administrativo previsto | Excluir categoria |
+| POST | `/api/categorias` | Sim | Admin | Criar categoria |
+| PUT | `/api/categorias/:id` | Sim | Admin | Atualizar categoria |
+| DELETE | `/api/categorias/:id` | Sim | Admin | Excluir categoria |
 | GET | `/api/pedidos` | Sim | Usuario/Admin | Listar pedidos do usuario ou todos para admin |
 | GET | `/api/pedidos/:id` | Sim | Usuario/Admin | Buscar pedido autorizado |
 | POST | `/api/pedidos` | Sim | Usuario/Admin | Criar pedido |
@@ -541,7 +541,7 @@ Tabela 5 - Endpoints da API REST
 
 Fonte: Elaboracao propria.
 
-Observacao tecnica: embora o frontend envie cabecalhos de autenticacao nas chamadas administrativas, as rotas de produtos e categorias no backend atual nao aplicam o middleware `auth`. Recomenda-se proteger essas rotas em evolucoes futuras.
+Observacao tecnica (atualizado 2026): rotas de produtos/categorias exigem `auth` + `admin`; erros padronizados `{success,message,code}`; listagens suportam `?page&limit` com meta `{page,limit,total,pages}`; `POST /pedidos` recalcula totais no servidor e baixa estoque atomicamente.
 
 ---
 
@@ -642,18 +642,18 @@ Tabela 6 - Matriz de permissoes
 | Alterar status de pedido | Nao | Nao | Sim |
 | Listar clientes | Nao | Nao | Sim |
 | Visualizar dashboard | Nao | Nao | Sim |
-| Gerenciar produtos | Previsto como admin, mas nao protegido no backend atual | Nao recomendado | Sim |
-| Gerenciar categorias | Previsto como admin, mas nao protegido no backend atual | Nao recomendado | Sim |
+| Gerenciar produtos | Nao | Nao | Sim |
+| Gerenciar categorias | Nao | Nao | Sim |
 
 Fonte: Elaboracao propria.
 
 ## 14.3 Pontos de atencao
 
-A chave JWT esta fixa como `secret` no codigo, devendo ser movida para variavel de ambiente.
+A chave JWT e configurada via `JWT_SECRET`/`JWT_EXPIRES_IN` em `.env` (com fallback apenas para desenvolvimento); `MONGODB_URI`, `ADMIN_*` e `CORS_ORIGIN` tambem via ambiente com `backend/.env.example` como template.
 
-A string de conexao do MongoDB contem usuario e senha diretamente no codigo, devendo ser externalizada.
+A string de conexao e resolvida via `MONGODB_URI` (local) ou via host `mongodb` no Docker Compose com `env_file`; `.env` nao e versionado.
 
-Rotas de produtos e categorias nao usam middleware de autenticacao no backend atual.
+Rotas de produtos/categorias usam `auth` + `admin`; `auth` valida usuario ativo no banco; `/auth/login` e `/auth/register` com `rate-limit`; backend usa `helmet` e CORS restrito por `CORS_ORIGIN`.
 
 O token e armazenado no `localStorage`, o que exige cuidado com XSS.
 
@@ -693,11 +693,11 @@ O arquivo `comando_inicializar.txt` descreve um fluxo para iniciar MongoDB, inst
 
 O arquivo `docker-compose.yml` define tres servicos:
 
-`mongodb`: banco MongoDB 4.4, exposto na porta `27017`.
+`mongodb`: banco MongoDB 7 com volume `mongo_data` e healthcheck `mongosh ping`, exposto na porta `27017`.
 
-`backend`: aplicacao backend, exposta externamente na porta `5010` e internamente na porta `5000`.
+`backend`: imagem `node:20-alpine` (`backend/Dockerfile`), `env_file: ./backend/.env`, healthcheck `GET /health`, porta `5010:5000`, `depends_on mongodb (healthy)`.
 
-`frontend`: aplicacao frontend, exposta na porta `8083`.
+`frontend`: imagem `nginx:alpine` (`frontend/Dockerfile`), porta `8083:80`, `depends_on backend (healthy)`; `js/config.js` resolve a API conforme a porta.
 
 ## 16.3 Portas utilizadas
 
@@ -849,7 +849,7 @@ Nao ha testes automatizados no repositorio analisado.
 
 Algumas paginas frontend simulam funcionalidades localmente, como gerenciamento de enderecos em `localStorage`.
 
-A pagina `pedidos.html` chama `/api/pedidos` sem enviar token no cabecalho, embora o backend exija autenticacao; isso pode impedir a listagem correta dos pedidos nessa tela.
+Historico: `pedidos.html` ja envia `Authorization: Bearer` via `js/config.js#getAuthHeaders`; frontend usa `API_BASE` dinamica (8083->5010, senao 5000); toasts e listagens usam `escapeHtml`; `dashboard` valida `admin` via `GET /auth/me`.
 
 ---
 
