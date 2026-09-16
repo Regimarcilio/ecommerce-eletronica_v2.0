@@ -29,12 +29,12 @@ async function register(email, nome = 'E2E User') {
 }
 
 async function adminToken() {
-  const r = await api('POST', '/api/auth/login', {
-    body: {
-      email: process.env.E2E_ADMIN_EMAIL || 'admin@techstore.com.br',
-      password: process.env.E2E_ADMIN_PASSWORD || 'Admin@2024',
-    },
-  });
+  const email = process.env.E2E_ADMIN_EMAIL;
+  const password = process.env.E2E_ADMIN_PASSWORD;
+  if (!email || !password) {
+    throw new Error('defina E2E_ADMIN_EMAIL e E2E_ADMIN_PASSWORD para rodar o E2E');
+  }
+  const r = await api('POST', '/api/auth/login', { body: { email, password } });
   if (r.status !== 200 || !r.data?.token) {
     throw new Error('admin login falhou: ' + JSON.stringify(r.data));
   }
