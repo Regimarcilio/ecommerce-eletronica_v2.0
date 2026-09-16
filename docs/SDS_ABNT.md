@@ -653,7 +653,7 @@ Fonte: Elaboracao propria.
 
 ## 14.3 Pontos de atencao
 
-A chave JWT e configurada via `JWT_SECRET`/`JWT_EXPIRES_IN` em `.env` (com fallback apenas para desenvolvimento); `MONGODB_URI`, `ADMIN_*` e `CORS_ORIGIN` tambem via ambiente com `backend/.env.example` como template.
+A chave JWT e configurada via `JWT_SECRET`/`JWT_EXPIRES_IN` em `.env` (com fallback apenas para desenvolvimento e alerta no boot); `MONGODB_URI`, `ADMIN_*` e `CORS_ORIGIN` tambem via ambiente com `backend/.env.example` como template. Segredos reais nunca versionados: `backend/.env` fora do git, placeholders em compose/scripts/codigo, historico purgado com `git filter-repo` (valores anteriores rotacionados).
 
 A string de conexao e resolvida via `MONGODB_URI` (local) ou via host `mongodb` no Docker Compose com `env_file`; `.env` nao e versionado.
 
@@ -783,9 +783,9 @@ Validar paginacao `?page&limit` com meta `{page,limit,total,pages}`.
 
 Executar `npm test` no backend (19 asserts: paging, pedido, auth, XSS, carrinho).
 
-E2E de pedido validado: total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.
+E2E de pedido validado (inclusive apos rotacao de segredos: 3x40 pix = 114, estoque 10->7): total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.
 
-CI (`.github/workflows/ci.yml`): `npm ci` + `npm test` + `node --check` e `docker compose config/build` a cada push/PR em `main`.
+CI (`.github/workflows/ci.yml`): `npm ci` + `npm test` + `node --check` e `docker compose config/build` a cada push/PR em `main` (verde). `env_file` do backend e opcional (`required: false`) para clone fresco sem `.env`.
 
 Validar calculo de indicadores do dashboard.
 
@@ -863,7 +863,7 @@ Nao ha testes automatizados no repositorio analisado.
 
 Algumas paginas frontend simulam funcionalidades localmente, como gerenciamento de enderecos em `localStorage`.
 
-Historico: `pedidos.html` ja envia `Authorization: Bearer` via `js/config.js#getAuthHeaders`; frontend usa `API_BASE` dinamica (8083->5010, senao 5000); toasts e listagens usam `escapeHtml`; `dashboard` valida `admin` via `GET /auth/me`.
+Historico: `pedidos.html` ja envia `Authorization: Bearer` via `js/config.js#getAuthHeaders`; frontend usa `API_BASE` dinamica (8083->5010, senao 5000); toasts e listagens usam `escapeHtml`/`safeIcon` (allowlist `fa-*`); `dashboard` valida `admin` via `GET /auth/me`; catalogo usa `addToCartById` (sem nome interpolado no `onclick`); checkout usa `cart` como fallback do `checkoutCart`.
 
 ---
 
