@@ -288,9 +288,23 @@
                             <div class="col-md-3"><div class="stat-card"><i class="fas fa-shopping-cart fa-2x"></i><div class="stat-value">${s.totalPedidos || 0}</div><div>Pedidos</div></div></div>
                         </div>
                         <div class="row mt-4"><div class="col-md-12"><div class="stat-card"><i class="fas fa-dollar-sign fa-2x"></i><div class="stat-value">R$ ${(s.vendasTotal || 0).toFixed(2)}</div><div>Faturamento</div></div></div></div>
+                        <div class="row mt-4"><div class="col-md-12"><div class="stat-card"><i class="fas fa-heartbeat fa-2x"></i><div class="stat-value" id="healthLine">API OK</div><div>Saúde da API <small class="text-muted" id="healthDetail"></small></div></div></div></div>
                     `;
+                    loadHealth();
                 }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar dashboard</div>'; }
+        }
+
+        async function loadHealth() {
+            try {
+                const res = await fetch(API + '/metrics', { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success) return;
+                const m = data.metrics;
+                const up = `${Math.floor(m.uptimeSec / 3600)}h ${Math.floor((m.uptimeSec % 3600) / 60)}m`;
+                document.getElementById('healthLine').textContent = `OK · up ${up} · ${m.requests} req`;
+                document.getElementById('healthDetail').textContent = `4xx:${m.errors4xx} 5xx:${m.errors5xx} mem:${m.memoryMB}MB mongo:${m.mongo}`;
+            } catch { /* mantem fallback */ }
         }
         
         // ==================== PRODUTOS (COM CATEGORIA) ====================

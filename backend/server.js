@@ -27,6 +27,23 @@ app.use(express.json({ limit: '100kb' }));
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
 
+// Observabilidade leve (em memoria, sem dependencias)
+const startedAt = Date.now();
+const metrics = { requests: 0, errors4xx: 0, errors5xx: 0, byRoute: {} };
+app.use((req, res, next) => {
+    const t0 = Date.now();
+    res.on('finish', () => {
+        const ms = Date.now() - t0;
+        const route = `${req.method} ${req.path.replace(/\/[a-f0-9]{24}(?=\/|$)/gi, '/:id')}`;
+        metrics.requests++;
+        metrics.byRoute[route] = (metrics.byRoute[route] || 0) + 1;
+        if (res.statusCode >= 500) metrics.errors5xx++;
+        else if (res.statusCode >= 400) metrics.errors4xx++;
+        console.log(JSON.stringify({ ts: new Date().toISOString(), method: req.method, path: req.path, status: res.statusCode, ms }));
+    });
+    next();
+});
+
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 const err = (res, status, message, code) => res.status(status).json({ success: false, message, code });
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -403,6 +420,24 @@ app.get('/api/dashboard/stats', auth, admin, asyncHandler(async (req, res) => {
 }));
 
 app.get('/health', (req, res) => res.json({ status: 'OK' }));
+
+// Metricas basicas (admin): uptime, contadores, memoria, estado do banco
+app.get('/metrics', auth, admin, asyncHandler(async (req, res) => {
+    const mem = process.memoryUsage();
+    res.json({
+        success: true,
+        metrics: {
+            uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
+            startedAt: new Date(startedAt).toISOString(),
+            requests: metrics.requests,
+            errors4xx: metrics.errors4xx,
+            errors5xx: metrics.errors5xx,
+            byRoute: metrics.byRoute,
+            memoryMB: Math.round(mem.rss / 1024 / 1024),
+            mongo: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+        }
+    });
+}));
 
 // Handler central — nunca vaza stack/message interno
 // eslint-disable-next-line no-unused-vars
