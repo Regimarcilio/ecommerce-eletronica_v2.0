@@ -37,13 +37,24 @@ const parsePaging = (q) => {
 };
 
 // Schemas com validacao basica server-side
+const EnderecoSchema = new mongoose.Schema({
+    logradouro: { type: String, required: true, trim: true, maxlength: 160 },
+    numero: { type: String, required: true, trim: true, maxlength: 20 },
+    complemento: { type: String, trim: true, maxlength: 80, default: '' },
+    bairro: { type: String, required: true, trim: true, maxlength: 80 },
+    cidade: { type: String, required: true, trim: true, maxlength: 80 },
+    estado: { type: String, required: true, trim: true, uppercase: true, match: /^[A-Z]{2}$/ },
+    cep: { type: String, required: true, trim: true, match: /^\d{5}-?\d{3}$/ }
+}, { _id: true });
+
 const UsuarioSchema = new mongoose.Schema({
     nome: { type: String, required: true, trim: true, maxlength: 120 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
     telefone: { type: String, trim: true, default: '' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' }
+    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
+    enderecos: { type: [EnderecoSchema], default: [] }
 }, { timestamps: true });
 
 const ProdutoSchema = new mongoose.Schema({
@@ -169,6 +180,49 @@ app.put('/api/auth/password', auth, asyncHandler(async (req, res) => {
     user.password = await bcrypt.hash(String(password), 10);
     await user.save();
     res.json({ success: true, message: 'Senha alterada' });
+}));
+
+// ========== ENDERECOS DO USUARIO ==========
+const pickEndereco = (b) => ({
+    logradouro: b.logradouro, numero: b.numero, complemento: b.complemento || '',
+    bairro: b.bairro, cidade: b.cidade,
+    estado: String(b.estado || '').toUpperCase(), cep: b.cep
+});
+
+app.get('/api/auth/enderecos', auth, asyncHandler(async (req, res) => {
+    const user = await Usuario.findById(req.usuarioId).select('enderecos');
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    res.json({ success: true, enderecos: user.enderecos });
+}));
+
+app.post('/api/auth/enderecos', auth, asyncHandler(async (req, res) => {
+    const user = await Usuario.findById(req.usuarioId);
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    user.enderecos.push(pickEndereco(req.body));
+    await user.save();
+    res.status(201).json({ success: true, enderecos: user.enderecos });
+}));
+
+app.put('/api/auth/enderecos/:id', auth, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const user = await Usuario.findById(req.usuarioId);
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    const end = user.enderecos.id(req.params.id);
+    if (!end) return err(res, 404, 'Endereço não encontrado', 'NOT_FOUND');
+    end.set(pickEndereco(req.body));
+    await user.save();
+    res.json({ success: true, enderecos: user.enderecos });
+}));
+
+app.delete('/api/auth/enderecos/:id', auth, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const user = await Usuario.findById(req.usuarioId);
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    const end = user.enderecos.id(req.params.id);
+    if (!end) return err(res, 404, 'Endereço não encontrado', 'NOT_FOUND');
+    end.deleteOne();
+    await user.save();
+    res.json({ success: true, enderecos: user.enderecos });
 }));
 
 // ========== ROTAS DE PRODUTOS ==========

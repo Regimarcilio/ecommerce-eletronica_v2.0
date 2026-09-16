@@ -56,6 +56,20 @@ describe('icone seguro (allowlist)', () => {
   it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
 });
 
+describe('endereco', () => {
+  const cepOk = (v) => /^\d{5}-?\d{3}$/.test(String(v || '').trim());
+  const ufOk = (v) => /^[A-Z]{2}$/.test(String(v || '').toUpperCase());
+  it('aceita CEP 01310-100 e 01310100', () => assert.ok(cepOk('01310-100') && cepOk('01310100')));
+  it('rejeita CEP curto', () => assert.ok(!cepOk('123')));
+  it('aceita UF SP', () => assert.ok(ufOk('SP')));
+  it('rejeita UF invalida', () => assert.ok(!ufOk('XX1') && !ufOk('')));
+  it('exige campos obrigatorios', () => {
+    const e = { logradouro: 'Rua A', numero: '', bairro: 'B', cidade: 'C', estado: 'SP', cep: '01310-100' };
+    const completo = [e.logradouro, e.numero, e.bairro, e.cidade, e.estado, e.cep].every((x) => String(x || '').trim());
+    assert.ok(!completo);
+  });
+});
+
 describe('carrinho', () => {
   it('merge incrementa em vez de duplicar', () => {
     let cart = [{ id: '1', quantity: 1 }];

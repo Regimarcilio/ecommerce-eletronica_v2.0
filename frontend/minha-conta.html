@@ -224,7 +224,18 @@
             }
         }).catch(() => window.location.href = '/auth.html');
         
-        let enderecos = JSON.parse(localStorage.getItem('enderecos') || '[]');
+        carregarEnderecos();
+        renderEnderecos();
+        
+        let enderecos = [];
+
+        async function carregarEnderecos() {
+            try {
+                const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
+                const data = await res.json();
+                if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); }
+            } catch { /* mantem lista vazia */ }
+        }
         
         function showToast(msg, isError = false) {
             const toast = document.createElement('div');
@@ -320,20 +331,20 @@
                 container.innerHTML = '<div class="text-center text-muted py-4">Nenhum endereço cadastrado.</div>';
                 return;
             }
-            container.innerHTML = enderecos.map((e, i) => `
+            container.innerHTML = enderecos.map((e) => `
                 <div class="address-card">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <strong>${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}</strong><br>
                             ${window.escapeHtml(e.bairro || '-')}<br>
-                            ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.uf || '-')}<br>
+                            ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.estado || e.uf || '-')}<br>
                             CEP: ${window.escapeHtml(e.cep || '-')}
                         </div>
                         <div>
-                            <button class="btn btn-sm btn-outline-warning me-1" onclick="editarEndereco(${i})">
+                            <button class="btn btn-sm btn-outline-warning me-1" onclick="editarEndereco('${e._id}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="excluirEndereco(${i})">
+                            <button class="btn btn-sm btn-outline-danger" onclick="excluirEndereco('${e._id}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -342,17 +353,17 @@
             `).join('');
         }
         
-        function abrirModalEndereco(index = null) {
-            if (index !== null) {
-                const e = enderecos[index];
-                document.getElementById('enderecoId').value = index;
+        function abrirModalEndereco(id = null) {
+            if (id !== null && id !== '') {
+                const e = enderecos.find(x => x._id === id) || {};
+                document.getElementById('enderecoId').value = id;
                 document.getElementById('endCep').value = e.cep;
                 document.getElementById('endLogradouro').value = e.logradouro;
                 document.getElementById('endNumero').value = e.numero;
                 document.getElementById('endComplemento').value = e.complemento || '';
                 document.getElementById('endBairro').value = e.bairro;
                 document.getElementById('endCidade').value = e.cidade;
-                document.getElementById('endUf').value = e.uf;
+                document.getElementById('endUf').value = e.estado || e.uf || 'SP';
             } else {
                 document.getElementById('enderecoId').value = '';
                 document.getElementById('endCep').value = '';
@@ -366,38 +377,50 @@
             new bootstrap.Modal(document.getElementById('enderecoModal')).show();
         }
         
-        function salvarEndereco() {
-            const endereco = {
-                cep: document.getElementById('endCep').value,
-                logradouro: document.getElementById('endLogradouro').value,
-                numero: document.getElementById('endNumero').value,
-                complemento: document.getElementById('endComplemento').value,
-                bairro: document.getElementById('endBairro').value,
-                cidade: document.getElementById('endCidade').value,
-                uf: document.getElementById('endUf').value
+        function collectEndereco() {
+            return {
+                cep: document.getElementById('endCep').value.trim(),
+                logradouro: document.getElementById('endLogradouro').value.trim(),
+                numero: document.getElementById('endNumero').value.trim(),
+                complemento: document.getElementById('endComplemento').value.trim(),
+                bairro: document.getElementById('endBairro').value.trim(),
+                cidade: document.getElementById('endCidade').value.trim(),
+                estado: document.getElementById('endUf').value
             };
-            
-            const index = document.getElementById('enderecoId').value;
-            if (index !== '') {
-                enderecos[parseInt(index)] = endereco;
-            } else {
-                enderecos.push(endereco);
-            }
-            
-            localStorage.setItem('enderecos', JSON.stringify(enderecos));
-            renderEnderecos();
-            bootstrap.Modal.getInstance(document.getElementById('enderecoModal')).hide();
-            showToast('Endereço salvo com sucesso!');
         }
-        
-        function editarEndereco(index) { abrirModalEndereco(index); }
-        function excluirEndereco(index) {
-            if (confirm('Excluir este endereço?')) {
-                enderecos.splice(index, 1);
-                localStorage.setItem('enderecos', JSON.stringify(enderecos));
-                renderEnderecos();
-                showToast('Endereço excluído!');
+
+        async function salvarEndereco() {
+            const corpo = collectEndereco();
+            if (!corpo.logradouro || !corpo.numero || !corpo.bairro || !corpo.cidade || !corpo.estado || !corpo.cep) {
+                showToast('Preencha logradouro, número, bairro, cidade, UF e CEP', true);
+                return;
             }
+            const id = document.getElementById('enderecoId').value;
+            try {
+                const res = await fetch(API + '/auth/enderecos' + (id ? '/' + id : ''), {
+                    method: id ? 'PUT' : 'POST',
+                    headers: window.getAuthHeaders(),
+                    body: JSON.stringify(corpo)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    enderecos = data.enderecos || [];
+                    renderEnderecos();
+                    bootstrap.Modal.getInstance(document.getElementById('enderecoModal')).hide();
+                    showToast('Endereço salvo com sucesso!');
+                } else showToast(data.message || 'Erro ao salvar endereço', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+
+        function editarEndereco(id) { abrirModalEndereco(id); }
+        async function excluirEndereco(id) {
+            if (!confirm('Excluir este endereço?')) return;
+            try {
+                const res = await fetch(API + '/auth/enderecos/' + id, { method: 'DELETE', headers: window.getAuthHeaders() });
+                const data = await res.json();
+                if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); showToast('Endereço excluído!'); }
+                else showToast(data.message || 'Erro ao excluir', true);
+            } catch { showToast('Erro ao conectar', true); }
         }
         
         renderEnderecos();

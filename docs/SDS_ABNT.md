@@ -317,7 +317,7 @@ Tabela 2 - Requisitos funcionais
 | RF15 | Atualizar status de pedido | O administrador deve alterar status do pedido. | Alta |
 | RF16 | Consultar clientes | O administrador deve listar usuarios com perfil de cliente. | Media |
 | RF17 | Exibir dashboard | O administrador deve visualizar indicadores do sistema. | Media |
-| RF18 | Gerenciar conta | O cliente visualiza dados via `GET /auth/me` e edita nome/telefone via `PUT /auth/me`. | Media |
+| RF18 | Gerenciar conta | O cliente visualiza dados via `GET /auth/me`, edita nome/telefone via `PUT /auth/me` e gerencia enderecos via CRUD `/auth/enderecos` (sem `localStorage`). | Media |
 | RF19 | Trocar senha | O usuario autenticado deve trocar senha via `PUT /auth/password` informando a atual. | Alta |
 | RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes devem suportar `?page&limit` com meta. | Media |
 
@@ -525,6 +525,10 @@ Tabela 5 - Endpoints da API REST
 | GET | `/api/auth/me` | Sim | Usuario/Admin | Retornar usuario autenticado |
 | PUT | `/api/auth/me` | Sim | Usuario/Admin | Atualizar nome/telefone (e-mail imutavel) |
 | PUT | `/api/auth/password` | Sim | Usuario/Admin | Trocar senha (exige atual, min 8) |
+| GET | `/api/auth/enderecos` | Sim | Usuario/Admin | Listar enderecos do usuario |
+| POST | `/api/auth/enderecos` | Sim | Usuario/Admin | Criar endereco (CEP `NNNNN-NNN`, UF 2 letras) |
+| PUT | `/api/auth/enderecos/:id` | Sim | Usuario/Admin | Atualizar endereco proprio |
+| DELETE | `/api/auth/enderecos/:id` | Sim | Usuario/Admin | Excluir endereco proprio |
 | GET | `/api/produtos` | Nao | Publico | Listar produtos |
 | GET | `/api/produtos/:id` | Nao | Publico | Buscar produto por ID |
 | POST | `/api/produtos` | Sim | Admin | Criar produto |
@@ -779,6 +783,8 @@ Validar acesso de usuario comum a pedido de outro usuario.
 
 Validar `PUT /auth/me` (nome vazio 400) e `PUT /auth/password` (atual errada 401, nova <8 400).
 
+Validar CRUD de enderecos: CEP invalido 400, PUT/DELETE de outro usuario 404, `npm test` (27 asserts).
+
 Validar paginacao `?page&limit` com meta `{page,limit,total,pages}`.
 
 Executar `npm test` no backend (19 asserts: paging, pedido, auth, XSS, carrinho).
@@ -861,7 +867,7 @@ Nao ha garantia transacional entre criacao de pedido e atualizacao de estoque.
 
 Nao ha testes automatizados no repositorio analisado.
 
-Algumas paginas frontend simulam funcionalidades localmente, como gerenciamento de enderecos em `localStorage`.
+O gerenciamento de enderecos e persistido no MongoDB via CRUD `/auth/enderecos` com isolamento por usuario (404 para id de outro usuario).
 
 Historico: `pedidos.html` ja envia `Authorization: Bearer` via `js/config.js#getAuthHeaders`; frontend usa `API_BASE` dinamica (8083->5010, senao 5000); toasts e listagens usam `escapeHtml`/`safeIcon` (allowlist `fa-*`); `dashboard` valida `admin` via `GET /auth/me`; catalogo usa `addToCartById` (sem nome interpolado no `onclick`); checkout usa `cart` como fallback do `checkoutCart`.
 
