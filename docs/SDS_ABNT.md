@@ -505,7 +505,7 @@ A interface web e baseada em paginas HTML responsivas com Bootstrap. O usuario i
 O backend acessa o MongoDB por meio do Mongoose. A string de conexao atual e:
 
 ```text
-mongodb://admin:***REMOVED***@localhost:27017/ecommerce?authSource=admin
+mongodb://<usuario>:<senha>@localhost:27017/ecommerce?authSource=admin
 ```
 
 ## 10.3 Interface HTTP

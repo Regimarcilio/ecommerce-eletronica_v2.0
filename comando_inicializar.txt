@@ -12,9 +12,10 @@ docker run -d \
   --name ecommerce_mongodb \
   -p 27017:27017 \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
-  -e MONGO_INITDB_ROOT_PASSWORD=***REMOVED*** \
+  -e MONGO_INITDB_ROOT_PASSWORD="$MONGO_PASSWORD" \
   -e MONGO_INITDB_DATABASE=ecommerce \
-  mongo:4.4
+  mongo:7
+# Defina MONGO_PASSWORD com o valor do backend/.env antes de executar.
 
 # 3. Instalar dependências do backend
 cd backend
@@ -42,8 +43,8 @@ echo "   📦 Checkout: http://localhost:5500/checkout.html"
 echo "   📊 Dashboard Admin: http://localhost:5500/dashboard.html"
 echo "   🔐 Login: http://localhost:5500/auth.html"
 echo ""
-echo "🔑 CREDENCIAIS:"
+echo "🔑 CREDENCIAIS (definidas no backend/.env):"
 echo "   Email: admin@techstore.com.br"
-echo "   Senha: ***REMOVED***"
+echo "   Senha: <valor de ADMIN_PASSWORD no backend/.env>"
 echo ""
 echo "========================================="

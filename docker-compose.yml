@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-***REMOVED***}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-dev-troque-em-producao}
       MONGO_INITDB_DATABASE: ecommerce
     ports:
       - "27017:27017"
@@ -23,7 +23,7 @@ services:
     restart: always
     env_file: ./backend/.env
     environment:
-      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-***REMOVED***}@mongodb:27017/ecommerce?authSource=admin
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-dev-troque-em-producao}@mongodb:27017/ecommerce?authSource=admin
       CORS_ORIGIN: http://localhost:8083
     ports:
       - "5010:5000"
