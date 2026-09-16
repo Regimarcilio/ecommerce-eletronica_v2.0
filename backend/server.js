@@ -93,7 +93,10 @@ app.get('/api/auth/me', auth, async (req, res) => {
 
 // ========== ROTAS DE PRODUTOS ==========
 app.get('/api/produtos', async (req, res) => {
-    const produtos = await Produto.find().sort({ createdAt: -1 });
+    const query = {};
+    if (req.query.status) query.status = req.query.status;
+    if (req.query.categoria) query.categoria = req.query.categoria;
+    const produtos = await Produto.find(query).sort({ createdAt: -1 });
     res.json({ success: true, produtos });
 });
 
@@ -119,7 +122,9 @@ app.delete('/api/produtos/:id', async (req, res) => {
 
 // ========== ROTAS DE CATEGORIAS ==========
 app.get('/api/categorias', async (req, res) => {
-    const categorias = await Categoria.find().sort({ createdAt: -1 });
+    const query = {};
+    if (req.query.status) query.status = req.query.status;
+    const categorias = await Categoria.find(query).sort({ createdAt: -1 });
     res.json({ success: true, categorias });
 });
 

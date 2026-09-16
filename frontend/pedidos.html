@@ -14,8 +14,12 @@
         .order-card:hover { transform: translateY(-3px); border-color: #4361ee; }
         .status-pendente { background: #f59e0b20; color: #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
         .status-pago { background: #10b98120; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .status-enviado { background: #06b6d420; color: #06b6d4; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .status-entregue { background: #20c99720; color: #20c997; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .status-cancelado { background: #ef444420; color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
         .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 10px 25px; border-radius: 30px; }
         .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
+        .modal-content { background: #0d1117; color: #fff; border: 1px solid #1f2937; }
     </style>
 </head>
 <body>
@@ -35,26 +39,44 @@
         <div class="container text-center"><p>&copy; 2024 TechStore - Todos os direitos reservados.</p></div>
     </footer>
 
+    <div class="modal fade" id="pedidoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title"><i class="fas fa-box"></i> Detalhes do Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="pedidoDetalhesBody"></div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const API = 'http://localhost:5000/api';
         const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
+        let pedidoModal;
         
         if (!token) window.location.href = '/auth.html';
         
         async function loadPedidos() {
             try {
-                const res = await fetch(API + '/pedidos');
+                const res = await fetch(API + '/pedidos', { headers: getHeaders() });
                 const data = await res.json();
                 const container = document.getElementById('pedidosContainer');
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/auth.html';
+                    return;
+                }
                 
                 if (data.success && data.pedidos && data.pedidos.length > 0) {
                     container.innerHTML = data.pedidos.map(p => {
-                        let statusClass = '';
-                        if (p.status === 'pendente') statusClass = 'status-pendente';
-                        else if (p.status === 'pago') statusClass = 'status-pago';
-                        else statusClass = 'status-pendente';
+                        const statusClass = getStatusClass(p.status);
                         
                         return `
                             <div class="order-card">
@@ -80,9 +102,65 @@
                 }
             } catch(e) { console.error(e); }
         }
+
+        function getHeaders() {
+            return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                pendente: 'status-pendente',
+                pago: 'status-pago',
+                enviado: 'status-enviado',
+                entregue: 'status-entregue',
+                cancelado: 'status-cancelado'
+            };
+            return classes[status] || 'status-pendente';
+        }
+
+        function getPaymentLabel(pagamento) {
+            if (pagamento === 'pix') return 'PIX';
+            if (pagamento === 'card') return 'Cartão de Crédito';
+            if (pagamento === 'boleto') return 'Boleto Bancário';
+            return pagamento || '-';
+        }
         
-        function verDetalhes(id) {
-            window.location.href = `/pedido-detalhes.html?id=${id}`;
+        async function verDetalhes(id) {
+            try {
+                const res = await fetch(API + '/pedidos/' + id, { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success || !data.pedido) return;
+                const p = data.pedido;
+                const itensHtml = (p.items || []).map(item => `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>R$ ${(item.price || 0).toFixed(2)}</td>
+                        <td>R$ ${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('pedidoDetalhesBody').innerHTML = `
+                    <p><strong>Número:</strong> ${p.numero}</p>
+                    <p><strong>Status:</strong> <span class="${getStatusClass(p.status)}">${(p.status || '').toUpperCase()}</span></p>
+                    <p><strong>Pagamento:</strong> ${getPaymentLabel(p.pagamento)}</p>
+                    <p><strong>Entrega:</strong> ${p.endereco.logradouro}, ${p.endereco.numero} - ${p.endereco.bairro}, ${p.endereco.cidade}/${p.endereco.estado}</p>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm">
+                            <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>
+                            <tbody>${itensHtml}</tbody>
+                        </table>
+                    </div>
+                    <div class="text-end">
+                        <p>Subtotal: R$ ${(p.subtotal || 0).toFixed(2)}</p>
+                        <p>Frete: ${p.frete === 0 ? 'Grátis' : 'R$ ' + (p.frete || 0).toFixed(2)}</p>
+                        <p>Desconto: R$ ${(p.desconto || 0).toFixed(2)}</p>
+                        <h5>Total: R$ ${(p.total || 0).toFixed(2)}</h5>
+                    </div>
+                `;
+                if (!pedidoModal) pedidoModal = new bootstrap.Modal(document.getElementById('pedidoModal'));
+                pedidoModal.show();
+            } catch(e) { console.error(e); }
         }
         
         loadPedidos();
