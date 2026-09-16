@@ -363,7 +363,7 @@
                 document.getElementById('endComplemento').value = e.complemento || '';
                 document.getElementById('endBairro').value = e.bairro;
                 document.getElementById('endCidade').value = e.cidade;
-                document.getElementById('endUf').value = e.estado || e.uf || 'SP';
+                window.setSelectValue(document.getElementById('endUf'), e.estado || e.uf || 'SP');
             } else {
                 document.getElementById('enderecoId').value = '';
                 document.getElementById('endCep').value = '';

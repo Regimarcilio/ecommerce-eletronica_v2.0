@@ -24,7 +24,17 @@
     return /^fa-[a-z0-9-]+$/.test(s) ? s : 'fa-microchip';
   };
 
-  // Carrinho com merge de quantidade (evita duplicados)
+  // Seta select mesmo quando o valor nao existe nas opcoes (ex.: UF salva)
+  window.setSelectValue = function (sel, val) {
+    if (!sel) return;
+    const v = String(val ?? '');
+    if (v && ![...sel.options].some((o) => o.value === v)) {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      sel.appendChild(o);
+    }
+    sel.value = v;
+  };
   window.cartAdd = function (id, name, price) {
     let cart = [];
     try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }

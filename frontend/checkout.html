@@ -44,6 +44,7 @@
                         </div>
                         
                         <h5 class="mt-3 mb-3">Endereço de Entrega</h5>
+                        <div class="mb-3" id="savedAddrWrap" style="display:none;"><label>Usar endereço salvo</label><select id="savedAddr" class="form-select" onchange="preencherEnderecoSalvo()"><option value="">Preencher manualmente</option></select></div>
                         <div class="row">
                             <div class="col-md-8 mb-3"><label>Logradouro</label><input type="text" id="endereco" class="form-control" required></div>
                             <div class="col-md-4 mb-3"><label>Número</label><input type="text" id="numero" class="form-control" required></div>
@@ -97,6 +98,38 @@
         let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
         let selectedPayment = 'pix';
         let subtotal = 0;
+        let savedAddrs = [];
+
+        async function loadEnderecosSalvos() {
+            try {
+                const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
+                const data = await res.json();
+                if (res.ok && data.success && (data.enderecos || []).length > 0) {
+                    savedAddrs = data.enderecos;
+                    const sel = document.getElementById('savedAddr');
+                    savedAddrs.forEach((e, i) => {
+                        const opt = document.createElement('option');
+                        opt.value = String(i);
+                        opt.textContent = `${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}/${e.estado || '-'}`;
+                        sel.appendChild(opt);
+                    });
+                    document.getElementById('savedAddrWrap').style.display = '';
+                }
+            } catch { /* sem enderecos: manual */ }
+        }
+
+        function preencherEnderecoSalvo() {
+            const idx = document.getElementById('savedAddr').value;
+            if (idx === '') return;
+            const e = savedAddrs[Number(idx)] || {};
+            document.getElementById('endereco').value = e.logradouro || '';
+            document.getElementById('numero').value = e.numero || '';
+            document.getElementById('complemento').value = e.complemento || '';
+            document.getElementById('bairro').value = e.bairro || '';
+            document.getElementById('cidade').value = e.cidade || '';
+            window.setSelectValue(document.getElementById('estado'), e.estado || '');
+            document.getElementById('cep').value = e.cep || '';
+        }
         
         if (cart.length === 0) window.location.href = '/cart.html';
         
@@ -199,6 +232,7 @@
         
         selectPayment('pix');
         renderOrderItems();
+        loadEnderecosSalvos();
     </script>
 </body>
 </html>
