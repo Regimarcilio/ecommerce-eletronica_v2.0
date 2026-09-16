@@ -317,7 +317,9 @@ Tabela 2 - Requisitos funcionais
 | RF15 | Atualizar status de pedido | O administrador deve alterar status do pedido. | Alta |
 | RF16 | Consultar clientes | O administrador deve listar usuarios com perfil de cliente. | Media |
 | RF17 | Exibir dashboard | O administrador deve visualizar indicadores do sistema. | Media |
-| RF18 | Gerenciar conta | O cliente deve visualizar e editar dados locais de conta e enderecos. | Media |
+| RF18 | Gerenciar conta | O cliente visualiza dados via `GET /auth/me` e edita nome/telefone via `PUT /auth/me`. | Media |
+| RF19 | Trocar senha | O usuario autenticado deve trocar senha via `PUT /auth/password` informando a atual. | Alta |
+| RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes devem suportar `?page&limit` com meta. | Media |
 
 Fonte: Elaboracao propria.
 
@@ -521,6 +523,8 @@ Tabela 5 - Endpoints da API REST
 | POST | `/api/auth/register` | Nao | Publico | Cadastrar usuario |
 | POST | `/api/auth/login` | Nao | Publico | Autenticar usuario |
 | GET | `/api/auth/me` | Sim | Usuario/Admin | Retornar usuario autenticado |
+| PUT | `/api/auth/me` | Sim | Usuario/Admin | Atualizar nome/telefone (e-mail imutavel) |
+| PUT | `/api/auth/password` | Sim | Usuario/Admin | Trocar senha (exige atual, min 8) |
 | GET | `/api/produtos` | Nao | Publico | Listar produtos |
 | GET | `/api/produtos/:id` | Nao | Publico | Buscar produto por ID |
 | POST | `/api/produtos` | Sim | Admin | Criar produto |
@@ -773,6 +777,12 @@ Validar restricao de acesso a rotas protegidas.
 
 Validar acesso de usuario comum a pedido de outro usuario.
 
+Validar `PUT /auth/me` (nome vazio 400) e `PUT /auth/password` (atual errada 401, nova <8 400).
+
+Validar paginacao `?page&limit` com meta `{page,limit,total,pages}`.
+
+Executar `npm test` no backend (19 asserts: paging, pedido, auth, XSS, carrinho).
+
 Validar calculo de indicadores do dashboard.
 
 ## 17.3 Criterios de aceite
@@ -934,6 +944,15 @@ Iniciar frontend local:
 cd frontend
 python3 -m http.server 5500
 ```
+
+Executar testes unitarios:
+
+```bash
+cd backend
+npm test
+```
+
+Smoke E2E validado (Mongo 7 + backend healthy): `GET /health`, `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `PUT /auth/me`, `PUT /auth/password` (fraca 400), `GET /produtos/abc` (400), `GET /produtos?page=1&limit=2` (meta), `GET /clientes` sem `password`.
 
 Subir servicos com Docker Compose:
 
