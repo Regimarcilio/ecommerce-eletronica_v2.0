@@ -21,7 +21,9 @@ services:
     build: ./backend
     container_name: ecommerce_backend
     restart: always
-    env_file: ./backend/.env
+    env_file:
+      - path: ./backend/.env
+        required: false
     environment:
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-dev-troque-em-producao}@mongodb:27017/ecommerce?authSource=admin
       CORS_ORIGIN: http://localhost:8083
