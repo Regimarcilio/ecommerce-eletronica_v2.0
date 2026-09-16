@@ -1,23 +1,41 @@
-version: '3.8'
 services:
   mongodb:
-    image: mongo:4.4
+    image: mongo:7
     container_name: ecommerce_mongodb
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: ***REMOVED***
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-***REMOVED***}
       MONGO_INITDB_DATABASE: ecommerce
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
   backend:
     build: ./backend
     container_name: ecommerce_backend
     restart: always
+    env_file: ./backend/.env
+    environment:
+      MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-***REMOVED***}@mongodb:27017/ecommerce?authSource=admin
+      CORS_ORIGIN: http://localhost:8083
     ports:
       - "5010:5000"
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   frontend:
     build: ./frontend
     container_name: ecommerce_frontend
@@ -25,4 +43,8 @@ services:
     ports:
       - "8083:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+volumes:
+  mongo_data:

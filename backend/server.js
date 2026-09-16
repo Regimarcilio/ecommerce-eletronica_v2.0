@@ -26,6 +26,11 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeade
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 const err = (res, status, message, code) => res.status(status).json({ success: false, message, code });
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const parsePaging = (q) => {
+    const page = Math.max(1, parseInt(q.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(q.limit, 10) || 50));
+    return { page, limit, skip: (page - 1) * limit };
+};
 
 // Schemas com validacao basica server-side
 const UsuarioSchema = new mongoose.Schema({
@@ -146,8 +151,12 @@ app.get('/api/produtos', asyncHandler(async (req, res) => {
         if (!isValidId(req.query.categoria)) return err(res, 400, 'Categoria inválida', 'VALIDATION');
         query.categoria = req.query.categoria;
     }
-    const produtos = await Produto.find(query).sort({ createdAt: -1 });
-    res.json({ success: true, produtos });
+    const { page, limit, skip } = parsePaging(req.query);
+    const [produtos, total] = await Promise.all([
+        Produto.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Produto.countDocuments(query)
+    ]);
+    res.json({ success: true, produtos, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
@@ -182,8 +191,12 @@ app.delete('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
 app.get('/api/categorias', asyncHandler(async (req, res) => {
     const query = {};
     if (req.query.status) query.status = req.query.status;
-    const categorias = await Categoria.find(query).sort({ createdAt: -1 });
-    res.json({ success: true, categorias });
+    const { page, limit, skip } = parsePaging(req.query);
+    const [categorias, total] = await Promise.all([
+        Categoria.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Categoria.countDocuments(query)
+    ]);
+    res.json({ success: true, categorias, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 app.get('/api/categorias/:id', asyncHandler(async (req, res) => {
@@ -220,8 +233,12 @@ app.get('/api/pedidos', auth, asyncHandler(async (req, res) => {
     let query = { usuarioId: req.usuarioId };
     // Admin vê todos os pedidos
     if (req.usuarioRole === 'admin') query = {};
-    const pedidos = await Pedido.find(query).sort({ createdAt: -1 });
-    res.json({ success: true, pedidos });
+    const { page, limit, skip } = parsePaging(req.query);
+    const [pedidos, total] = await Promise.all([
+        Pedido.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Pedido.countDocuments(query)
+    ]);
+    res.json({ success: true, pedidos, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 // Buscar pedido por ID (só se for do usuário ou admin)
@@ -284,8 +301,12 @@ app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) =>
 
 // ========== ROTAS DE CLIENTES ==========
 app.get('/api/clientes', auth, admin, asyncHandler(async (req, res) => {
-    const clientes = await Usuario.find({ role: 'user' }).select('-password');
-    res.json({ success: true, clientes });
+    const { page, limit, skip } = parsePaging(req.query);
+    const [clientes, total] = await Promise.all([
+        Usuario.find({ role: 'user' }).select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Usuario.countDocuments({ role: 'user' })
+    ]);
+    res.json({ success: true, clientes, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 // ========== DASHBOARD STATS ==========
