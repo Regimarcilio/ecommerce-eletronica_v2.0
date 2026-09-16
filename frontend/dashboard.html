@@ -148,7 +148,11 @@
         
         if (!token) window.location.href = '/auth.html';
         // Guard real: valida no servidor (localStorage é burlável)
-        fetch(API + '/auth/me', { headers: window.getAuthHeaders() }).then(async (r) => {
+        window.ensureSession().then((ok) => {
+            if (!ok) { window.location.href = '/auth.html'; return null; }
+            return fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
+        }).then(async (r) => {
+            if (!r) return;
             if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
             const d = await r.json();
             if (!d.success || d.user?.role !== 'admin') { window.location.href = '/auth.html'; return; }
@@ -173,7 +177,7 @@
             setTimeout(() => toast.remove(), 3000);
         }
         
-        function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; }
+        function logout() { window.logoutAll(); window.location.href = '/auth.html'; }
 
         // Paginacao das tabelas admin (a API retorna page/limit/total/pages)
         const PG_LIMIT = 10;

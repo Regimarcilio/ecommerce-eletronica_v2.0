@@ -211,7 +211,11 @@
         function showTab(id) { const el = document.getElementById(id); if (el) new bootstrap.Tab(el).show(); }
 
         // Fonte da verdade: servidor (localStorage e burlavel)
-        fetch(API + '/auth/me', { headers: window.getAuthHeaders() }).then(async (r) => {
+        window.ensureSession().then((ok) => {
+            if (!ok) { window.location.href = '/auth.html'; return null; }
+            return fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
+        }).then(async (r) => {
+            if (!r) return;
             if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
             const d = await r.json();
             if (d.success && d.user) {
@@ -273,7 +277,7 @@
             }
         }
         
-        function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/'; }
+        function logout() { window.logoutAll(); window.location.href = '/'; }
         
         // Carregar dados do usuário
         document.getElementById('userName').innerText = user.nome || 'Usuário';

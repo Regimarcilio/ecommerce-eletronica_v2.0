@@ -158,7 +158,7 @@
             }
         }
         
-        function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/'; }
+        function logout() { window.logoutAll(); window.location.href = '/'; }
         
         window.addEventListener('scroll', () => {
             const btn = document.querySelector('.back-to-top');

@@ -209,12 +209,15 @@
             };
             
             try {
-                const res = await fetch(API + '/pedidos', {
+                const send = () => fetch(API + '/pedidos', {
                     method: 'POST',
                     headers: window.getAuthHeaders(),
                     body: JSON.stringify(pedido)
                 });
+                let res = await send();
+                if (res.status === 401 && await window.refreshSession()) res = await send();
                 const data = await res.json();
+                if (res.status === 401) { window.logoutAll(); window.location.href = '/auth.html'; return; }
                 if (res.ok && data.success) {
                     localStorage.removeItem('cart');
                     localStorage.removeItem('checkoutCart');
@@ -233,6 +236,7 @@
         selectPayment('pix');
         renderOrderItems();
         loadEnderecosSalvos();
+        window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
     </script>
 </body>
 </html>

@@ -525,6 +525,10 @@ Tabela 5 - Endpoints da API REST
 | GET | `/api/auth/me` | Sim | Usuario/Admin | Retornar usuario autenticado |
 | PUT | `/api/auth/me` | Sim | Usuario/Admin | Atualizar nome/telefone (e-mail imutavel) |
 | PUT | `/api/auth/password` | Sim | Usuario/Admin | Trocar senha (exige atual, min 8) |
+| POST | `/api/auth/refresh` | Nao | Publico | Renovar par (rotacao, uso unico) |
+| POST | `/api/auth/logout` | Sim | Usuario/Admin | Revogar refresh da sessao |
+| POST | `/api/auth/forgot` | Nao | Publico | Solicitar reset (anti-enumeracao) |
+| POST | `/api/auth/reset` | Nao | Publico | Redefinir com token unico |
 | GET | `/api/auth/enderecos` | Sim | Usuario/Admin | Listar enderecos do usuario |
 | POST | `/api/auth/enderecos` | Sim | Usuario/Admin | Criar endereco (CEP `NNNNN-NNN`, UF 2 letras) |
 | PUT | `/api/auth/enderecos/:id` | Sim | Usuario/Admin | Atualizar endereco proprio |
@@ -658,7 +662,7 @@ Fonte: Elaboracao propria.
 
 ## 14.3 Pontos de atencao
 
-A chave JWT e configurada via `JWT_SECRET`/`JWT_EXPIRES_IN` em `.env` (com fallback apenas para desenvolvimento e alerta no boot); `MONGODB_URI`, `ADMIN_*` e `CORS_ORIGIN` tambem via ambiente com `backend/.env.example` como template. Segredos reais nunca versionados: `backend/.env` fora do git, placeholders em compose/scripts/codigo, historico purgado com `git filter-repo` (valores anteriores rotacionados).
+Access JWT curto (`JWT_EXPIRES_IN`, padrao 15m) + refresh opaco com rotacao (`JWT_REFRESH_EXPIRES_IN_DAYS`, padrao 7, hash SHA-256, TTL, revogacao em logout/reset). A chave JWT e configurada via `JWT_SECRET`/`JWT_EXPIRES_IN` em `.env` (com fallback apenas para desenvolvimento e alerta no boot); `MONGODB_URI`, `ADMIN_*` e `CORS_ORIGIN` tambem via ambiente com `backend/.env.example` como template. Segredos reais nunca versionados: `backend/.env` fora do git, placeholders em compose/scripts/codigo, historico purgado com `git filter-repo` (valores anteriores rotacionados).
 
 A string de conexao e resolvida via `MONGODB_URI` (local) ou via host `mongodb` no Docker Compose com `env_file`; `.env` nao e versionado.
 
@@ -796,7 +800,7 @@ Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
 | `01-auth-conta` | health, register 200, duplicado 400, senha fraca 400, login errado 401, me sem password, PUT me 400/200, password 401/400/200+relogin |
 | `02-catalogo-rbac` | admin cria categoria/produto, user 403, sem token 401, id invalido 400, paging 13 itens p1=12/p2=1 |
 | `03-pedido-estoque-enderecos` | total adulterado ignorado (120), pix 77, estoque 17, oversell 409, cross-user 403, enderecos CRUD + CEP 400 + cross 404 |
-| `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
+| `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
 Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).
 
 E2E de pedido validado (inclusive apos rotacao de segredos: 3x40 pix = 114, estoque 10->7): total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.

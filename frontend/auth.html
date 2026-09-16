@@ -20,6 +20,17 @@
                 <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="username"></div>
                 <div class="form-group"><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
                 <button class="btn-primary auth-btn" onclick="login()">Entrar</button>
+                <p class="text-center mt-3"><a href="#" onclick="switchTab('forgot'); return false;" style="font-size:.9rem;">Esqueci a senha</a></p>
+            </div>
+            <div id="forgotForm" class="auth-form">
+                <div id="forgotAlert"></div>
+                <div class="form-group"><label>Email da conta</label><input type="email" id="forgotEmail" placeholder="seu@email.com"></div>
+                <button class="btn-primary auth-btn" onclick="forgot()">Enviar instrucoes</button>
+                <div id="resetBlock" style="display:none; margin-top:15px;">
+                    <div class="form-group"><label>Token recebido</label><input type="text" id="resetToken" placeholder="cole o token"></div>
+                    <div class="form-group"><label>Nova senha (min 8)</label><input type="password" id="resetPassword" autocomplete="new-password"></div>
+                    <button class="btn-primary auth-btn" onclick="resetPassword()">Redefinir senha</button>
+                </div>
             </div>
             <div id="registerForm" class="auth-form">
                 <div id="registerAlert"></div>
@@ -47,15 +58,12 @@
         }
         
         function switchTab(tab) {
+            const forms = { login: 'loginForm', register: 'registerForm', forgot: 'forgotForm' };
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            if (tab === 'login') {
-                document.querySelector('.auth-tab:first-child').classList.add('active');
-                document.getElementById('loginForm').classList.add('active');
-            } else {
-                document.querySelector('.auth-tab:last-child').classList.add('active');
-                document.getElementById('registerForm').classList.add('active');
-            }
+            document.getElementById(forms[tab]).classList.add('active');
+            const tabs = document.querySelectorAll('.auth-tab');
+            if (tabs[tab === 'login' ? 0 : 1]) tabs[tab === 'login' ? 0 : 1].classList.add('active');
         }
         
         async function login() {
@@ -71,6 +79,7 @@
                 const data = await res.json();
                 if (data.success) {
                     localStorage.setItem('token', data.token);
+                    localStorage.setItem('refreshToken', data.refreshToken);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     window.location.href = '/';
                 } else {
@@ -98,12 +107,50 @@
                 const data = await res.json();
                 if (data.success) {
                     localStorage.setItem('token', data.token);
+                    localStorage.setItem('refreshToken', data.refreshToken);
                     localStorage.setItem('user', JSON.stringify(data.user));
                     window.location.href = '/';
                 } else {
                     showAlert('registerAlert', data.message, true);
                 }
             } catch(e) { showAlert('registerAlert', 'Erro ao conectar', true); }
+        }
+
+        async function forgot() {
+            const email = document.getElementById('forgotEmail').value.trim();
+            if (!email) { showAlert('forgotAlert', 'Informe o e-mail', true); return; }
+            try {
+                const res = await fetch(API + '/auth/forgot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                showAlert('forgotAlert', data.message || 'Verifique seu e-mail', false);
+                if (data.resetToken) {
+                    document.getElementById('resetToken').value = data.resetToken;
+                    document.getElementById('resetBlock').style.display = '';
+                    showAlert('forgotAlert', 'Modo dev: token preenchido abaixo (em producao chega por e-mail).', false);
+                }
+            } catch(e) { showAlert('forgotAlert', 'Erro ao conectar', true); }
+        }
+
+        async function resetPassword() {
+            const token = document.getElementById('resetToken').value.trim();
+            const password = document.getElementById('resetPassword').value;
+            if (!token || password.length < 8) { showAlert('forgotAlert', 'Token e senha (min 8) obrigatórios', true); return; }
+            try {
+                const res = await fetch(API + '/auth/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showAlert('forgotAlert', 'Senha redefinida! Entre com a nova senha.', false);
+                    setTimeout(() => switchTab('login'), 1500);
+                } else showAlert('forgotAlert', data.message || 'Token inválido', true);
+            } catch(e) { showAlert('forgotAlert', 'Erro ao conectar', true); }
         }
     </script>
 </body>

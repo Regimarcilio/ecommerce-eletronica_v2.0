@@ -36,6 +36,7 @@ jobs:
       JWT_EXPIRES_IN: 1h
       ADMIN_EMAIL: e2e-admin@t.t
       ADMIN_PASSWORD: E2eAdmin123!
+      ALLOW_RESET_TOKEN_RESPONSE: 'true'
       E2E_ADMIN_EMAIL: e2e-admin@t.t
       E2E_ADMIN_PASSWORD: E2eAdmin123!
       E2E_BASE_URL: http://localhost:5000

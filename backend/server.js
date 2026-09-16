@@ -5,12 +5,19 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const crypto = require('crypto');
+
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+// Access curto (min) + refresh opaco de longa duracao (dias) com rotacao
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+const REFRESH_DAYS = Math.max(1, parseInt(process.env.JWT_REFRESH_EXPIRES_IN_DAYS || '7', 10) || 7);
+const RESET_MINUTES = Math.max(5, parseInt(process.env.PASSWORD_RESET_MINUTES || '60', 10) || 60);
+// Em dev, /forgot devolve o token p/ teste; em prod, plugar provedor de e-mail
+const RESET_TOKEN_RESPONSE = process.env.ALLOW_RESET_TOKEN_RESPONSE === 'true';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecommerce';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@techstore.com.br';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dev-troque-em-producao';
@@ -74,6 +81,37 @@ const UsuarioSchema = new mongoose.Schema({
     enderecos: { type: [EnderecoSchema], default: [] }
 }, { timestamps: true });
 
+// Sessoes (refresh opaco com rotacao) e reset de senha (token unico, 1 uso)
+const RefreshTokenSchema = new mongoose.Schema({
+    tokenHash: { type: String, required: true, unique: true },
+    usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
+    expiresAt: { type: Date, required: true, expires: 0 },
+    revoked: { type: Boolean, default: false }
+}, { timestamps: true });
+
+const PasswordResetSchema = new mongoose.Schema({
+    tokenHash: { type: String, required: true, unique: true },
+    usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', required: true },
+    expiresAt: { type: Date, required: true, expires: 0 },
+    used: { type: Boolean, default: false }
+}, { timestamps: true });
+
+const sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');
+const newOpaqueToken = () => crypto.randomBytes(48).toString('hex');
+const signAccess = (user) => jwt.sign(
+    { id: user._id, email: user.email, role: user.role },
+    JWT_SECRET, { expiresIn: JWT_EXPIRES_IN }
+);
+async function issueRefresh(usuarioId) {
+    const token = newOpaqueToken();
+    await RefreshToken.create({
+        tokenHash: sha256(token),
+        usuarioId,
+        expiresAt: new Date(Date.now() + REFRESH_DAYS * 24 * 3600 * 1000)
+    });
+    return token;
+}
+
 const ProdutoSchema = new mongoose.Schema({
     nome: { type: String, required: true, trim: true },
     sku: { type: String, required: true, unique: true, trim: true },
@@ -109,6 +147,8 @@ const Usuario = mongoose.model('Usuario', UsuarioSchema);
 const Produto = mongoose.model('Produto', ProdutoSchema);
 const Categoria = mongoose.model('Categoria', CategoriaSchema);
 const Pedido = mongoose.model('Pedido', PedidoSchema);
+const RefreshToken = mongoose.model('RefreshToken', RefreshTokenSchema);
+const PasswordReset = mongoose.model('PasswordReset', PasswordResetSchema);
 
 // Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
@@ -144,8 +184,9 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
         if (exists) return err(res, 400, 'Email já cadastrado', 'EMAIL_EXISTS');
         const hash = await bcrypt.hash(password, 10);
         const user = await Usuario.create({ nome: String(nome).trim(), email: emailNorm, telefone: String(telefone || '').trim(), password: hash, role: 'user' });
-        const token = jwt.sign({ id: user._id, email: emailNorm, role: 'user' }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        res.json({ success: true, token, user: { id: user._id, nome: user.nome, email: emailNorm, role: 'user' } });
+        const token = signAccess({ _id: user._id, email: emailNorm, role: 'user' });
+        const refreshToken = await issueRefresh(user._id);
+        res.json({ success: true, token, refreshToken, user: { id: user._id, nome: user.nome, email: emailNorm, role: 'user' } });
     } catch (error) {
         if (error.code === 11000) return err(res, 400, 'Email já cadastrado', 'EMAIL_EXISTS');
         console.error('register:', error.message);
@@ -161,13 +202,79 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         if (!user || user.status !== 'ativo') return err(res, 401, 'Credenciais inválidas', 'AUTH');
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return err(res, 401, 'Credenciais inválidas', 'AUTH');
-        const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-        res.json({ success: true, token, user: { id: user._id, nome: user.nome, email: user.email, role: user.role } });
+        const token = signAccess(user);
+        const refreshToken = await issueRefresh(user._id);
+        res.json({ success: true, token, refreshToken, user: { id: user._id, nome: user.nome, email: user.email, role: user.role } });
     } catch (error) {
         console.error('login:', error.message);
         return err(res, 500, 'Erro interno', 'INTERNAL');
     }
 });
+
+// Renova par de tokens com rotacao (refresh de uso unico)
+app.post('/api/auth/refresh', authLimiter, asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body || {};
+    if (!refreshToken) return err(res, 400, 'Refresh token obrigatório', 'VALIDATION');
+    const sess = await RefreshToken.findOne({ tokenHash: sha256(refreshToken) });
+    if (!sess || sess.revoked || sess.expiresAt < new Date()) {
+        return err(res, 401, 'Sessão inválida', 'AUTH');
+    }
+    const user = await Usuario.findById(sess.usuarioId).select('email role status');
+    if (!user || user.status !== 'ativo') return err(res, 401, 'Sessão inválida', 'AUTH');
+    sess.revoked = true;
+    await sess.save();
+    const token = signAccess(user);
+    const next = await issueRefresh(user._id);
+    res.json({ success: true, token, refreshToken: next });
+}));
+
+// Encerra a sessao (revoga refresh; access expira em minutos)
+app.post('/api/auth/logout', auth, asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body || {};
+    if (refreshToken) {
+        await RefreshToken.updateOne(
+            { tokenHash: sha256(refreshToken), usuarioId: req.usuarioId },
+            { $set: { revoked: true } }
+        );
+    }
+    res.json({ success: true });
+}));
+
+// Solicita reset de senha (resposta generica anti-enumeracao)
+app.post('/api/auth/forgot', authLimiter, asyncHandler(async (req, res) => {
+    const { email } = req.body || {};
+    const generic = { success: true, message: 'Se o e-mail existir, voce recebera instrucoes.' };
+    if (!email) return res.json(generic);
+    const user = await Usuario.findOne({ email: String(email).toLowerCase().trim() });
+    if (!user) return res.json(generic);
+    const token = newOpaqueToken();
+    await PasswordReset.create({
+        tokenHash: sha256(token),
+        usuarioId: user._id,
+        expiresAt: new Date(Date.now() + RESET_MINUTES * 60 * 1000)
+    });
+    if (RESET_TOKEN_RESPONSE) return res.json({ ...generic, resetToken: token });
+    return res.json(generic);
+}));
+
+// Conclui reset com token de uso unico
+app.post('/api/auth/reset', authLimiter, asyncHandler(async (req, res) => {
+    const { token, password } = req.body || {};
+    if (!token || !password) return err(res, 400, 'Token e nova senha são obrigatórios', 'VALIDATION');
+    if (String(password).length < 8) return err(res, 400, 'Nova senha deve ter ao menos 8 caracteres', 'WEAK_PASSWORD');
+    const rec = await PasswordReset.findOne({ tokenHash: sha256(token) });
+    if (!rec || rec.used || rec.expiresAt < new Date()) {
+        return err(res, 400, 'Token inválido ou expirado', 'AUTH');
+    }
+    const user = await Usuario.findById(rec.usuarioId).select('+password');
+    if (!user || user.status !== 'ativo') return err(res, 400, 'Token inválido ou expirado', 'AUTH');
+    user.password = await bcrypt.hash(String(password), 10);
+    await user.save();
+    rec.used = true;
+    await rec.save();
+    await RefreshToken.updateMany({ usuarioId: user._id, revoked: false }, { $set: { revoked: true } });
+    res.json({ success: true, message: 'Senha redefinida' });
+}));
 
 app.get('/api/auth/me', auth, asyncHandler(async (req, res) => {
     const user = await Usuario.findById(req.usuarioId).select('-password');

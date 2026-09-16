@@ -94,7 +94,9 @@
             try {
                 const res = await fetch(`${API}/pedidos?page=${pedPage}&limit=${PED_LIMIT}`, { headers: window.getAuthHeaders() });
                 if (res.status === 401) {
-                    localStorage.removeItem('token'); localStorage.removeItem('user');
+                    const ok = await window.refreshSession();
+                    if (ok) { loadPedidos(); return; }
+                    window.logoutAll();
                     window.location.href = '/auth.html';
                     return;
                 }
