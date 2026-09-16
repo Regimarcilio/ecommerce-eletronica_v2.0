@@ -1,8 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+
+const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:***REMOVED***@localhost:27017/ecommerce?authSource=admin';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@techstore.com.br';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '***REMOVED***';
 
 const app = express();
 app.use(cors());
@@ -48,7 +55,7 @@ const auth = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         if (!token) return res.status(401).json({ success: false, message: 'Token não fornecido' });
-        const decoded = jwt.verify(token, 'secret');
+        const decoded = jwt.verify(token, JWT_SECRET);
         req.usuarioId = decoded.id;
         req.usuarioRole = decoded.role;
         next();
@@ -72,7 +79,7 @@ app.post('/api/auth/register', async (req, res) => {
         if (exists) return res.status(400).json({ success: false, message: 'Email já cadastrado' });
         const hash = await bcrypt.hash(password, 10);
         const user = await Usuario.create({ nome, email, telefone, password: hash });
-        const token = jwt.sign({ id: user._id, email, role: 'user' }, 'secret', { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, user: { id: user._id, nome, email, role: 'user' } });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -86,7 +93,7 @@ app.post('/api/auth/login', async (req, res) => {
         if (!user) return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
-        const token = jwt.sign({ id: user._id, email, role: user.role }, 'secret', { expiresIn: '7d' });
+        const token = jwt.sign({ id: user._id, email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
         res.json({ success: true, token, user: { id: user._id, nome: user.nome, email, role: user.role } });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -236,17 +243,17 @@ app.get('/health', (req, res) => res.json({ status: 'OK' }));
 
 // ========== INICIALIZAÇÃO ==========
 async function init() {
-    const admin = await Usuario.findOne({ email: 'admin@techstore.com.br' });
+    const admin = await Usuario.findOne({ email: ADMIN_EMAIL });
     if (!admin) {
-        const hash = await bcrypt.hash('***REMOVED***', 10);
+        const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
         await Usuario.create({
-            nome: 'Administrador', email: 'admin@techstore.com.br', password: hash,
+            nome: 'Administrador', email: ADMIN_EMAIL, password: hash,
             telefone: '11999999999', role: 'admin'
         });
         console.log('Admin criado');
     }
 }
 
-mongoose.connect('mongodb://admin:***REMOVED***@localhost:27017/ecommerce?authSource=admin')
-    .then(async () => { console.log('MongoDB conectado'); await init(); app.listen(5000, () => console.log('Servidor na porta 5000')); })
+mongoose.connect(MONGODB_URI)
+    .then(async () => { console.log('MongoDB conectado'); await init(); app.listen(PORT, () => console.log(`Servidor na porta ${PORT}`)); })
     .catch(err => console.error('MongoDB erro:', err));
