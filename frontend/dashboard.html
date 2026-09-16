@@ -174,6 +174,23 @@
         }
         
         function logout() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; }
+
+        // Paginacao das tabelas admin (a API retorna page/limit/total/pages)
+        const PG_LIMIT = 10;
+        const pgProd = { page: 1, pages: 1 }, pgCat = { page: 1, pages: 1 },
+              pgPed = { page: 1, pages: 1 }, pgCli = { page: 1, pages: 1 };
+        function pagerNav(prefix, st) {
+            return `<nav class="d-flex justify-content-center align-items-center gap-3 mt-3"><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',-1)" ${st.page <= 1 ? 'disabled' : ''}>← Anterior</button><span class="text-muted small">Página ${st.page} de ${st.pages}</span><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',1)" ${st.page >= st.pages ? 'disabled' : ''}>Próxima →</button></nav>`;
+        }
+        window.mudarPaginaTab = function(prefix, delta) {
+            const map = { prod: [pgProd, loadProdutos], cat: [pgCat, loadCategorias], ped: [pgPed, loadPedidos], cli: [pgCli, loadClientes] };
+            const entry = map[prefix];
+            if (!entry) return;
+            const next = entry[0].page + delta;
+            if (next < 1 || next > entry[0].pages) return;
+            entry[0].page = next;
+            entry[1]();
+        };
         
         function getStatusClass(status) {
             const classes = { 'pendente': 'badge-warning', 'pago': 'badge-info', 'enviado': 'badge-info', 'entregue': 'badge-success', 'cancelado': 'badge-warning' };
@@ -282,8 +299,8 @@
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
                 const [prodRes, catRes] = await Promise.all([
-                    fetch(API + '/produtos', { headers: getHeaders() }),
-                    fetch(API + '/categorias', { headers: getHeaders() })
+                    fetch(`${API}/produtos?page=${pgProd.page}&limit=${PG_LIMIT}`, { headers: getHeaders() }),
+                    fetch(API + '/categorias?limit=100', { headers: getHeaders() })
                 ]);
                 const prodData = await prodRes.json();
                 const catData = await catRes.json();
@@ -296,20 +313,22 @@
                 }
                 
                 if (prodData.success && prodData.produtos) {
-                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Produtos (' + prodData.produtos.length + ')</h4><button class="btn-primary-custom" onclick="abrirModalProduto()"><i class="fas fa-plus"></i> Novo Produto</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    if (prodData.produtos.length === 0 && pgProd.page > 1) { pgProd.page--; loadProdutos(); return; }
+                    pgProd.pages = prodData.pages || 1;
+                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Produtos (' + (prodData.total ?? prodData.produtos.length) + ')</h4><button class="btn-primary-custom" onclick="abrirModalProduto()"><i class="fas fa-plus"></i> Novo Produto</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const p of prodData.produtos) {
                         const nomeCategoria = categoriasMap[p.categoria] || p.categoria_nome || 'Sem categoria';
                         html += `<tr>
                             <td>${window.escapeHtml(p.nome)}</td>
                             <td>${window.escapeHtml(p.sku ?? '-')}</td>
-                            <td><span class="badge-active">${nomeCategoria}</span></td>
+                            <td><span class="badge-active">${window.escapeHtml(nomeCategoria)}</span></td>
                             <td>R$ ${(Number(p.preco) || 0).toFixed(2)}</td>
                             <td>${p.quantidade ?? 0}</td>
                             <td><span class="badge-active">${window.escapeHtml(p.status)}</span></td>
                             <td><button class="btn-edit" onclick="editarProduto('${p._id}')"><i class="fas fa-edit"></i> Editar</button> <button class="btn-delete" onclick="excluirProduto('${p._id}')"><i class="fas fa-trash"></i> Excluir</button></td>
                         </tr>`;
                     }
-                    html += '</tbody></table></div></div>';
+                    html += '</tbody></table></div>' + pagerNav('prod', pgProd) + '</div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar produtos</div>'; }
@@ -386,14 +405,16 @@
             document.getElementById('pageTitle').innerHTML = 'Categorias';
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
-                const res = await fetch(API + '/categorias', { headers: getHeaders() });
+                const res = await fetch(`${API}/categorias?page=${pgCat.page}&limit=${PG_LIMIT}`, { headers: getHeaders() });
                 const data = await res.json();
                 if (data.success && data.categorias) {
-                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Categorias (' + data.categorias.length + ')</h4><button class="btn-primary-custom" onclick="abrirModalCategoria()"><i class="fas fa-plus"></i> Nova Categoria</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Ícone</th><th>Nome</th><th>Slug</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    if (data.categorias.length === 0 && pgCat.page > 1) { pgCat.page--; loadCategorias(); return; }
+                    pgCat.pages = data.pages || 1;
+                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Categorias (' + (data.total ?? data.categorias.length) + ')</h4><button class="btn-primary-custom" onclick="abrirModalCategoria()"><i class="fas fa-plus"></i> Nova Categoria</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Ícone</th><th>Nome</th><th>Slug</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const c of data.categorias) {
                         html += `<tr><td><i class="fas ${window.safeIcon(c.icone)} fa-lg"></i></td><td>${window.escapeHtml(c.nome)}</td><td>${window.escapeHtml(c.slug || '-')}</td><td><span class="badge-active">${window.escapeHtml(c.status)}</span></td><td><button class="btn-edit" onclick="editarCategoria('${c._id}')">Editar</button> <button class="btn-delete" onclick="excluirCategoria('${c._id}')">Excluir</button></td></tr>`;
                     }
-                    html += '</tbody></table></div></div>';
+                    html += '</tbody></table></div>' + pagerNav('cat', pgCat) + '</div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar categorias</div>'; }
@@ -450,10 +471,11 @@
             document.getElementById('pageTitle').innerHTML = 'Pedidos';
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
-                const res = await fetch(API + '/pedidos', { headers: getHeaders() });
+                const res = await fetch(`${API}/pedidos?page=${pgPed.page}&limit=${PG_LIMIT}`, { headers: getHeaders() });
                 const data = await res.json();
                 if (data.success && data.pedidos && data.pedidos.length > 0) {
-                    let html = '<div class="data-card"><h4>Pedidos (' + data.pedidos.length + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    pgPed.pages = data.pages || 1;
+                    let html = '<div class="data-card"><h4>Pedidos (' + (data.total ?? data.pedidos.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nº</th><th>Cliente</th><th>Data</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const p of data.pedidos) {
                         const statusClass = getStatusClass(p.status);
                         const statusText = getStatusText(p.status);
@@ -467,7 +489,7 @@
                                 <button class="btn-status" onclick="abrirModalStatus('${p._id}', '${(p.status || '').replace(/[^a-z]/g, '')}')"><i class="fas fa-exchange-alt"></i> Status</button></td>
                         </tr>`;
                     }
-                    html += '</tbody></table></div></div>';
+                    html += '</tbody></table></div>' + pagerNav('ped', pgPed) + '</div>';
                     document.getElementById('content').innerHTML = html;
                 } else { document.getElementById('content').innerHTML = '<div class="data-card"><p>Nenhum pedido encontrado.</p></div>'; }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar pedidos</div>'; }
@@ -520,12 +542,13 @@
             document.getElementById('pageTitle').innerHTML = 'Clientes';
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
-                const res = await fetch(API + '/clientes', { headers: getHeaders() });
+                const res = await fetch(`${API}/clientes?page=${pgCli.page}&limit=${PG_LIMIT}`, { headers: getHeaders() });
                 const data = await res.json();
                 if (data.success && data.clientes && data.clientes.length > 0) {
-                    let html = '<div class="data-card"><h4>Clientes (' + data.clientes.length + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>';
+                    pgCli.pages = data.pages || 1;
+                    let html = '<div class="data-card"><h4>Clientes (' + (data.total ?? data.clientes.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>';
                     for (const c of data.clientes) { html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${window.escapeHtml(c.email || '-')}</td><td>${window.escapeHtml(c.telefone || '-')}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-'}</td><td><span class="badge-active">${window.escapeHtml(c.status)}</span></td></tr>`; }
-                    html += '</tbody></table></div></div>';
+                    html += '</tbody></table></div>' + pagerNav('ped', pgPed) + '</div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>'; }

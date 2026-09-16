@@ -319,7 +319,7 @@ Tabela 2 - Requisitos funcionais
 | RF17 | Exibir dashboard | O administrador deve visualizar indicadores do sistema. | Media |
 | RF18 | Gerenciar conta | O cliente visualiza dados via `GET /auth/me`, edita nome/telefone via `PUT /auth/me` e gerencia enderecos via CRUD `/auth/enderecos` (sem `localStorage`). | Media |
 | RF19 | Trocar senha | O usuario autenticado deve trocar senha via `PUT /auth/password` informando a atual. | Alta |
-| RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes suportam `?page&limit` com meta; catalogo (`index`, `categoria`) tem pager Anterior/Proxima (12/pagina) e busca via API. | Media |
+| RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes suportam `?page&limit` com meta; catalogo (`index`, `categoria`, 12/pagina) e dashboard admin (produtos, categorias, pedidos, clientes, 10/pagina) tem pager Anterior/Proxima com back-step em pagina esvaziada; busca via API. | Media |
 
 Fonte: Elaboracao propria.
 

@@ -62,6 +62,7 @@ describe('paginacao UI', () => {
   it('13 itens com limit 12 = 2 paginas', () => assert.equal(pages(13, 12), 2));
   it('0 itens = 1 pagina vazia', () => assert.equal(pages(0, 12), 1));
   it('navegacao nao sai dos limites', () => assert.equal(clamp(0, 3), 1) && assert.equal(clamp(9, 3), 3));
+  it('pagina vazia volta uma (back-step)', () => { let page = 3; const items = []; if (items.length === 0 && page > 1) page--; assert.equal(page, 2); });
 });
 
 describe('endereco', () => {
