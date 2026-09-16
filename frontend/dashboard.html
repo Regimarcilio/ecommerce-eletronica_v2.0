@@ -196,7 +196,7 @@
                     if (select) {
                         let options = '<option value="">Selecione uma categoria...</option>';
                         for (const cat of data.categorias) {
-                            options += `<option value="${cat._id}">${cat.nome} ${cat.status !== 'ativo' ? '(inativo)' : ''}</option>`;
+                            options += `<option value="${cat._id}">${window.escapeHtml(cat.nome)} ${cat.status !== 'ativo' ? '(inativo)' : ''}</option>`;
                         }
                         select.innerHTML = options;
                     }
@@ -300,12 +300,12 @@
                     for (const p of prodData.produtos) {
                         const nomeCategoria = categoriasMap[p.categoria] || p.categoria_nome || 'Sem categoria';
                         html += `<tr>
-                            <td>${p.nome}</td>
-                            <td>${p.sku}</td>
+                            <td>${window.escapeHtml(p.nome)}</td>
+                            <td>${window.escapeHtml(p.sku ?? '-')}</td>
                             <td><span class="badge-active">${nomeCategoria}</span></td>
-                            <td>R$ ${p.preco.toFixed(2)}</td>
-                            <td>${p.quantidade}</td>
-                            <td><span class="badge-active">${p.status}</span></td>
+                            <td>R$ ${(Number(p.preco) || 0).toFixed(2)}</td>
+                            <td>${p.quantidade ?? 0}</td>
+                            <td><span class="badge-active">${window.escapeHtml(p.status)}</span></td>
                             <td><button class="btn-edit" onclick="editarProduto('${p._id}')"><i class="fas fa-edit"></i> Editar</button> <button class="btn-delete" onclick="excluirProduto('${p._id}')"><i class="fas fa-trash"></i> Excluir</button></td>
                         </tr>`;
                     }
@@ -391,7 +391,7 @@
                 if (data.success && data.categorias) {
                     let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Categorias (' + data.categorias.length + ')</h4><button class="btn-primary-custom" onclick="abrirModalCategoria()"><i class="fas fa-plus"></i> Nova Categoria</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Ícone</th><th>Nome</th><th>Slug</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const c of data.categorias) {
-                        html += `<tr><td><i class="fas ${c.icone || 'fa-folder'} fa-lg"></i></td><td>${c.nome}</td><td>${c.slug}</td><td><span class="badge-active">${c.status}</span></td><td><button class="btn-edit" onclick="editarCategoria('${c._id}')">Editar</button> <button class="btn-delete" onclick="excluirCategoria('${c._id}')">Excluir</button></td></tr>`;
+                        html += `<tr><td><i class="fas ${window.safeIcon(c.icone)} fa-lg"></i></td><td>${window.escapeHtml(c.nome)}</td><td>${window.escapeHtml(c.slug || '-')}</td><td><span class="badge-active">${window.escapeHtml(c.status)}</span></td><td><button class="btn-edit" onclick="editarCategoria('${c._id}')">Editar</button> <button class="btn-delete" onclick="excluirCategoria('${c._id}')">Excluir</button></td></tr>`;
                     }
                     html += '</tbody></table></div></div>';
                     document.getElementById('content').innerHTML = html;
@@ -458,13 +458,13 @@
                         const statusClass = getStatusClass(p.status);
                         const statusText = getStatusText(p.status);
                         html += `<tr>
-                            <td><strong>${p.numero}</strong></td>
-                            <td>${p.cliente.nome}<br><small>${p.cliente.email}</small></td>
+                            <td><strong>${window.escapeHtml(p.numero)}</strong></td>
+                            <td>${window.escapeHtml(p.cliente?.nome || '-')}<br><small>${window.escapeHtml(p.cliente?.email || '-')}</small></td>
                             <td>${new Date(p.createdAt).toLocaleDateString()}</td>
-                            <td><strong>R$ ${p.total.toFixed(2)}</strong></td>
+                            <td><strong>R$ ${(Number(p.total) || 0).toFixed(2)}</strong></td>
                             <td><span class="${statusClass}">${statusText}</span></td>
                             <td><button class="btn-view" onclick="verPedidoDetalhes('${p._id}')"><i class="fas fa-eye"></i> Ver</button>
-                                <button class="btn-status" onclick="abrirModalStatus('${p._id}', '${p.status}')"><i class="fas fa-exchange-alt"></i> Status</button></td>
+                                <button class="btn-status" onclick="abrirModalStatus('${p._id}', '${(p.status || '').replace(/[^a-z]/g, '')}')"><i class="fas fa-exchange-alt"></i> Status</button></td>
                         </tr>`;
                     }
                     html += '</tbody></table></div></div>';
@@ -480,15 +480,15 @@
                 if (data.success && data.pedido) {
                     const p = data.pedido;
                     let itensHtml = '';
-                    for (const item of p.items) { itensHtml += `<tr><td>${item.name}</td><td>${item.quantity}</td><td>R$ ${item.price.toFixed(2)}</td><td>R$ ${(item.price * item.quantity).toFixed(2)}</td>`; }
+                    for (const item of (p.items || [])) { const nm = window.escapeHtml(item.nome ?? item.name ?? '-'); const q = Number(item.quantity) || 0; const pr = Number(item.preco ?? item.price) || 0; itensHtml += `<tr><td>${nm}</td><td>${q}</td><td>R$ ${pr.toFixed(2)}</td><td>R$ ${(pr * q).toFixed(2)}</td>`; }
                     document.getElementById('pedidoDetalhesBody').innerHTML = `
-                        <div class="row"><div class="col-md-6"><h6><i class="fas fa-user"></i> Dados do Cliente</h6><p><strong>Nome:</strong> ${p.cliente.nome}<br><strong>Email:</strong> ${p.cliente.email}<br><strong>Telefone:</strong> ${p.cliente.telefone || '-'}<br><strong>CPF:</strong> ${p.cliente.cpf || '-'}</p></div>
-                        <div class="col-md-6"><h6><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h6><p>${p.endereco.logradouro}, ${p.endereco.numero}<br>${p.endereco.bairro}<br>${p.endereco.cidade} - ${p.endereco.estado}<br>CEP: ${p.endereco.cep}</p></div></div><hr>
+                        <div class="row"><div class="col-md-6"><h6><i class="fas fa-user"></i> Dados do Cliente</h6><p><strong>Nome:</strong> ${window.escapeHtml(p.cliente?.nome || '-')}<br><strong>Email:</strong> ${window.escapeHtml(p.cliente?.email || '-')}<br><strong>Telefone:</strong> ${window.escapeHtml(p.cliente?.telefone || '-')}<br><strong>CPF:</strong> ${window.escapeHtml(p.cliente?.cpf || '-')}</p></div>
+                        <div class="col-md-6"><h6><i class="fas fa-map-marker-alt"></i> Endereço de Entrega</h6><p>${window.escapeHtml(p.endereco?.logradouro || '-')}, ${window.escapeHtml(p.endereco?.numero || '-')}<br>${window.escapeHtml(p.endereco?.bairro || '-')}<br>${window.escapeHtml(p.endereco?.cidade || '-')} - ${window.escapeHtml(p.endereco?.estado || '-')}<br>CEP: ${window.escapeHtml(p.endereco?.cep || '-')}</p></div></div><hr>
                         <h6><i class="fas fa-boxes"></i> Itens do Pedido</h6><div class="table-responsive"><table class="table table-dark table-sm"><thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>${itensHtml}</tbody>
-                        <tfoot><tr><td colspan="3" class="text-end"><strong>Subtotal:</strong></td><td>R$ ${p.subtotal.toFixed(2)}</td></tr>
-                        <tr><td colspan="3" class="text-end"><strong>Frete:</strong></td><td>${p.frete === 0 ? 'Grátis' : 'R$ ' + p.frete.toFixed(2)}</td></tr>
-                        ${p.desconto > 0 ? '<tr><td colspan="3" class="text-end"><strong>Desconto:</strong></td><td class="text-success">- R$ ' + p.desconto.toFixed(2) + '</td></tr>' : ''}
-                        <tr><td colspan="3" class="text-end"><strong>TOTAL:</strong></td><td><strong class="text-primary">R$ ${p.total.toFixed(2)}</strong></td></tr></tfoot></table></div><hr>
+                        <tfoot><tr><td colspan="3" class="text-end"><strong>Subtotal:</strong></td><td>R$ ${(Number(p.subtotal) || 0).toFixed(2)}</td></tr>
+                        <tr><td colspan="3" class="text-end"><strong>Frete:</strong></td><td>${(Number(p.frete) || 0) === 0 ? 'Grátis' : 'R$ ' + (Number(p.frete) || 0).toFixed(2)}</td></tr>
+                        ${Number(p.desconto) > 0 ? '<tr><td colspan="3" class="text-end"><strong>Desconto:</strong></td><td class="text-success">- R$ ' + (Number(p.desconto) || 0).toFixed(2) + '</td></tr>' : ''}
+                        <tr><td colspan="3" class="text-end"><strong>TOTAL:</strong></td><td><strong class="text-primary">R$ ${(Number(p.total) || 0).toFixed(2)}</strong></td></tr></tfoot></table></div><hr>
                         <div class="row"><div class="col-md-6"><strong><i class="fas fa-credit-card"></i> Pagamento:</strong> ${p.pagamento === 'pix' ? 'PIX' : p.pagamento === 'card' ? 'Cartão' : 'Boleto'}</div>
                         <div class="col-md-6"><strong><i class="fas fa-toggle-on"></i> Status:</strong> <span class="${getStatusClass(p.status)}">${getStatusText(p.status)}</span></div></div>
                         <div class="mt-3"><strong><i class="fas fa-calendar"></i> Data:</strong> ${new Date(p.createdAt).toLocaleString()}</div>`;
@@ -524,7 +524,7 @@
                 const data = await res.json();
                 if (data.success && data.clientes && data.clientes.length > 0) {
                     let html = '<div class="data-card"><h4>Clientes (' + data.clientes.length + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>';
-                    for (const c of data.clientes) { html += `<tr><td>${c.nome || '-'}</td><td>${c.email || '-'}</td><td>${c.telefone || '-'}</td><td>${new Date(c.createdAt).toLocaleDateString()}</td><td><span class="badge-active">${c.status}</span></td></tr>`; }
+                    for (const c of data.clientes) { html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${window.escapeHtml(c.email || '-')}</td><td>${window.escapeHtml(c.telefone || '-')}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-'}</td><td><span class="badge-active">${window.escapeHtml(c.status)}</span></td></tr>`; }
                     html += '</tbody></table></div></div>';
                     document.getElementById('content').innerHTML = html;
                 }

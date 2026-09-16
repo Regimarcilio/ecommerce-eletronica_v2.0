@@ -46,6 +46,16 @@ describe('xss', () => {
   it('escapa aspas e &', () => assert.equal(escapeHtml(`a"b'&c`), 'a&quot;b&#39;&amp;c'));
 });
 
+describe('icone seguro (allowlist)', () => {
+  const safeIcon = (v) => {
+    const s = String(v || 'fa-microchip').trim().split(/\s+/).pop();
+    return /^fa-[a-z0-9-]+$/.test(s) ? s : 'fa-microchip';
+  };
+  it('aceita fa-microchip', () => assert.equal(safeIcon('fa-microchip'), 'fa-microchip'));
+  it('rejeita injecao de atributo', () => assert.equal(safeIcon('fa-x" onclick="alert(1)'), 'fa-microchip'));
+  it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
+});
+
 describe('carrinho', () => {
   it('merge incrementa em vez de duplicar', () => {
     let cart = [{ id: '1', quantity: 1 }];

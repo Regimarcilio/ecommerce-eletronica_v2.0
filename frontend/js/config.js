@@ -18,6 +18,12 @@
     return h;
   };
 
+  // Icone FontAwesome sanitizado (allowlist fa-xxx, anti injecao de atributo)
+  window.safeIcon = function (v) {
+    const s = String(v || 'fa-microchip').trim().split(/\s+/).pop();
+    return /^fa-[a-z0-9-]+$/.test(s) ? s : 'fa-microchip';
+  };
+
   // Carrinho com merge de quantidade (evita duplicados)
   window.cartAdd = function (id, name, price) {
     let cart = [];

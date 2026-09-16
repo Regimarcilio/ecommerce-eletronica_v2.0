@@ -235,7 +235,7 @@
             if (user.nome) {
                 authLink.innerHTML = `<div class="dropdown">
                     <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> ${user.nome.split(' ')[0]}
+                        <i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end bg-dark">
                         <li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>

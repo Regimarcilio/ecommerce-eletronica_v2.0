@@ -94,7 +94,7 @@
         
         if (!token) window.location.href = '/auth.html';
         
-        let cart = JSON.parse(localStorage.getItem('checkoutCart') || '[]');
+        let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
         let selectedPayment = 'pix';
         let subtotal = 0;
         

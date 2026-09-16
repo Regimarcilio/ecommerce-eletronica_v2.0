@@ -174,8 +174,8 @@
                     document.getElementById('categoriesContainer').innerHTML = data.categorias.map(cat => `
                         <div class="col-md-3 col-6">
                             <div class="category-card" onclick="window.location.href='categoria.html?id=${cat._id}'">
-                                <i class="fas ${cat.icone || 'fa-microchip'} fa-3x text-primary mb-3"></i>
-                                <h5>${cat.nome}</h5>
+                                <i class="fas ${window.safeIcon(cat.icone)} fa-3x text-primary mb-3"></i>
+                                <h5>${window.escapeHtml(cat.nome)}</h5>
                                 <small class="text-muted">Ver produtos →</small>
                             </div>
                         </div>
@@ -185,7 +185,7 @@
                     document.getElementById('categoriesMenu').innerHTML = data.categorias.map(cat => `
                         <li>
                             <a class="dropdown-item text-white" href="#" onclick="window.location.href='categoria.html?id=${cat._id}'">
-                                <i class="fas ${cat.icone || 'fa-microchip'}"></i> ${cat.nome}
+                                <i class="fas ${window.safeIcon(cat.icone)}"></i> ${window.escapeHtml(cat.nome)}
                             </a>
                         </li>
                     `).join('');
@@ -217,10 +217,10 @@
                             <i class="fas fa-microchip fa-4x text-primary"></i>
                         </div>
                         <div class="product-info p-3">
-                            <h6 class="fw-bold">${p.nome}</h6>
-                            <p class="small text-muted">SKU: ${p.sku || '---'}</p>
-                            <p class="text-primary fw-bold fs-5">R$ ${(p.preco || 0).toFixed(2)}</p>
-                            <button class="btn btn-primary-custom w-100" onclick="addToCart('${p._id}', '${p.nome.replace(/'/g, "\\'")}', ${p.preco || 0})"><i class="fas fa-cart-plus"></i> Comprar</button>
+                            <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
+                            <p class="small text-muted">SKU: ${window.escapeHtml(p.sku || '---')}</p>
+                            <p class="text-primary fw-bold fs-5">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
+                            <button class="btn btn-primary-custom w-100" onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button>
                         </div>
                     </div>
                 </div>
@@ -228,18 +228,34 @@
         }
         
         function searchProducts() {
-            const term = document.getElementById('searchInput').value.toLowerCase();
+            const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
             if (!term) {
                 displayProducts(allProducts);
             } else {
-                const filtered = allProducts.filter(p => p.nome.toLowerCase().includes(term) || (p.sku && p.sku.toLowerCase().includes(term)));
+                const filtered = (allProducts || []).filter(p => String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term));
                 displayProducts(filtered);
             }
         }
         
         function addToCart(id, name, price) {
             window.cartAdd(id, name, price);
-            showToast(`${window.escapeHtml(name)} adicionado ao carrinho!`);
+            showToast(`${name} adicionado ao carrinho!`);
+        }
+
+        function updateCartCount() {
+            try {
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const el = document.getElementById('cartCount');
+                if (el) el.textContent = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+            } catch { /* carrinho ilegivel: ignora */ }
+        }
+
+        function addToCartById(id) {
+            const prod = (allProducts || []).find(x => x._id === id);
+            if (!prod) { showToast('Produto não encontrado', true); return; }
+            window.cartAdd(id, prod.nome, prod.preco);
+            updateCartCount();
+            showToast('Produto adicionado ao carrinho!');
         }
         
         loadCategories();
