@@ -20,6 +20,39 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node --check server.js
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping')\""
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      PORT: 5000
+      MONGODB_URI: mongodb://localhost:27017/e2edb
+      JWT_SECRET: e2e-test-secret
+      JWT_EXPIRES_IN: 1h
+      ADMIN_EMAIL: e2e-admin@t.t
+      ADMIN_PASSWORD: E2eAdmin123!
+      E2E_ADMIN_EMAIL: e2e-admin@t.t
+      E2E_ADMIN_PASSWORD: E2eAdmin123!
+      E2E_BASE_URL: http://localhost:5000
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: node server.js > /tmp/backend.log 2>&1 &
+      - run: for i in $(seq 1 30); do curl -sf http://localhost:5000/health && break || sleep 2; done; curl -sf http://localhost:5000/health
+      - run: npm run test:e2e
   compose-build:
     runs-on: ubuntu-latest
     steps:

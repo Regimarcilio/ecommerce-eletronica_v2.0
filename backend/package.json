@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/security.test.js"
+    "test": "node --test test/security.test.js",
+    "test:e2e": "node --test test/e2e/*.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

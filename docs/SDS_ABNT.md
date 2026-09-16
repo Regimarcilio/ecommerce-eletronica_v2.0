@@ -787,7 +787,15 @@ Validar CRUD de enderecos: CEP invalido 400, PUT/DELETE de outro usuario 404, `n
 
 Validar paginacao `?page&limit` com meta `{page,limit,total,pages}`.
 
-Executar `npm test` no backend (19 asserts: paging, pedido, auth, XSS, carrinho).
+Executar `npm test` no backend (unitarios) e `npm run test:e2e` (23 asserts E2E sem dependencias: `fetch` nativo + `node:test`).
+
+Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
+| Suite | Casos |
+|---|---|
+| `01-auth-conta` | health, register 200, duplicado 400, senha fraca 400, login errado 401, me sem password, PUT me 400/200, password 401/400/200+relogin |
+| `02-catalogo-rbac` | admin cria categoria/produto, user 403, sem token 401, id invalido 400, paging 13 itens p1=12/p2=1 |
+| `03-pedido-estoque-enderecos` | total adulterado ignorado (120), pix 77, estoque 17, oversell 409, cross-user 403, enderecos CRUD + CEP 400 + cross 404 |
+Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).
 
 E2E de pedido validado (inclusive apos rotacao de segredos: 3x40 pix = 114, estoque 10->7): total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.
 
