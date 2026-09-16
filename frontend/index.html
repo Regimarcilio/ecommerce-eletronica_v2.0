@@ -248,6 +248,7 @@
                         <div class="product-info p-3">
                             <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
                             <p class="small text-muted">SKU: ${window.escapeHtml(p.sku || '---')}</p>
+                            <p class="small text-muted desc" title="${window.escapeHtml(p.descricao || '')}">${window.escapeHtml(window.truncate(p.descricao || '', 120))}</p>
                             <p class="text-primary fw-bold fs-5">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
                             <button class="btn btn-primary-custom w-100" onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button>
                         </div>

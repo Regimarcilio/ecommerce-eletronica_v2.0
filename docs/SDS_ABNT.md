@@ -305,7 +305,7 @@ Tabela 2 - Requisitos funcionais
 | RF03 | Emitir token JWT | O sistema deve gerar token para sessoes autenticadas. | Alta |
 | RF04 | Listar produtos | O sistema deve listar produtos disponiveis no catalogo. | Alta |
 | RF05 | Buscar produto por ID | O sistema deve consultar dados de um produto especifico. | Media |
-| RF06 | Gerenciar produtos | O administrador deve criar, editar e excluir produtos. | Alta |
+| RF06 | Gerenciar produtos | O administrador deve criar, editar e excluir produtos com ficha completa: titulo (nome), descricao, valor (preco) e quantidade em estoque; os dados publicados aparecem na pagina principal via mesma API REST. | Alta |
 | RF07 | Listar categorias | O sistema deve exibir categorias de produtos. | Alta |
 | RF08 | Gerenciar categorias | O administrador deve criar, editar e excluir categorias. | Alta |
 | RF09 | Adicionar ao carrinho | O usuario deve adicionar produtos ao carrinho. | Alta |
@@ -469,6 +469,7 @@ Tabela 4 - Entidades e atributos principais
 | Usuario | status | String | `ativo` por padrao |
 | Produto | nome | String | Nome comercial do produto |
 | Produto | sku | String | Codigo unico do produto |
+| Produto | descricao | String | Descricao detalhada (opcional, max 2000, exibida na principal) |
 | Produto | preco | Number | Valor unitario |
 | Produto | quantidade | Number | Quantidade em estoque |
 | Produto | status | String | `ativo` por padrao |
@@ -611,6 +612,10 @@ RN03 - Um novo usuario cadastrado recebe o perfil `user`.
 RN04 - O sistema cria um administrador padrao se nao existir usuario com e-mail `admin@techstore.com.br`.
 
 RN05 - O produto possui SKU unico.
+
+RN16 - A descricao do produto e opcional (max 2000 caracteres), armazenada sem alteracao e sempre escapada na exibicao (anti-XSS).
+
+RN17 - Todo produto criado/editado pelo administrador via `POST/PUT /api/produtos` fica imediatamente disponivel na pagina principal (mesma API, sem cache de frontend).
 
 RN06 - A categoria possui nome unico.
 
@@ -798,7 +803,7 @@ Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
 | Suite | Casos |
 |---|---|
 | `01-auth-conta` | health, register 200, duplicado 400, senha fraca 400, login errado 401, me sem password, PUT me 400/200, password 401/400/200+relogin |
-| `02-catalogo-rbac` | admin cria categoria/produto, user 403, sem token 401, id invalido 400, paging 13 itens p1=12/p2=1 |
+| `02-catalogo-rbac` | admin cria categoria/produto, user 403, sem token 401, id invalido 400, paging 14 itens p1=12/p2=2, ficha (preco/qtd 400, descricao+XSS roundtrip, PUT), integracao admin→principal |
 | `03-pedido-estoque-enderecos` | total adulterado ignorado (120), pix 77, estoque 17, oversell 409, cross-user 403, enderecos CRUD + CEP 400 + cross 404 |
 | `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
 Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).

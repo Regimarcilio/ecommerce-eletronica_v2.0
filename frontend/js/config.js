@@ -90,6 +90,11 @@
     }
     sel.value = v;
   };
+  // Trunca texto p/ cards (mantem original intacto)
+  window.truncate = function (v, n) {
+    const s = String(v ?? '').trim();
+    return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
+  };
   window.cartAdd = function (id, name, price) {
     let cart = [];
     try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }

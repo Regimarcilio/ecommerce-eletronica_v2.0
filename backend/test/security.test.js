@@ -56,6 +56,21 @@ describe('icone seguro (allowlist)', () => {
   it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
 });
 
+describe('ficha do produto', () => {
+  const pick = (b) => {
+    const out = { descricao: b.descricao ?? '' };
+    if (out.preco !== undefined && (typeof out.preco !== 'number' || out.preco < 0)) throw new Error('Preco invalido');
+    return out;
+  };
+  it('descricao default vazia', () => assert.equal(pick({}).descricao, ''));
+  it('descricao longa passa no pick (limite no schema)', () => assert.equal(pick({ descricao: 'x'.repeat(2000) }).descricao.length, 2000));
+  it('truncate 120 com reticencia', () => {
+    const s = 'y'.repeat(200);
+    const r = s.length > 120 ? s.slice(0, 119).trimEnd() + '…' : s;
+    assert.equal(r.length, 120);
+  });
+});
+
 describe('paginacao UI', () => {
   const pages = (total, limit) => Math.max(1, Math.ceil(total / limit));
   const clamp = (p, pages) => Math.min(Math.max(1, p), pages);

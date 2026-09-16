@@ -103,7 +103,9 @@
                 </div>
                 <small class="text-muted">Se a categoria não existir, clique em "Nova" para criar</small>
             </div>
+            <div class="mb-3"><label class="form-label">Descrição</label><textarea id="prodDescricao" class="form-control" rows="3" maxlength="2000" placeholder="Detalhes do produto exibidos na página principal"></textarea></div>
             <div class="mb-3"><label class="form-label">Status</label><select id="prodStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
+            <div class="mb-3 form-check"><input type="checkbox" id="prodDestaque" class="form-check-input"><label class="form-check-label" for="prodDestaque">Destaque na página principal</label></div>
         </div>
         <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" onclick="salvarProduto()">Salvar</button></div></div></div>
     </div>
@@ -363,6 +365,8 @@
                 document.getElementById('prodPreco').value = produto.preco;
                 document.getElementById('prodQuantidade').value = produto.quantidade;
                 document.getElementById('prodCategoria').value = produto.categoria || '';
+                document.getElementById('prodDescricao').value = produto.descricao || '';
+                document.getElementById('prodDestaque').checked = !!produto.destaque;
                 document.getElementById('prodStatus').value = produto.status;
             } else {
                 document.getElementById('produtoModalTitle').innerHTML = '<i class="fas fa-plus"></i> Novo Produto';
@@ -372,6 +376,8 @@
                 document.getElementById('prodPreco').value = '';
                 document.getElementById('prodQuantidade').value = 0;
                 document.getElementById('prodCategoria').value = '';
+                document.getElementById('prodDescricao').value = '';
+                document.getElementById('prodDestaque').checked = false;
                 document.getElementById('prodStatus').value = 'ativo';
             }
             produtoModal.show();
@@ -393,13 +399,21 @@
             if (!document.getElementById('prodNome').value.trim()) { showToast('Preencha o nome do produto!', true); return; }
             if (!document.getElementById('prodSku').value.trim()) { showToast('Preencha o SKU!', true); return; }
             if (!categoria) { showToast('Selecione uma categoria!', true); return; }
-            
+            const preco = parseFloat(document.getElementById('prodPreco').value);
+            const quantidade = Number(document.getElementById('prodQuantidade').value);
+            if (Number.isNaN(preco) || preco < 0) { showToast('Preço inválido (use 0 ou mais)!', true); return; }
+            if (!Number.isInteger(quantidade) || quantidade < 0) { showToast('Quantidade inválida (inteiro 0 ou mais)!', true); return; }
+            const descricao = document.getElementById('prodDescricao').value.trim();
+            if (descricao.length > 2000) { showToast('Descrição com no máximo 2000 caracteres!', true); return; }
+
             const produto = {
-                nome: document.getElementById('prodNome').value,
-                sku: document.getElementById('prodSku').value,
-                preco: parseFloat(document.getElementById('prodPreco').value) || 0,
-                quantidade: parseInt(document.getElementById('prodQuantidade').value) || 0,
+                nome: document.getElementById('prodNome').value.trim(),
+                sku: document.getElementById('prodSku').value.trim(),
+                descricao,
+                preco,
+                quantidade,
                 categoria: categoria,
+                destaque: document.getElementById('prodDestaque').checked,
                 status: document.getElementById('prodStatus').value
             };
             

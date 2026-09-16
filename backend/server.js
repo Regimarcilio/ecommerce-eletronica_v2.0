@@ -117,8 +117,9 @@ async function issueRefresh(usuarioId) {
 }
 
 const ProdutoSchema = new mongoose.Schema({
-    nome: { type: String, required: true, trim: true },
-    sku: { type: String, required: true, unique: true, trim: true },
+    nome: { type: String, required: true, trim: true, maxlength: 160 },
+    sku: { type: String, required: true, unique: true, trim: true, maxlength: 60 },
+    descricao: { type: String, trim: true, maxlength: 2000, default: '' },
     preco: { type: Number, required: true, min: 0 },
     quantidade: { type: Number, required: true, min: 0, default: 0 },
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
@@ -376,18 +377,42 @@ app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
     res.json({ success: true, produto });
 }));
 
-const pickProduto = (b) => ({ nome: b.nome, sku: b.sku, preco: b.preco, quantidade: b.quantidade, status: b.status, destaque: b.destaque, categoria: b.categoria || undefined });
+const pickProduto = (b) => {
+    const out = {
+        nome: b.nome, sku: b.sku, descricao: b.descricao ?? '',
+        preco: b.preco, quantidade: b.quantidade,
+        status: b.status, destaque: b.destaque,
+        categoria: b.categoria || undefined
+    };
+    if (out.preco !== undefined && (typeof out.preco !== 'number' || Number.isNaN(out.preco) || out.preco < 0)) {
+        throw Object.assign(new Error('Preco invalido'), { statusCode: 400, code: 'VALIDATION' });
+    }
+    if (out.quantidade !== undefined && (!Number.isInteger(Number(out.quantidade)) || Number(out.quantidade) < 0)) {
+        throw Object.assign(new Error('Quantidade invalida'), { statusCode: 400, code: 'VALIDATION' });
+    }
+    if (out.quantidade !== undefined) out.quantidade = Number(out.quantidade);
+    return out;
+};
+
+const sendPickError = (res, error) => {
+    if (error.statusCode) return err(res, error.statusCode, error.message, error.code);
+    throw error;
+};
 
 app.post('/api/produtos', auth, admin, asyncHandler(async (req, res) => {
-    const produto = await Produto.create(pickProduto(req.body));
-    res.json({ success: true, produto });
+    try {
+        const produto = await Produto.create(pickProduto(req.body));
+        res.json({ success: true, produto });
+    } catch (error) { sendPickError(res, error); }
 }));
 
 app.put('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const produto = await Produto.findByIdAndUpdate(req.params.id, pickProduto(req.body), { new: true, runValidators: true });
-    if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
-    res.json({ success: true, produto });
+    try {
+        const produto = await Produto.findByIdAndUpdate(req.params.id, pickProduto(req.body), { new: true, runValidators: true });
+        if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
+        res.json({ success: true, produto });
+    } catch (error) { sendPickError(res, error); }
 }));
 
 app.delete('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
