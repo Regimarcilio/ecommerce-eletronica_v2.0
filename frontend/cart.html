@@ -128,10 +128,12 @@
         }
         
         function updateQuantity(productId, newQuantity) {
+            const qtd = parseInt(newQuantity, 10);
+            if (!Number.isInteger(qtd) || qtd <= 0 || qtd > 99) return;
             let cart = getCart();
             const item = cart.find(i => i.id === productId);
-            if (item && newQuantity > 0) {
-                item.quantity = newQuantity;
+            if (item) {
+                item.quantity = qtd;
                 saveCart(cart);
             }
         }

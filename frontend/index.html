@@ -128,8 +128,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
     <script>
-        const API = 'http://localhost:5000/api';
+        const API = window.API_BASE;
         let allProducts = [];
         
         function showToast(msg, isError = false) {
@@ -236,10 +237,8 @@
         }
         
         function addToCart(id, name, price) {
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            cart.push({ id, name, price, quantity: 1 });
-            localStorage.setItem('cart', JSON.stringify(cart));
-            showToast(`${name} adicionado ao carrinho!`);
+            window.cartAdd(id, name, price);
+            showToast(`${window.escapeHtml(name)} adicionado ao carrinho!`);
         }
         
         loadCategories();
