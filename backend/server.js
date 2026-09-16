@@ -32,7 +32,11 @@ app.use(helmet());
 app.use(cors(CORS_ORIGIN === true ? undefined : { origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '100kb' }));
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
+// Limites por rota sensivel (E2E usa: login ~7, register ~8, refresh ~3, forgot+reset ~5 por run)
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 // Observabilidade leve (em memoria, sem dependencias)
 const startedAt = Date.now();
@@ -174,7 +178,7 @@ const admin = (req, res, next) => {
 };
 
 // ========== ROTAS DE AUTH ==========
-app.post('/api/auth/register', authLimiter, async (req, res) => {
+app.post('/api/auth/register', registerLimiter, async (req, res) => {
     try {
         const { nome, email, telefone, password } = req.body;
         if (!nome?.trim() || !email?.trim() || !password) return err(res, 400, 'Nome, e-mail e senha são obrigatórios', 'VALIDATION');
@@ -194,7 +198,7 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/auth/login', authLimiter, async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) return err(res, 400, 'E-mail e senha são obrigatórios', 'VALIDATION');
@@ -212,7 +216,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 });
 
 // Renova par de tokens com rotacao (refresh de uso unico)
-app.post('/api/auth/refresh', authLimiter, asyncHandler(async (req, res) => {
+app.post('/api/auth/refresh', refreshLimiter, asyncHandler(async (req, res) => {
     const { refreshToken } = req.body || {};
     if (!refreshToken) return err(res, 400, 'Refresh token obrigatório', 'VALIDATION');
     const sess = await RefreshToken.findOne({ tokenHash: sha256(refreshToken) });
@@ -241,7 +245,7 @@ app.post('/api/auth/logout', auth, asyncHandler(async (req, res) => {
 }));
 
 // Solicita reset de senha (resposta generica anti-enumeracao)
-app.post('/api/auth/forgot', authLimiter, asyncHandler(async (req, res) => {
+app.post('/api/auth/forgot', resetLimiter, asyncHandler(async (req, res) => {
     const { email } = req.body || {};
     const generic = { success: true, message: 'Se o e-mail existir, voce recebera instrucoes.' };
     if (!email) return res.json(generic);
@@ -258,7 +262,7 @@ app.post('/api/auth/forgot', authLimiter, asyncHandler(async (req, res) => {
 }));
 
 // Conclui reset com token de uso unico
-app.post('/api/auth/reset', authLimiter, asyncHandler(async (req, res) => {
+app.post('/api/auth/reset', resetLimiter, asyncHandler(async (req, res) => {
     const { token, password } = req.body || {};
     if (!token || !password) return err(res, 400, 'Token e nova senha são obrigatórios', 'VALIDATION');
     if (String(password).length < 8) return err(res, 400, 'Nova senha deve ter ao menos 8 caracteres', 'WEAK_PASSWORD');

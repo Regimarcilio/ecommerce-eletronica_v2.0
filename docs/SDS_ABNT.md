@@ -672,7 +672,7 @@ O token e armazenado no `localStorage`, o que exige cuidado com XSS.
 
 Nao ha sanitizacao centralizada de entradas.
 
-Nao ha limitacao de taxa para login.
+Rate-limit por rota: login e register 20/15min, refresh 30/15min, forgot+reset 10/15min, com headers `RateLimit-*` (E2E valida presenca sem disparar 429).
 
 Nao ha politica formal de validacao de senha forte no backend.
 

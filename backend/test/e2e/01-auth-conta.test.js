@@ -34,11 +34,15 @@ describe('e2e auth + conta', () => {
     assert.equal(r.data.code, 'WEAK_PASSWORD');
   });
 
-  it('login com senha errada retorna 401', async () => {
-    const r = await api('POST', '/api/auth/login', {
-      body: { email, password: 'Errada123' },
+  it('login expoe headers de rate-limit (sem disparar 429)', async () => {
+    const { BASE } = require('./helpers');
+    const res = await fetch(BASE + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: 'Errada123' }),
     });
-    assert.equal(r.status, 401);
+    assert.equal(res.status, 401);
+    assert.equal(res.headers.get('ratelimit-limit'), '20');
   });
 
   it('me retorna usuario sem password', async () => {
