@@ -33,6 +33,11 @@
     <div class="container py-5" style="margin-top: 60px;">
         <h2 class="mb-4"><i class="fas fa-box text-primary"></i> Meus Pedidos</h2>
         <div id="pedidosContainer"></div>
+        <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="pedPager" style="display:none;">
+            <button class="btn btn-outline-light btn-sm" id="pedPrev" onclick="mudarPaginaPed(-1)">← Anterior</button>
+            <span class="text-muted small" id="pedPageInfo">Página 1</span>
+            <button class="btn btn-outline-light btn-sm" id="pedNext" onclick="mudarPaginaPed(1)">Próxima →</button>
+        </nav>
     </div>
 
     <footer class="footer">
@@ -64,9 +69,30 @@
         
         if (!token) window.location.href = '/auth.html';
         
+        let pedPage = 1;
+        const PED_LIMIT = 10;
+        let pedPages = 1;
+
+        function renderPedPager() {
+            const nav = document.getElementById('pedPager');
+            if (!nav) return;
+            nav.style.display = pedPages > 1 ? 'flex' : 'none';
+            document.getElementById('pedPageInfo').textContent = `Página ${pedPage} de ${pedPages}`;
+            document.getElementById('pedPrev').disabled = pedPage <= 1;
+            document.getElementById('pedNext').disabled = pedPage >= pedPages;
+        }
+
+        function mudarPaginaPed(delta) {
+            const next = pedPage + delta;
+            if (next < 1 || next > pedPages) return;
+            pedPage = next;
+            loadPedidos();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         async function loadPedidos() {
             try {
-                const res = await fetch(API + '/pedidos', { headers: window.getAuthHeaders() });
+                const res = await fetch(`${API}/pedidos?page=${pedPage}&limit=${PED_LIMIT}`, { headers: window.getAuthHeaders() });
                 if (res.status === 401) {
                     localStorage.removeItem('token'); localStorage.removeItem('user');
                     window.location.href = '/auth.html';
@@ -74,8 +100,9 @@
                 }
                 const data = await res.json();
                 const container = document.getElementById('pedidosContainer');
-                
+
                 if (data.success && data.pedidos && data.pedidos.length > 0) {
+                    pedPages = data.pages || 1;
                     container.innerHTML = data.pedidos.map(p => {
                         const statusClass = getStatusClass(p.status);
                         const numero = window.escapeHtml(p.numero);
@@ -102,7 +129,13 @@
                             </div>
                         `;
                     }).join('');
+                    renderPedPager();
+                } else if (data.success && pedPage > 1) {
+                    pedPage--;
+                    loadPedidos();
+                    return;
                 } else {
+                    document.getElementById('pedPager').style.display = 'none';
                     container.innerHTML = '<div class="text-center py-5"><i class="fas fa-box-open fa-3x text-muted mb-3"></i><h4>Nenhum pedido encontrado</h4><a href="/" class="btn btn-primary-custom mt-3">Começar a comprar</a></div>';
                 }
             } catch(e) { console.error(e); }

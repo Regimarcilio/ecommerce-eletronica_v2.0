@@ -319,7 +319,7 @@ Tabela 2 - Requisitos funcionais
 | RF17 | Exibir dashboard | O administrador deve visualizar indicadores do sistema. | Media |
 | RF18 | Gerenciar conta | O cliente visualiza dados via `GET /auth/me`, edita nome/telefone via `PUT /auth/me` e gerencia enderecos via CRUD `/auth/enderecos` (sem `localStorage`). | Media |
 | RF19 | Trocar senha | O usuario autenticado deve trocar senha via `PUT /auth/password` informando a atual. | Alta |
-| RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes suportam `?page&limit` com meta; catalogo (`index`, `categoria`, 12/pagina) e dashboard admin (produtos, categorias, pedidos, clientes, 10/pagina) tem pager Anterior/Proxima com back-step em pagina esvaziada; busca via API. | Media |
+| RF20 | Paginar listagens | Produtos, categorias, pedidos e clientes suportam `?page&limit` com meta; catalogo (`index`, `categoria`, 12/pagina), dashboard admin (produtos, categorias, pedidos, clientes, 10/pagina) e Meus Pedidos (10/pagina) tem pager Anterior/Proxima com back-step em pagina esvaziada; busca via API. | Media |
 
 Fonte: Elaboracao propria.
 
@@ -704,7 +704,7 @@ O arquivo `docker-compose.yml` define tres servicos:
 
 `mongodb`: banco MongoDB 7 com volume `mongo_data` e healthcheck `mongosh ping`, exposto na porta `27017`.
 
-`backend`: imagem `node:20-alpine` (`backend/Dockerfile`), `env_file: ./backend/.env`, healthcheck `GET /health`, porta `5010:5000`, `depends_on mongodb (healthy)`.
+`backend`: imagem `node:20-alpine` (`backend/Dockerfile`), `env_file: ./backend/.env`, healthcheck `GET /health`, porta `5010:5000`, `depends_on mongodb (healthy)`. Credenciais do Mongo via `.env` na raiz (`MONGO_USER/MONGO_PASSWORD`, nao versionado, mesmos valores do `backend/.env`); `MONGODB_URI` do compose tem precedencia sobre o `env_file`.
 
 `frontend`: imagem `nginx:alpine` (`frontend/Dockerfile`), porta `8083:80`, `depends_on backend (healthy)`; `js/config.js` resolve a API conforme a porta.
 
