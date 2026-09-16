@@ -143,6 +143,30 @@ app.get('/api/auth/me', auth, asyncHandler(async (req, res) => {
     res.json({ success: true, user });
 }));
 
+app.put('/api/auth/me', auth, asyncHandler(async (req, res) => {
+    const { nome, telefone } = req.body;
+    if (nome !== undefined && !String(nome).trim()) return err(res, 400, 'Nome inválido', 'VALIDATION');
+    const update = {};
+    if (nome !== undefined) update.nome = String(nome).trim().slice(0, 120);
+    if (telefone !== undefined) update.telefone = String(telefone).trim().slice(0, 30);
+    const user = await Usuario.findByIdAndUpdate(req.usuarioId, update, { new: true, runValidators: true }).select('-password');
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    res.json({ success: true, user });
+}));
+
+app.put('/api/auth/password', auth, asyncHandler(async (req, res) => {
+    const { current, password } = req.body;
+    if (!current || !password) return err(res, 400, 'Senhas atual e nova são obrigatórias', 'VALIDATION');
+    if (String(password).length < 8) return err(res, 400, 'Nova senha deve ter ao menos 8 caracteres', 'WEAK_PASSWORD');
+    const user = await Usuario.findById(req.usuarioId).select('+password');
+    if (!user) return err(res, 404, 'Usuário não encontrado', 'NOT_FOUND');
+    const ok = await bcrypt.compare(String(current), user.password);
+    if (!ok) return err(res, 401, 'Senha atual incorreta', 'AUTH');
+    user.password = await bcrypt.hash(String(password), 10);
+    await user.save();
+    res.json({ success: true, message: 'Senha alterada' });
+}));
+
 // ========== ROTAS DE PRODUTOS ==========
 app.get('/api/produtos', asyncHandler(async (req, res) => {
     const query = {};

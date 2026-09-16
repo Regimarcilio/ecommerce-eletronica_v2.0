@@ -70,10 +70,10 @@
                         <button class="btn btn-outline-custom" onclick="location.href='/pedidos.html'">
                             <i class="fas fa-box"></i> Meus Pedidos
                         </button>
-                        <button class="btn btn-outline-custom" onclick="$('#enderecosTab').tab('show')">
+                        <button class="btn btn-outline-custom" onclick="showTab('enderecosTab')">
                             <i class="fas fa-map-marker-alt"></i> Endereços
                         </button>
-                        <button class="btn btn-outline-custom" onclick="$('#dadosTab').tab('show')">
+                        <button class="btn btn-outline-custom" onclick="showTab('dadosTab')">
                             <i class="fas fa-edit"></i> Editar Perfil
                         </button>
                         <button class="btn btn-outline-danger" onclick="logout()">
@@ -114,7 +114,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Email</label>
-                                        <input type="email" id="updateEmail" class="form-control" required>
+                                        <input type="email" id="updateEmail" class="form-control" readonly title="E-mail não pode ser alterado">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Telefone</label>
@@ -199,7 +199,6 @@
         </div>
     </footer>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
     <script>
@@ -208,6 +207,22 @@
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         
         if (!token) window.location.href = '/auth.html';
+
+        function showTab(id) { const el = document.getElementById(id); if (el) new bootstrap.Tab(el).show(); }
+
+        // Fonte da verdade: servidor (localStorage e burlavel)
+        fetch(API + '/auth/me', { headers: window.getAuthHeaders() }).then(async (r) => {
+            if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
+            const d = await r.json();
+            if (d.success && d.user) {
+                localStorage.setItem('user', JSON.stringify({ id: d.user._id, nome: d.user.nome, email: d.user.email, telefone: d.user.telefone, role: d.user.role }));
+                document.getElementById('userName').textContent = d.user.nome || 'Usuário';
+                document.getElementById('userEmail').textContent = d.user.email || '';
+                document.getElementById('updateNome').value = d.user.nome || '';
+                document.getElementById('updateEmail').value = d.user.email || '';
+                document.getElementById('updateTelefone').value = d.user.telefone || '';
+            }
+        }).catch(() => window.location.href = '/auth.html');
         
         let enderecos = JSON.parse(localStorage.getItem('enderecos') || '[]');
         
@@ -233,7 +248,7 @@
             if (user.nome) {
                 authLink.innerHTML = `<div class="dropdown">
                     <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> ${user.nome.split(' ')[0]}
+                        <i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end bg-dark">
                         <li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>
@@ -256,20 +271,22 @@
         document.getElementById('updateEmail').value = user.email || '';
         document.getElementById('updateTelefone').value = user.telefone || '';
         
-        // Atualizar perfil
+        // Atualizar perfil (API real)
         document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const updatedUser = {
-                nome: document.getElementById('updateNome').value,
-                email: document.getElementById('updateEmail').value,
-                telefone: document.getElementById('updateTelefone').value
-            };
-            
-            // Atualizar localStorage
-            const newUser = { ...user, ...updatedUser };
-            localStorage.setItem('user', JSON.stringify(newUser));
-            showToast('Perfil atualizado com sucesso!');
-            setTimeout(() => location.reload(), 1500);
+            const nome = document.getElementById('updateNome').value.trim();
+            const telefone = document.getElementById('updateTelefone').value.trim();
+            if (!nome) { showToast('Nome é obrigatório', true); return; }
+            try {
+                const res = await fetch(API + '/auth/me', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ nome, telefone }) });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    const cur = JSON.parse(localStorage.getItem('user') || '{}');
+                    localStorage.setItem('user', JSON.stringify({ ...cur, nome: data.user.nome, telefone: data.user.telefone }));
+                    showToast('Perfil atualizado com sucesso!');
+                    setTimeout(() => location.reload(), 1200);
+                } else showToast(data.message || 'Erro ao atualizar', true);
+            } catch { showToast('Erro ao conectar', true); }
         });
         
         // Alterar senha
@@ -282,13 +299,18 @@
                 showToast('As senhas não conferem!', true);
                 return;
             }
-            if (newPass.length < 6) {
-                showToast('A senha deve ter pelo menos 6 caracteres!', true);
+            if (newPass.length < 8) {
+                showToast('A senha deve ter pelo menos 8 caracteres!', true);
                 return;
             }
-            
-            showToast('Senha alterada com sucesso!');
-            document.getElementById('changePasswordForm').reset();
+            const current = document.getElementById('currentPassword').value;
+            if (!current) { showToast('Informe a senha atual', true); return; }
+            try {
+                const res = await fetch(API + '/auth/password', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ current, password: newPass }) });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Senha alterada com sucesso!'); document.getElementById('changePasswordForm').reset(); }
+                else showToast(data.message || 'Erro ao alterar senha', true);
+            } catch { showToast('Erro ao conectar', true); }
         });
         
         // Renderizar endereços
@@ -302,10 +324,10 @@
                 <div class="address-card">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <strong>${e.logradouro}, ${e.numero}</strong><br>
-                            ${e.bairro}<br>
-                            ${e.cidade} - ${e.uf}<br>
-                            CEP: ${e.cep}
+                            <strong>${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}</strong><br>
+                            ${window.escapeHtml(e.bairro || '-')}<br>
+                            ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.uf || '-')}<br>
+                            CEP: ${window.escapeHtml(e.cep || '-')}
                         </div>
                         <div>
                             <button class="btn btn-sm btn-outline-warning me-1" onclick="editarEndereco(${i})">
