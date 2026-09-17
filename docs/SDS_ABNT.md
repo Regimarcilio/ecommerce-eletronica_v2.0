@@ -638,7 +638,7 @@ RN19 - O icone da categoria e escolhido em biblioteca curada (`ICON_LIB`, ~130 i
 
 RN06 - A categoria possui nome unico.
 
-RN25 - Exclusao de produtos/categorias e logica (`deletedAt`): some de listas, detalhe e PUT (404), bloqueia novos pedidos e gera audit log; sem lixeira na UI.
+RN25 - Exclusao de produtos/categorias e logica (`deletedAt`): some de listas, detalhe e PUT (404), bloqueia novos pedidos e gera audit log; sem lixeira na UI. Unicidade de sku/nome vale só p/ visíveis (índice parcial + migração `syncIndexes` no boot).
 
 RN07 - Pedidos devem estar associados ao usuario autenticado.
 

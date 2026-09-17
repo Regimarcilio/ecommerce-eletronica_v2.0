@@ -54,6 +54,33 @@ describe('e2e regras: estados + soft-delete', () => {
     assert.equal(fim.status, 422);
   });
 
+  it('soft-delete libera sku/nome para reuso (indice parcial)', async () => {
+    const one = await api('POST', '/api/produtos', {
+      token: atok,
+      body: { nome: 'E2E Reuso', sku: `E2ERS-${tag}`, preco: 20, quantidade: 3, status: 'ativo', categoria: catId },
+    });
+    assert.equal(one.status, 200);
+    assert.equal((await api('DELETE', `/api/produtos/${one.data.produto._id}`, { token: atok })).status, 200);
+    const again = await api('POST', '/api/produtos', {
+      token: atok,
+      body: { nome: 'E2E Reuso Novo', sku: `E2ERS-${tag}`, preco: 20, quantidade: 3, status: 'ativo', categoria: catId },
+    });
+    assert.equal(again.status, 200);
+    await api('DELETE', `/api/produtos/${again.data.produto._id}`, { token: atok });
+    const cat0 = await api('POST', '/api/categorias', {
+      token: atok,
+      body: { nome: `E2E Reuso ${tag}`, status: 'ativo' },
+    });
+    assert.equal(cat0.status, 200);
+    assert.equal((await api('DELETE', `/api/categorias/${cat0.data.categoria._id}`, { token: atok })).status, 200);
+    const cat2 = await api('POST', '/api/categorias', {
+      token: atok,
+      body: { nome: `E2E Reuso ${tag}`, status: 'ativo' },
+    });
+    assert.equal(cat2.status, 200);
+    await api('DELETE', `/api/categorias/${cat2.data.categoria._id}`, { token: atok });
+  });
+
   it('soft-delete: some da lista/detalhe/PUT e bloqueia pedido', async () => {
     const del = await api('DELETE', `/api/produtos/${prodId}`, { token: atok });
     assert.equal(del.status, 200);

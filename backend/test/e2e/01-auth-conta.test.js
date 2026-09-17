@@ -42,7 +42,8 @@ describe('e2e auth + conta', () => {
       body: JSON.stringify({ email, password: 'Errada123' }),
     });
     assert.equal(res.status, 401);
-    assert.equal(res.headers.get('ratelimit-limit'), '20');
+    // 20 em prod, 10000 com E2E_NO_LIMIT=true
+    assert.ok(['20', '10000'].includes(res.headers.get('ratelimit-limit')));
   });
 
   it('me retorna usuario sem password', async () => {

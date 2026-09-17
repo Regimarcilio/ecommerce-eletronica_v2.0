@@ -40,10 +40,12 @@ app.use(cors(CORS_ORIGIN === true ? undefined : { origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '100kb' }));
 
 // Limites por rota sensivel (E2E usa: login ~7, register ~8, refresh ~3, forgot+reset ~5 por run)
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
-const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
-const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
-const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+// E2E_NO_LIMIT=true afrouxa p/ 10000 (CI/teste local; NUNCA em prod). Headers sempre presentes.
+const tetoE2E = (n) => (req) => process.env.E2E_NO_LIMIT === 'true' ? 10000 : n;
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: tetoE2E(20), standardHeaders: true, legacyHeaders: false });
+const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: tetoE2E(20), standardHeaders: true, legacyHeaders: false });
+const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: tetoE2E(30), standardHeaders: true, legacyHeaders: false });
+const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: tetoE2E(10), standardHeaders: true, legacyHeaders: false });
 
 // Observabilidade leve (em memoria, sem dependencias)
 const startedAt = Date.now();
@@ -134,7 +136,7 @@ async function issueRefresh(usuarioId) {
 
 const ProdutoSchema = new mongoose.Schema({
     nome: { type: String, required: true, trim: true, maxlength: 160 },
-    sku: { type: String, required: true, unique: true, trim: true, maxlength: 60 },
+    sku: { type: String, required: true, trim: true, maxlength: 60 },
     descricao: { type: String, trim: true, maxlength: 2000, default: '' },
     imagemUrl: {
         type: String, trim: true, maxlength: 500, default: '',
@@ -152,7 +154,7 @@ const ProdutoSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const CategoriaSchema = new mongoose.Schema({
-    nome: { type: String, required: true, unique: true, trim: true },
+    nome: { type: String, required: true, trim: true },
     slug: { type: String, trim: true },
     icone: { type: String, trim: true, default: 'fa-microchip' },
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
@@ -225,6 +227,10 @@ const NotificacaoSchema = new mongoose.Schema({
     status: { type: String, enum: ['enviada', 'falha'], required: true },
     erro: { type: String, default: '' }
 }, { timestamps: true });
+
+// Unicidade vale só p/ registros visíveis (soft-delete libera nome/sku/slug)
+ProdutoSchema.index({ sku: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
+CategoriaSchema.index({ nome: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 
 const Usuario = mongoose.model('Usuario', UsuarioSchema);
 const Produto = mongoose.model('Produto', ProdutoSchema);
@@ -930,6 +936,11 @@ app.use((error, req, res, next) => {
 
 // ========== INICIALIZAÇÃO ==========
 async function init() {
+    // Migracao: unicidade passa a valer só p/ visíveis (derruba índices legados)
+    try {
+        await Produto.syncIndexes();
+        await Categoria.syncIndexes();
+    } catch (error) { console.error('indices:', error.message); }
     const admin = await Usuario.findOne({ email: ADMIN_EMAIL });
     if (!admin) {
         const hash = await bcrypt.hash(ADMIN_PASSWORD, 10);

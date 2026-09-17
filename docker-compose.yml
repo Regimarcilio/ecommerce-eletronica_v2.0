@@ -27,6 +27,7 @@ services:
     environment:
       MONGODB_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-dev-troque-em-producao}@mongodb:27017/ecommerce?authSource=admin
       CORS_ORIGIN: http://localhost:8083
+      E2E_NO_LIMIT: ${E2E_NO_LIMIT:-}
     ports:
       - "5010:5000"
     depends_on:
