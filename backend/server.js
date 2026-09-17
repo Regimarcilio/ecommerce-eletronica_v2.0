@@ -62,7 +62,16 @@ app.use((req, res, next) => {
     next();
 });
 
+// Maquina de estados do pedido (qualquer salto fora da whitelist: 422)
 const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const PEDIDO_FLOW = {
+    pendente: ['pago', 'cancelado'],
+    pago: ['enviado', 'cancelado'],
+    enviado: ['entregue'],
+    entregue: [],
+    cancelado: []
+};
+const notDeleted = { deletedAt: null };
 const err = (res, status, message, code) => res.status(status).json({ success: false, message, code });
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const parsePaging = (q) => {
@@ -138,14 +147,16 @@ const ProdutoSchema = new mongoose.Schema({
     quantidade: { type: Number, required: true, min: 0, default: 0 },
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
     destaque: { type: Boolean, default: false },
-    categoria: { type: mongoose.Schema.Types.ObjectId, ref: 'Categoria' }
+    categoria: { type: mongoose.Schema.Types.ObjectId, ref: 'Categoria' },
+    deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 const CategoriaSchema = new mongoose.Schema({
     nome: { type: String, required: true, unique: true, trim: true },
     slug: { type: String, trim: true },
     icone: { type: String, trim: true, default: 'fa-microchip' },
-    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' }
+    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
+    deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 const PedidoSchema = new mongoose.Schema({
@@ -413,16 +424,17 @@ app.get('/api/produtos', asyncHandler(async (req, res) => {
         query.categoria = req.query.categoria;
     }
     const { page, limit, skip } = parsePaging(req.query);
+    const visivel = { ...query, ...{ deletedAt: null } };
     const [produtos, total] = await Promise.all([
-        Produto.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        Produto.countDocuments(query)
+        Produto.find(visivel).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Produto.countDocuments(visivel)
     ]);
     res.json({ success: true, produtos, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const produto = await Produto.findById(req.params.id);
+    const produto = await Produto.findOne({ _id: req.params.id, deletedAt: null });
     if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
     res.json({ success: true, produto });
 }));
@@ -463,7 +475,7 @@ app.post('/api/produtos', auth, admin, asyncHandler(async (req, res) => {
 app.put('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
     try {
-        const produto = await Produto.findByIdAndUpdate(req.params.id, pickProduto(req.body), { new: true, runValidators: true });
+        const produto = await Produto.findOneAndUpdate({ _id: req.params.id, deletedAt: null }, pickProduto(req.body), { new: true, runValidators: true });
         if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
         res.json({ success: true, produto });
     } catch (error) { sendPickError(res, error); }
@@ -471,8 +483,9 @@ app.put('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
 
 app.delete('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const produto = await Produto.findByIdAndDelete(req.params.id);
+    const produto = await Produto.findOneAndUpdate({ _id: req.params.id, deletedAt: null }, { $set: { deletedAt: new Date() } }, { new: true });
     if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'produto_excluido', por: req.usuarioId, id: req.params.id }));
     res.json({ success: true });
 }));
 
@@ -481,16 +494,17 @@ app.get('/api/categorias', asyncHandler(async (req, res) => {
     const query = {};
     if (req.query.status) query.status = req.query.status;
     const { page, limit, skip } = parsePaging(req.query);
+    const visivelCat = { ...query, ...{ deletedAt: null } };
     const [categorias, total] = await Promise.all([
-        Categoria.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
-        Categoria.countDocuments(query)
+        Categoria.find(visivelCat).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Categoria.countDocuments(visivelCat)
     ]);
     res.json({ success: true, categorias, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 app.get('/api/categorias/:id', asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const categoria = await Categoria.findById(req.params.id);
+    const categoria = await Categoria.findOne({ _id: req.params.id, deletedAt: null });
     if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
     res.json({ success: true, categoria });
 }));
@@ -504,15 +518,16 @@ app.post('/api/categorias', auth, admin, asyncHandler(async (req, res) => {
 
 app.put('/api/categorias/:id', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const categoria = await Categoria.findByIdAndUpdate(req.params.id, pickCategoria(req.body), { new: true, runValidators: true });
+    const categoria = await Categoria.findOneAndUpdate({ _id: req.params.id, deletedAt: null }, pickCategoria(req.body), { new: true, runValidators: true });
     if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
     res.json({ success: true, categoria });
 }));
 
 app.delete('/api/categorias/:id', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const categoria = await Categoria.findByIdAndDelete(req.params.id);
+    const categoria = await Categoria.findOneAndUpdate({ _id: req.params.id, deletedAt: null }, { $set: { deletedAt: new Date() } }, { new: true });
     if (!categoria) return err(res, 404, 'Categoria não encontrada', 'NOT_FOUND');
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'categoria_excluida', por: req.usuarioId, id: req.params.id }));
     res.json({ success: true });
 }));
 
@@ -554,7 +569,7 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         const id = it.produtoId || it.id || it._id;
         const qtd = Number(it.quantity ?? it.qtd ?? 1);
         if (!isValidId(id) || !Number.isInteger(qtd) || qtd <= 0) return err(res, 400, 'Item inválido', 'VALIDATION');
-        const prod = await Produto.findById(id);
+        const prod = await Produto.findOne({ _id: id, deletedAt: null });
         if (!prod || prod.status !== 'ativo') return err(res, 400, `Produto indisponível`, 'OUT_OF_STOCK');
         if ((prod.quantidade ?? 0) < qtd) return err(res, 409, `Estoque insuficiente para ${prod.nome}`, 'OUT_OF_STOCK');
         subtotal += prod.preco * qtd;
@@ -583,10 +598,16 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
 // Atualizar status do pedido (admin apenas)
 app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const allowed = ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'];
+    const allowed = Object.keys(PEDIDO_FLOW);
     if (!allowed.includes(req.body.status)) return err(res, 400, 'Status inválido', 'VALIDATION');
-    const pedido = await Pedido.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+    const pedido = await Pedido.findById(req.params.id);
     if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (!PEDIDO_FLOW[pedido.status].includes(req.body.status)) {
+        return err(res, 422, `Transição inválida: ${pedido.status} → ${req.body.status}`, 'TRANSITION');
+    }
+    pedido.status = req.body.status;
+    await pedido.save();
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_status', por: req.usuarioId, id: pedido._id, status: pedido.status }));
     res.json({ success: true, pedido });
 }));
 
@@ -602,8 +623,8 @@ app.get('/api/clientes', auth, admin, asyncHandler(async (req, res) => {
 
 // ========== DASHBOARD STATS ==========
 app.get('/api/dashboard/stats', auth, admin, asyncHandler(async (req, res) => {
-    const totalProdutos = await Produto.countDocuments();
-    const totalCategorias = await Categoria.countDocuments();
+    const totalProdutos = await Produto.countDocuments({ deletedAt: null });
+    const totalCategorias = await Categoria.countDocuments({ deletedAt: null });
     const totalClientes = await Usuario.countDocuments({ role: 'user' });
     const totalPedidos = await Pedido.countDocuments();
     const pedidos = await Pedido.find().select('total');

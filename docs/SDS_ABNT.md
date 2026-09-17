@@ -632,6 +632,8 @@ RN19 - O icone da categoria e escolhido em biblioteca curada (`ICON_LIB`, ~130 i
 
 RN06 - A categoria possui nome unico.
 
+RN25 - Exclusao de produtos/categorias e logica (`deletedAt`): some de listas, detalhe e PUT (404), bloqueia novos pedidos e gera audit log; sem lixeira na UI.
+
 RN07 - Pedidos devem estar associados ao usuario autenticado.
 
 RN08 - Usuarios comuns visualizam apenas seus proprios pedidos.
@@ -640,7 +642,7 @@ RN09 - Administradores visualizam todos os pedidos.
 
 RN10 - Apenas administradores podem atualizar status de pedidos.
 
-RN11 - O status inicial de pedido e `pendente`.
+RN11 - O status inicial de pedido e `pendente`; transicoes validas: pendente→pago/cancelado, pago→enviado/cancelado, enviado→entregue (fora disso: 422 `TRANSITION`).
 
 RN12 - O frete e gratis para subtotal superior a R$ 100,00; caso contrario, o valor aplicado e R$ 20,00.
 
@@ -818,7 +820,8 @@ Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
 | `01-auth-conta` | health, register 200, duplicado 400, senha fraca 400, login errado 401, me sem password, PUT me 400/200, password 401/400/200+relogin |
 | `02-catalogo-rbac` | admin cria categoria/produto, user 403, sem token 401, id invalido 400, paging 14 itens p1=12/p2=2, ficha (preco/qtd 400, descricao+XSS roundtrip, PUT), imagemUrl roundtrip + `javascript:` 400, integracao admin→principal |
 | `03-pedido-estoque-enderecos` | total adulterado ignorado (120), pix 77, estoque 17, oversell 409, cross-user 403, enderecos CRUD + CEP 400 + cross 404 |
-| `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `06-config` public 401/403, validacoes 400, segredo cifrado/mascarado/limpo, status Evolution |; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
+| `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `06-config` public 401/403, validacoes 400, segredo cifrado/mascarado/limpo, status Evolution |;
+| `07-regras` | transicao ilegal 422, fluxo valido ate entregue, pos-entregue imutavel, soft-delete (lista/detalhe/PUT/pedido) |; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
 Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).
 
 E2E de pedido validado (inclusive apos rotacao de segredos: 3x40 pix = 114, estoque 10->7): total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.
