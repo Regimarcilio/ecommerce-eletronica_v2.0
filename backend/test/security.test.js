@@ -77,6 +77,24 @@ describe('whatsapp destino (normZap/maskFone)', () => {
   it('vazio vira vazio', () => assert.equal(normZap(''), '') && assert.equal(maskFone(''), ''));
 });
 
+describe('whatsapp imediato (wa.me)', () => {
+  const buildWaText = (p) => [`*NOVO PEDIDO ${p.numero}*`, `*TOTAL: R$ ${Number(p.total).toFixed(2)}*`].join('\n');
+  const waSendUrl = (loja, txt) => `https://api.whatsapp.com/send/?phone=${loja}&text=${encodeURIComponent(txt)}&type=phone_number&app_absent=0`;
+  it('monta URL exata pedida', () => {
+    const url = waSendUrl('5511999999999', 'oi');
+    assert.ok(url.startsWith('https://api.whatsapp.com/send/?phone=5511999999999&text='));
+    assert.ok(url.endsWith('&type=phone_number&app_absent=0'));
+  });
+  it('codifica itens e total', () => {
+    const txt = buildWaText({ numero: 'PED-1', total: 120 });
+    assert.ok(waSendUrl('5511', txt).includes(encodeURIComponent('*TOTAL: R$ 120.00*')));
+  });
+  it('DDD valido 11-99, 11 digitos', () => {
+    const ok = (v) => { const d = String(v || '').replace(/\D/g, ''); return d.length === 11 && Number(d.slice(0, 2)) >= 11; };
+    assert.ok(ok('(47) 99713-6647') && !ok('(07) 99713-6647') && !ok('999999'));
+  });
+});
+
 describe('foto do produto (safeImg)', () => {
   const safeImg = (v) => {
     const s = String(v || '').trim();

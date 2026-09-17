@@ -39,7 +39,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3"><label>Nome completo</label><input type="text" id="nome" class="form-control" required></div>
                             <div class="col-md-6 mb-3"><label>Email</label><input type="email" id="email" class="form-control" required></div>
-                            <div class="col-md-6 mb-3"><label>Telefone</label><input type="tel" id="telefone" class="form-control" required></div>
+                            <div class="col-md-6 mb-3"><label>Telefone (WhatsApp c/ DDD)</label><input type="tel" id="telefone" class="form-control" required placeholder="(11) 99999-9999" oninput="maskTelefone(this)"></div>
                             <div class="col-md-6 mb-3"><label>CPF</label><input type="text" id="cpf" class="form-control"></div>
                         </div>
                         
@@ -123,6 +123,39 @@
         }
         let subtotal = 0;
         let savedAddrs = [];
+
+        // Mascara (00) 00000-0000 e valida DDD brasileiro (11–99)
+        function maskTelefone(el) {
+            const d = el.value.replace(/\D/g, '').slice(0, 11);
+            el.value = d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+                : d.length > 2 ? `(${d.slice(0, 2)}) ${d.slice(2)}` : d;
+        }
+        function telefoneValido(v) {
+            const d = String(v || '').replace(/\D/g, '');
+            if (d.length !== 11) return false;
+            const ddd = Number(d.slice(0, 2));
+            return ddd >= 11 && ddd <= 99;
+        }
+
+        // Resumo p/ WhatsApp da loja (itens + valores + pagamento)
+        function buildWaText(pedido) {
+            const linhas = (pedido.items || []).slice(0, 12).map((i) =>
+                `- ${i.quantity}x ${i.nome} (R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)})`);
+            return [
+                `*NOVO PEDIDO ${pedido.numero}*`,
+                ...linhas,
+                `Subtotal: R$ ${Number(pedido.subtotal).toFixed(2)}`,
+                `Frete: ${Number(pedido.frete) === 0 ? 'Grátis' : 'R$ ' + Number(pedido.frete).toFixed(2)}`,
+                `Desconto: R$ ${Number(pedido.desconto).toFixed(2)}`,
+                `*TOTAL: R$ ${Number(pedido.total).toFixed(2)}*`,
+                `Pagamento: ${pedido.pagamento}`,
+                `Cliente: ${pedido.cliente?.nome || ''}`
+            ].join('\n');
+        }
+
+        function waSendUrl(loja, pedido) {
+            return `https://api.whatsapp.com/send/?phone=${loja}&text=${encodeURIComponent(buildWaText(pedido))}&type=phone_number&app_absent=0`;
+        }
 
         async function loadEnderecosSalvos() {
             try {
@@ -219,6 +252,7 @@
                 return;
             }
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
+            if (!telefoneValido(telefone)) { showToast('Informe um WhatsApp válido com DDD (11 dígitos)', true); return; }
             if (!['pix', 'card', 'boleto'].includes(selectedPayment)) { showToast('Pagamento inválido', true); return; }
             
             // Backend recalcula subtotal/frete/desconto/total — envia apenas o essencial
@@ -259,13 +293,16 @@
             const zapMsg = zap.enviado
                 ? `Resumo com itens e valores enviado ao seu WhatsApp ${window.escapeHtml(zap.para || '')}!`
                 : 'Assim que possível, o resumo chegará no seu WhatsApp.';
+            const waUrl = loja ? waSendUrl(loja, data.pedido) : '';
+            if (waUrl) { try { window.open(waUrl, '_blank'); } catch { /* popup bloqueado: usa o botão */ } }
             document.getElementById('orderItems').innerHTML = `
                 <div class="text-center py-3">
                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
                     <h4>Pedido ${numero} confirmado!</h4>
                     <p class="fs-5">Total: <strong>${total}</strong></p>
                     <p><i class="fab fa-whatsapp text-success"></i> ${zapMsg}</p>
-                    ${loja ? `<a class="btn btn-success w-100 mb-2" target="_blank" rel="noopener" href="https://wa.me/${loja}"><i class="fab fa-whatsapp"></i> Falar com a loja</a>` : ''}
+                    ${waUrl ? `<a class="btn btn-success w-100 mb-2" target="_blank" rel="noopener" href="${waUrl}"><i class="fab fa-whatsapp"></i> Enviar pedido no WhatsApp da loja</a>` : ''}
+                    ${loja ? `<a class="btn btn-outline-success w-100 mb-2" target="_blank" rel="noopener" href="https://wa.me/${loja}"><i class="fab fa-whatsapp"></i> Falar com a loja</a>` : ''}
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary-custom flex-fill" onclick="pagarAgora()"><i class="fas fa-bolt"></i> Pagar agora</button>
                         <a class="btn btn-outline-light flex-fill" href="/pedidos.html">Meus pedidos</a>
@@ -294,6 +331,7 @@
             document.getElementById('nome').value = user.nome;
             document.getElementById('email').value = user.email;
             document.getElementById('telefone').value = user.telefone || '';
+            maskTelefone(document.getElementById('telefone'));
         }
         
         selectPayment('pix');

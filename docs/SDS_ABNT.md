@@ -308,7 +308,7 @@ Tabela 2 - Requisitos funcionais
 | RF06 | Gerenciar produtos | O administrador deve criar, editar e excluir produtos com ficha completa: titulo (nome), descricao, foto (URL), valor (preco) e quantidade em estoque; os dados publicados aparecem na pagina principal via mesma API REST. | Alta |
 | RF23 | Biblioteca de icones | O dashboard deve oferecer biblioteca de icones por segmento para categorias multi-ramo (busca + preview). | Media |
 | RF25 | Pagar via Mercado Pago | O cliente deve pagar o pedido (Pix/cartao/boleto) via preferencia MP e retorno; webhook confirma `pendente→pago`. | Alta |
-| RF26 | Avisar pedido no WhatsApp | No aceite, o resumo (itens, valores, pagamento) vai automatico ao WhatsApp do cliente (checkout, senao cadastro); a tela exibe so o numero da loja. | Alta |
+| RF26 | Avisar pedido no WhatsApp | No aceite: (1) servidor tenta resumo ao WhatsApp informado (checkout, senao cadastro) e retorna mascarado; (2) painel abre `api.whatsapp.com/send?phone=<loja>&text=<resumo>` de pronto + botao (anti-popup). Telefone com mascara e DDD 11-99 validado. | Alta |
 | RF24 | Configurar loja | O administrador deve editar WhatsApp, instancia Evolution, condicoes de pagamento e segredos via dashboard; segredos nunca via .env em runtime. | Alta |
 | RF07 | Listar categorias | O sistema deve exibir categorias de produtos. | Alta |
 | RF08 | Gerenciar categorias | O administrador deve criar, editar e excluir categorias. | Alta |
