@@ -308,7 +308,7 @@ Tabela 2 - Requisitos funcionais
 | RF06 | Gerenciar produtos | O administrador deve criar, editar e excluir produtos com ficha completa: titulo (nome), descricao, foto (URL), valor (preco) e quantidade em estoque; os dados publicados aparecem na pagina principal via mesma API REST. | Alta |
 | RF23 | Biblioteca de icones | O dashboard deve oferecer biblioteca de icones por segmento para categorias multi-ramo (busca + preview). | Media |
 | RF25 | Pagar via Mercado Pago | O cliente deve pagar o pedido (Pix/cartao/boleto) via preferencia MP e retorno; webhook confirma `pendente→pago`. | Alta |
-| RF26 | Avisar pedido no WhatsApp | O sistema deve enviar resumo do pedido pago ao WhatsApp do cliente (retry, sem quebrar o pedido). | Alta |
+| RF26 | Avisar pedido no WhatsApp | No aceite, o resumo (itens, valores, pagamento) vai automatico ao WhatsApp do cliente (checkout, senao cadastro); a tela exibe so o numero da loja. | Alta |
 | RF24 | Configurar loja | O administrador deve editar WhatsApp, instancia Evolution, condicoes de pagamento e segredos via dashboard; segredos nunca via .env em runtime. | Alta |
 | RF07 | Listar categorias | O sistema deve exibir categorias de produtos. | Alta |
 | RF08 | Gerenciar categorias | O administrador deve criar, editar e excluir categorias. | Alta |
@@ -830,7 +830,8 @@ Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
 | `03-pedido-estoque-enderecos` | total adulterado ignorado (120), pix 77, estoque 17, oversell 409, cross-user 403, enderecos CRUD + CEP 400 + cross 404 |
 | `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `06-config` public 401/403, validacoes 400, segredo cifrado/mascarado/limpo, status Evolution |;
 | `07-regras` | transicao ilegal 422, fluxo valido ate entregue, pos-entregue imutavel, soft-delete (lista/detalhe/PUT/pedido) |;
-| `08-pagamentos` | intent 403/409, preferencia mock, webhook aprova (pago) idempotente |; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
+| `08-pagamentos` | intent 403/409, preferencia mock, webhook aprova (pago) idempotente |
+| `03-pedido` | aceite retorna `lojaWhatsapp` + `whatsapp.{enviado,para}` mascarado; fallback cadastro; auditoria em `/notificacoes` |; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
 Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).
 
 E2E de pedido validado (inclusive apos rotacao de segredos: 3x40 pix = 114, estoque 10->7): total adulterado ignorado (2x60 card = 120), estoque 5->3, oversell 99 = 409, pix 1x60 = 77 (60+20-3), acesso cruzado 403, user criar produto 403, sem token 401; dados de teste removidos.

@@ -69,6 +69,14 @@ describe('carrossel placas (filtro destaque)', () => {
   });
 });
 
+describe('whatsapp destino (normZap/maskFone)', () => {
+  const normZap = (v) => { const d = String(v || '').replace(/\D/g, ''); if (!d) return ''; return d.length <= 11 ? `55${d}` : d; };
+  const maskFone = (v) => { const d = String(v || '').replace(/\D/g, ''); return d.length >= 4 ? `***${d.slice(-4)}` : ''; };
+  it('checkout vence, senao cadastro', () => { const dest = (c, r) => normZap(c || r); assert.equal(dest('11911112222', '11999999999'), '5511911112222'); assert.equal(dest('', '11999999999'), '5511999999999'); });
+  it('normaliza DDI e mascara', () => assert.equal(normZap('11999999999'), '5511999999999') && assert.equal(maskFone('5511999999999'), '***9999'));
+  it('vazio vira vazio', () => assert.equal(normZap(''), '') && assert.equal(maskFone(''), ''));
+});
+
 describe('foto do produto (safeImg)', () => {
   const safeImg = (v) => {
     const s = String(v || '').trim();

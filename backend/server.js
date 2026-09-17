@@ -623,7 +623,20 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         usuarioId: req.usuarioId, cliente, endereco, pagamento,
         items: itemsCalc, subtotal, frete, desconto, total, status: 'pendente'
     });
-    res.status(201).json({ success: true, pedido });
+    // Aceite: resumo automatico no WhatsApp do cliente (nunca quebra o 201)
+    let zap = { enviado: false, motivo: 'nao-tentado', para: '' };
+    try {
+        const dono = await Usuario.findById(req.usuarioId).select('telefone');
+        const r = await enviaWhatsApp(pedido, dono?.telefone || '');
+        zap = { enviado: r.ok, motivo: r.ok ? 'enviado' : (r.motivo || 'falha'), para: maskFone(r.destino || '') };
+    } catch (error) { zap = { enviado: false, motivo: 'falha', para: '' }; }
+    const cfgLoja = await getSettings();
+    res.status(201).json({
+        success: true,
+        pedido,
+        lojaWhatsapp: cfgLoja.whatsappNumero || '',
+        whatsapp: zap
+    });
 }));
 
 // Atualizar status do pedido (admin apenas)
@@ -698,38 +711,45 @@ async function mpBuscarPagamento(paymentId) {
     } finally { clearTimeout(t); }
 }
 
-function montaMsgPedido(pedido) {
+function montaMsgPedido(pedido, lojaNumero = '') {
     const linhas = (pedido.items || []).slice(0, 10).map((i) => `• ${i.quantity}x ${i.nome} — R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)}`);
     return [
         `*TechStore* — Pedido ${pedido.numero} confirmado! ✅`,
         ...linhas,
         `Subtotal R$ ${Number(pedido.subtotal).toFixed(2)} · Frete ${Number(pedido.frete) === 0 ? 'Grátis' : 'R$ ' + Number(pedido.frete).toFixed(2)} · Desconto R$ ${Number(pedido.desconto).toFixed(2)}`,
         `*Total R$ ${Number(pedido.total).toFixed(2)}* (${pedido.pagamento})`,
-        `Entrega: ${pedido.endereco?.logradouro || ''}, ${pedido.endereco?.numero || ''} — ${pedido.endereco?.cidade || ''}/${pedido.endereco?.estado || ''}`
-    ].join('\n').slice(0, 1000);
+        `Entrega: ${pedido.endereco?.logradouro || ''}, ${pedido.endereco?.numero || ''} — ${pedido.endereco?.cidade || ''}/${pedido.endereco?.estado || ''}`,
+        lojaNumero ? `Duvidas? Fale com a loja: +${lojaNumero}` : ''
+    ].filter(Boolean).join('\n').slice(0, 1000);
 }
 
 const normZap = (v) => {
     const d = String(v || '').replace(/\D/g, '');
+    if (!d) return '';
     return d.length <= 11 ? `55${d}` : d;
 };
+const maskFone = (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    return d.length >= 4 ? `***${d.slice(-4)}` : '';
+};
 
-async function enviaWhatsApp(pedido) {
-    const destino = normZap(pedido.cliente?.telefone);
-    const texto = montaMsgPedido(pedido);
+async function enviaWhatsApp(pedido, telefoneCadastro = '') {
+    // Destino: telefone do pedido → fallback para o do cadastro
+    const destino = normZap(pedido.cliente?.telefone || telefoneCadastro);
+    const cfg = await getSettings().catch(() => null);
+    const texto = montaMsgPedido(pedido, cfg?.whatsappNumero || '');
     if (!evoConfigurado()) {
         await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: 'Evolution nao configurado' });
-        return { ok: false, motivo: 'nao-configurado' };
+        return { ok: false, motivo: 'nao-configurado', destino };
     }
-    const s = await getSettings();
-    if (!s.evoInstance) {
+    if (!cfg?.evoInstance) {
         await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: 'Instancia Evolution ausente' });
-        return { ok: false, motivo: 'sem-instancia' };
+        return { ok: false, motivo: 'sem-instancia', destino };
     }
     try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 10000);
-        const r = await fetch(`${EVO_API_URL}/message/sendText/${encodeURIComponent(s.evoInstance)}`, {
+        const r = await fetch(`${EVO_API_URL}/message/sendText/${encodeURIComponent(cfg.evoInstance)}`, {
             method: 'POST',
             signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', apikey: EVO_APIKEY },
@@ -737,10 +757,10 @@ async function enviaWhatsApp(pedido) {
         }).finally(() => clearTimeout(t));
         if (!r.ok) throw new Error(`Evolution ${r.status}`);
         await Notificacao.create({ pedidoId: pedido._id, destino, status: 'enviada' });
-        return { ok: true };
+        return { ok: true, destino };
     } catch (error) {
         await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: error.message.slice(0, 200) });
-        return { ok: false, motivo: error.message.slice(0, 120) };
+        return { ok: false, motivo: error.message.slice(0, 120), destino };
     }
 }
 
@@ -802,6 +822,21 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
 }));
 
 // ========== ROTAS DE CLIENTES ==========
+
+// Auditoria de notificacoes WhatsApp (admin)
+app.get('/api/notificacoes', auth, admin, asyncHandler(async (req, res) => {
+    const { page, limit, skip } = parsePaging(req.query);
+    const query = {};
+    if (req.query.pedidoId) {
+        if (!isValidId(req.query.pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+        query.pedidoId = req.query.pedidoId;
+    }
+    const [notificacoes, total] = await Promise.all([
+        Notificacao.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Notificacao.countDocuments(query)
+    ]);
+    res.json({ success: true, notificacoes, page, limit, total, pages: Math.ceil(total / limit) });
+}));
 app.get('/api/clientes', auth, admin, asyncHandler(async (req, res) => {
     const { page, limit, skip } = parsePaging(req.query);
     const [clientes, total] = await Promise.all([
@@ -834,7 +869,8 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             condicoesPagamento: s.condicoesPagamento || '',
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
-            mpPublicKey: s.mpPublicKey || ''
+            mpPublicKey: s.mpPublicKey || '',
+            whatsappNumero: s.whatsappNumero || ''
         }
     });
 }));

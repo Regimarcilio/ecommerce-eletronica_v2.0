@@ -13,12 +13,13 @@ describe('e2e configuracoes da loja', () => {
     utok = r.data.token;
   });
 
-  it('public sem auth: so campos publicos', async () => {
+  it('public sem auth: so campos publicos (+zap da loja)', async () => {
     const r = await api('GET', '/api/config/loja/public');
     assert.equal(r.status, 200);
     assert.ok(typeof r.data.config.condicoesPagamento === 'string');
     assert.ok(typeof r.data.config.parcelasMax === 'number');
-    assert.ok(!('segredos' in r.data.config) && !('whatsappNumero' in r.data.config));
+    assert.ok(typeof r.data.config.whatsappNumero === 'string');
+    assert.ok(!('segredos' in r.data.config));
   });
 
   it('loja sem token 401, como user 403', async () => {

@@ -44,6 +44,25 @@ describe('e2e pedido + estoque + enderecos', () => {
     ...extra,
   });
 
+  it('whatsapp no aceite: checkout vence, senao cadastro (mascarado)', async () => {
+    const r1 = await api('POST', '/api/pedidos', {
+      token: utok,
+      body: pedidoBase([{ produtoId: prodId, quantity: 1 }], { cliente: { nome: 'E2E Buyer', telefone: '11911112222' } }),
+    });
+    assert.equal(r1.status, 201);
+    assert.ok('whatsapp' in r1.data && 'lojaWhatsapp' in r1.data);
+    assert.equal(r1.data.whatsapp.para, '***2222');
+    const r2 = await api('POST', '/api/pedidos', {
+      token: utok,
+      body: pedidoBase([{ produtoId: prodId, quantity: 1 }]),
+    });
+    assert.equal(r2.status, 201);
+    assert.equal(r2.data.whatsapp.para, '***9999');
+    const aud = await api('GET', `/api/notificacoes?pedidoId=${r1.data.pedido._id}`, { token: atok });
+    assert.equal(aud.status, 200);
+    assert.ok(aud.data.total >= 1);
+  });
+
   it('total adulterado e ignorado: 2x60 card = 120', async () => {
     const r = await api('POST', '/api/pedidos', {
       token: utok,
@@ -67,7 +86,7 @@ describe('e2e pedido + estoque + enderecos', () => {
 
   it('estoque decrementado e oversell retorna 409', async () => {
     const g = await api('GET', `/api/produtos/${prodId}`);
-    assert.equal(g.data.produto.quantidade, 17);
+    assert.equal(g.data.produto.quantidade, 15);
     const over = await api('POST', '/api/pedidos', {
       token: utok,
       body: pedidoBase([{ produtoId: prodId, quantity: 99 }]),
