@@ -1,7 +1,7 @@
 # SRS — Software Requirements Specification: TechStore / PlacaShop
 
 Versão 1.0 · 2026-09-17 · Estilo IEEE 830 (técnico direto).
-Escopo: sistema implementado + itens `[FUTURO]` (MP intent, envio WhatsApp).
+Escopo: sistema implementado (pagamento MP e envio WhatsApp em modo mock sem credenciais; reais com `MP_ACCESS_TOKEN` e Evolution pareada).
 Referências de design: `docs/SDS_ABNT.md`. Avaliação: `docs/AVALIACAO.md`. Protótipos: `docs/prototipo/`.
 
 ## 1. Introdução
@@ -10,7 +10,7 @@ Referências de design: `docs/SDS_ABNT.md`. Avaliação: `docs/AVALIACAO.md`. Pr
 Especificar os requisitos do e-commerce TechStore (vitrine) e da landing-exemplo PlacaShop (multi-ramo), cobrindo catálogo, carrinho, checkout, pedidos, conta, admin e observabilidade, para guiar uso, testes e evolução.
 
 ### 1.2 Escopo
-Dentro: tudo da seção 3 marcado sem tag. `[FUTURO]`: cobrança real e disparo WhatsApp (só pareamento existe).
+Dentro: tudo da seção 3 (RF-009/RF-010 operam em mock sem credenciais e em modo real com credenciais).
 
 ### 1.3 Definições
 `RF` funcional, `RNF` não-funcional, `RN` regra de negócio, RBAC por `role`, access JWT 15min + refresh opaco rotativo.
@@ -42,8 +42,8 @@ Admin bootstrap via `ADMIN_*`; `SETTINGS_KEY` (64 hex) p/ cifrar segredos do das
 - RF-006: carrinho local com merge de quantidade, limite 1–99 e frete (grátis > R$100, senão R$20).
 - RF-007: checkout autenticado com validação (e-mail, pagamento, endereço completo), endereço salvo selecionável e condições dinâmicas (`/config/loja/public`).
 - RF-008: pedido criado com totais **recalculados no servidor** e baixa atômica de estoque (409 se insuficiente/concorrente).
-- RF-009 `[FUTURO]`: cobrança Mercado Pago (intent → `init_point`/QR → webhook `pendente→pago`).
-- RF-010 `[FUTURO]`: resumo do pedido no WhatsApp do cliente via Evolution (retry, sem quebrar o pedido).
+- RF-009: cobrança Mercado Pago (intent → `init_point`/QR → webhook `pendente→pago`; mock sem token).
+- RF-010: resumo do pedido no WhatsApp do cliente via Evolution (mock registra falha honesta sem Evolution; sem quebrar o pedido).
 
 ### 3.3 Conta e sessão
 - RF-011: cadastro/login com JWT; senha mín 8 e hash bcrypt.
@@ -74,7 +74,7 @@ RN01 e-mail único · RN02 hash · RN03 novo usuário `user` · RN04 admin boots
 
 ## 6. Interfaces externas
 
-- MongoDB via Mongoose; Evolution (`/instance/connectionState`, `/message/sendText`) `[FUTURO envio]`; Mercado Pago (users/me, preferências, webhooks) `[FUTURO]`; navegador moderno.
+- MongoDB via Mongoose; Evolution (`/instance/connectionState`, `/message/sendText`); Mercado Pago (preferências, webhooks, users/me p/ status); navegador moderno.
 
 ## 7. Rastreabilidade (amostra; matriz E2E completa no SDS §17)
 

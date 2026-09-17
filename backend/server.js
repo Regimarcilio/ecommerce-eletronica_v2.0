@@ -208,6 +208,24 @@ async function getSettings() {
 }
 const maskSegredos = (s) => Object.fromEntries([...(s.segredos || new Map()).keys()].map((k) => [k, '***']));
 
+// Pagamentos (MP) e notificacoes (WhatsApp)
+const PagamentoSchema = new mongoose.Schema({
+    pedidoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pedido', required: true, unique: true },
+    provedor: { type: String, default: 'mercadopago' },
+    mpPreferenceId: { type: String, default: '' },
+    initPoint: { type: String, default: '' },
+    modo: { type: String, enum: ['real', 'mock'], default: 'mock' },
+    status: { type: String, enum: ['criado', 'aprovado', 'recusado'], default: 'criado' }
+}, { timestamps: true });
+
+const NotificacaoSchema = new mongoose.Schema({
+    pedidoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pedido', required: true },
+    canal: { type: String, default: 'whatsapp' },
+    destino: { type: String, default: '' },
+    status: { type: String, enum: ['enviada', 'falha'], required: true },
+    erro: { type: String, default: '' }
+}, { timestamps: true });
+
 const Usuario = mongoose.model('Usuario', UsuarioSchema);
 const Produto = mongoose.model('Produto', ProdutoSchema);
 const Categoria = mongoose.model('Categoria', CategoriaSchema);
@@ -215,6 +233,8 @@ const Pedido = mongoose.model('Pedido', PedidoSchema);
 const RefreshToken = mongoose.model('RefreshToken', RefreshTokenSchema);
 const PasswordReset = mongoose.model('PasswordReset', PasswordResetSchema);
 const Settings = mongoose.model('Settings', SettingsSchema);
+const Pagamento = mongoose.model('Pagamento', PagamentoSchema);
+const Notificacao = mongoose.model('Notificacao', NotificacaoSchema);
 
 // Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
@@ -609,6 +629,165 @@ app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) =>
     await pedido.save();
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_status', por: req.usuarioId, id: pedido._id, status: pedido.status }));
     res.json({ success: true, pedido });
+}));
+
+// ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
+const mpConfigurado = () => !!MP_ACCESS_TOKEN;
+const evoConfigurado = () => !!(EVO_API_URL && EVO_APIKEY);
+
+async function mpCriarPreferencia(pedido, email) {
+    if (!mpConfigurado()) {
+        return { modo: 'mock', id: `mock-pref-${pedido.numero}`, init_point: `${FRONT_URL}/pedidos.html?mock=${pedido.numero}` };
+    }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    try {
+        const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+            body: JSON.stringify({
+                items: pedido.items.map((i) => ({ title: String(i.nome || 'Item').slice(0, 100), quantity: Number(i.quantity) || 1, unit_price: Number(i.preco) || 0, currency_id: 'BRL' })),
+                payer: { email },
+                back_urls: { success: `${FRONT_URL}/pedidos.html`, pending: `${FRONT_URL}/pedidos.html`, failure: `${FRONT_URL}/checkout.html` },
+                auto_return: 'approved',
+                notification_url: `${process.env.API_PUBLIC_URL || `http://localhost:${PORT}`}/api/pagamentos/webhook`,
+                external_reference: String(pedido._id)
+            })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message || 'MP erro');
+        return { modo: 'real', id: data.id, init_point: data.init_point };
+    } finally { clearTimeout(t); }
+}
+
+function verificaAssinaturaMP(req) {
+    const sig = req.headers['x-signature'] || '';
+    const ts = (sig.match(/ts=([^,]+)/) || [])[1];
+    const v1 = (sig.match(/v1=([^,]+)/) || [])[1];
+    const dataId = req.query.id || req.query['data.id'] || (req.body?.data?.id);
+    const reqId = req.headers['x-request-id'] || '';
+    if (!ts || !v1 || !dataId) return false;
+    const manifest = `id:${dataId};request-id:${reqId};ts:${ts};`;
+    const esperado = crypto.createHmac('sha256', MP_WEBHOOK_SECRET).update(manifest).digest('hex');
+    try {
+        return crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(esperado));
+    } catch { return false; }
+}
+
+async function mpBuscarPagamento(paymentId) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    try {
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            signal: ctrl.signal,
+            headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` }
+        });
+        return r.json();
+    } finally { clearTimeout(t); }
+}
+
+function montaMsgPedido(pedido) {
+    const linhas = (pedido.items || []).slice(0, 10).map((i) => `• ${i.quantity}x ${i.nome} — R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)}`);
+    return [
+        `*TechStore* — Pedido ${pedido.numero} confirmado! ✅`,
+        ...linhas,
+        `Subtotal R$ ${Number(pedido.subtotal).toFixed(2)} · Frete ${Number(pedido.frete) === 0 ? 'Grátis' : 'R$ ' + Number(pedido.frete).toFixed(2)} · Desconto R$ ${Number(pedido.desconto).toFixed(2)}`,
+        `*Total R$ ${Number(pedido.total).toFixed(2)}* (${pedido.pagamento})`,
+        `Entrega: ${pedido.endereco?.logradouro || ''}, ${pedido.endereco?.numero || ''} — ${pedido.endereco?.cidade || ''}/${pedido.endereco?.estado || ''}`
+    ].join('\n').slice(0, 1000);
+}
+
+const normZap = (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    return d.length <= 11 ? `55${d}` : d;
+};
+
+async function enviaWhatsApp(pedido) {
+    const destino = normZap(pedido.cliente?.telefone);
+    const texto = montaMsgPedido(pedido);
+    if (!evoConfigurado()) {
+        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: 'Evolution nao configurado' });
+        return { ok: false, motivo: 'nao-configurado' };
+    }
+    const s = await getSettings();
+    if (!s.evoInstance) {
+        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: 'Instancia Evolution ausente' });
+        return { ok: false, motivo: 'sem-instancia' };
+    }
+    try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(`${EVO_API_URL}/message/sendText/${encodeURIComponent(s.evoInstance)}`, {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', apikey: EVO_APIKEY },
+            body: JSON.stringify({ number: destino, text: texto })
+        }).finally(() => clearTimeout(t));
+        if (!r.ok) throw new Error(`Evolution ${r.status}`);
+        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'enviada' });
+        return { ok: true };
+    } catch (error) {
+        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: error.message.slice(0, 200) });
+        return { ok: false, motivo: error.message.slice(0, 120) };
+    }
+}
+
+// Confirma pagamento de forma idempotente; WhatsApp nunca quebra o fluxo
+async function confirmaPagamento(pedidoId, aprovado, provedorId = '') {
+    const pedido = await Pedido.findById(pedidoId);
+    if (!pedido) return { ok: false };
+    await Pagamento.findOneAndUpdate(
+        { pedidoId: pedido._id },
+        { $set: { status: aprovado ? 'aprovado' : 'recusado', ...(provedorId ? { mpPreferenceId: provedorId } : {}) } },
+        { upsert: true }
+    );
+    if (!aprovado || pedido.status !== 'pendente') return { ok: true, jaProcessado: pedido.status !== 'pendente' };
+    pedido.status = 'pago';
+    await pedido.save();
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pagamento_aprovado', pedido: pedido.numero }));
+    try { await enviaWhatsApp(pedido); } catch (error) { console.error('whatsapp:', error.message); }
+    return { ok: true };
+}
+
+// Cria intencao de pagamento (dono do pedido; apenas se pendente)
+app.post('/api/pagamentos/intent', auth, asyncHandler(async (req, res) => {
+    const { pedidoId } = req.body || {};
+    if (!isValidId(pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(pedidoId);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
+        return err(res, 403, 'Acesso negado', 'FORBIDDEN');
+    }
+    if (pedido.status !== 'pendente') return err(res, 409, 'Pedido já processado', 'STATE');
+    const user = await Usuario.findById(req.usuarioId).select('email');
+    const pref = await mpCriarPreferencia(pedido, user?.email || '');
+    await Pagamento.findOneAndUpdate(
+        { pedidoId: pedido._id },
+        { $set: { mpPreferenceId: pref.id, initPoint: pref.init_point, modo: pref.modo, status: 'criado' } },
+        { upsert: true }
+    );
+    const s = await getSettings();
+    res.json({ success: true, initPoint: pref.init_point, modo: pref.modo, mpPublicKey: s.mpPublicKey || '' });
+}));
+
+// Webhook MP (publico; valida assinatura; modo teste sem segredo aceita corpo direto)
+app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
+    if (!MP_WEBHOOK_SECRET) {
+        const { pedidoId, status } = req.body || {};
+        console.warn('[pagamento] webhook em modo teste (sem MP_WEBHOOK_SECRET)');
+        if (!isValidId(pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+        await confirmaPagamento(pedidoId, status === 'aprovado', 'mock');
+        return res.json({ success: true, modo: 'mock' });
+    }
+    if (!verificaAssinaturaMP(req)) return err(res, 401, 'Assinatura inválida', 'AUTH');
+    const paymentId = req.query.id || req.query['data.id'] || req.body?.data?.id;
+    try {
+        const pg = await mpBuscarPagamento(paymentId);
+        const pedidoId = pg.external_reference;
+        await confirmaPagamento(pedidoId, pg.status === 'approved', String(pg.id || ''));
+    } catch (error) { console.error('webhook mp:', error.message); }
+    return res.json({ success: true });
 }));
 
 // ========== ROTAS DE CLIENTES ==========

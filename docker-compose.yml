@@ -48,5 +48,21 @@ services:
       backend:
         condition: service_healthy
 
+  # Integracao WhatsApp (opcional): suba com --profile integracoes e pareie o QR
+  evolution:
+    image: atendai/evolution-api:v2.2.5
+    container_name: ecommerce_evolution
+    restart: unless-stopped
+    profiles: ["integracoes"]
+    ports:
+      - "8080:8080"
+    environment:
+      AUTHENTICATION_TYPE: apikey
+      AUTHENTICATION_API_KEY: ${EVO_APIKEY:-troque-esta-chave}
+      DATABASE_ENABLED: "false"
+    volumes:
+      - evo_instances:/evolution/instances
+
 volumes:
   mongo_data:
+  evo_instances:

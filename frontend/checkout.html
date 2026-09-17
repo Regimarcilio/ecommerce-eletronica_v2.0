@@ -82,6 +82,10 @@
                     <hr>
                     <div class="d-flex justify-content-between mb-3"><strong>TOTAL:</strong><strong id="orderTotal" style="color:#4361ee;font-size:1.5rem;">R$ 0,00</strong></div>
                     <button class="btn btn-primary-custom w-100" onclick="confirmarPedido()"><i class="fas fa-check-circle"></i> Confirmar Pedido</button>
+                    <div id="payNowWrap" style="display:none;" class="mt-2">
+                        <button class="btn btn-success w-100" onclick="pagarAgora()"><i class="fas fa-bolt"></i> Pagar agora (Mercado Pago)</button>
+                        <p class="text-muted small mt-1">Você será redirecionado ao checkout seguro.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -242,8 +246,25 @@
                     localStorage.removeItem('cart');
                     localStorage.removeItem('checkoutCart');
                     showToast(`Pedido ${data.pedido.numero} confirmado! Total: R$ ${Number(data.pedido.total).toFixed(2)}`);
-                    setTimeout(() => window.location.href = '/pedidos.html', 2000);
+                    window.__lastPedidoId = data.pedido._id || data.pedido.id;
+                    document.getElementById('payNowWrap').style.display = '';
+                    setTimeout(() => window.location.href = '/pedidos.html', 6000);
                 } else showToast(data.message || 'Erro ao processar pedido', true);
+            } catch(e) { showToast('Erro ao conectar', true); }
+        }
+
+        async function pagarAgora() {
+            if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
+            try {
+                const res = await fetch(API + '/pagamentos/intent', {
+                    method: 'POST',
+                    headers: window.getAuthHeaders(),
+                    body: JSON.stringify({ pedidoId: window.__lastPedidoId })
+                });
+                const data = await res.json();
+                if (res.ok && data.success && data.initPoint) {
+                    window.location.href = data.initPoint;
+                } else showToast(data.message || 'Erro ao iniciar pagamento', true);
             } catch(e) { showToast('Erro ao conectar', true); }
         }
         
