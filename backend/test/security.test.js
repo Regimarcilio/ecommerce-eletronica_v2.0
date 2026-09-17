@@ -56,6 +56,19 @@ describe('icone seguro (allowlist)', () => {
   it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
 });
 
+describe('carrossel placas (filtro destaque)', () => {
+  it('filtra destaque e limita a 5', () => {
+    const prods = Array.from({ length: 7 }, (_, i) => ({ _id: String(i), destaque: i % 2 === 0 }));
+    const dest = prods.filter((p) => p.destaque).slice(0, 5);
+    assert.equal(dest.length, 4);
+    assert.ok(dest.every((p) => p.destaque));
+  });
+  it('sem destaque esconde a secao', () => {
+    const dest = [{ destaque: false }].filter((p) => p.destaque).slice(0, 5);
+    assert.equal(dest.length, 0);
+  });
+});
+
 describe('foto do produto (safeImg)', () => {
   const safeImg = (v) => {
     const s = String(v || '').trim();

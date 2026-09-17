@@ -894,6 +894,8 @@ Nao ha testes automatizados no repositorio analisado.
 
 O gerenciamento de enderecos e persistido no MongoDB via CRUD `/auth/enderecos` com isolamento por usuario (404 para id de outro usuario). O checkout oferece selecao de endereco salvo com preenchimento automatico (`setSelectValue` para UF fora da lista).
 
+`placas.html` (PlacaShop): landing-exemplo multi-ramo (pagina separada, front-only, mesma API): hero, carrossel de `destaque` (filtro client-side, max 5, oculto se vazio), chips de categoria, grade com pager 12/pag e busca, faixa institucional. Tudo sincronizado via dashboard (produtos/categorias/fotos/precos); link cruzado `index ↔ placas`.
+
 Historico: `pedidos.html` ja envia `Authorization: Bearer` via `js/config.js#getAuthHeaders`; frontend usa `API_BASE` dinamica (8083->5010, senao 5000); toasts e listagens usam `escapeHtml`/`safeIcon` (allowlist `fa-*`); `dashboard` valida `admin` via `GET /auth/me`; catalogo usa `addToCartById` (sem nome interpolado no `onclick`); checkout usa `cart` como fallback do `checkoutCart`.
 
 ---

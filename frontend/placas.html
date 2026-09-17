@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlacaShop - Placas Eletrônicas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --ps-green: #10b981; --ps-dark: #064e3b; --ps-amber: #f59e0b; }
+        body { background: #06090f; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background: rgba(6,9,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #10b98133; }
+        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #10b981, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
+        .hero { min-height: 88vh; display: flex; align-items: center; position: relative; overflow: hidden;
+            background: radial-gradient(circle at 80% 20%, #10b98126 0%, transparent 60%), radial-gradient(circle at 10% 90%, #f59e0b1a 0%, transparent 50%); }
+        .hero-chip { display: inline-block; background: #10b98120; color: #6ee7b7; border: 1px solid #10b98155; padding: 6px 16px; border-radius: 30px; font-size: .85rem; margin-bottom: 18px; }
+        .btn-ps { background: linear-gradient(135deg, #10b981, #047857); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; }
+        .btn-ps:hover { color: #fff; filter: brightness(1.1); }
+        .btn-ps-outline { background: transparent; border: 2px solid #10b981; color: #10b981; padding: 10px 25px; border-radius: 30px; }
+        .btn-ps-outline:hover { background: #10b981; color: #fff; }
+        .carousel-item img.slide-img { height: 340px; width: 100%; object-fit: cover; border-radius: 20px; }
+        .carousel-caption { background: rgba(6,9,15,.72); border-radius: 14px; padding: 12px 18px; }
+        .chip-cat { background: #0d1512; border: 1px solid #10b98133; color: #fff; border-radius: 30px; padding: 8px 18px; cursor: pointer; transition: all .25s; }
+        .chip-cat:hover, .chip-cat.active { background: #10b981; color: #06090f; }
+        .product-card { background: #0d1512; border: 1px solid #10b98133; border-radius: 20px; overflow: hidden; transition: all .3s; height: 100%; }
+        .product-card:hover { transform: translateY(-5px); border-color: #10b981; }
+        .trust { background: #0d1512; border-top: 1px solid #10b98122; border-bottom: 1px solid #10b98122; }
+        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
+        .footer { background: #06090f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
+        .back-to-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #047857); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: all .3s; z-index: 1000; }
+        .back-to-top.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="logo" href="/placas.html"><i class="fas fa-microchip"></i> PlacaShop</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon bg-white"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="mx-auto">
+                    <div class="input-group">
+                        <input type="text" id="searchInput" class="form-control bg-dark text-white border-success" placeholder="Buscar placas..." style="width: 280px;">
+                        <button class="btn btn-success" onclick="searchProducts()"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="/placas.html"><i class="fas fa-home"></i> Início</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="#" onclick="scrollToCatalogo()"><i class="fas fa-box"></i> Placas</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/index.html"><i class="fas fa-store"></i> Loja completa</a></li>
+                    <li class="nav-item"><a class="nav-link text-white" href="/cart.html"><i class="fas fa-shopping-cart"></i> Carrinho</a></li>
+                    <li class="nav-item" id="authLink"></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <span class="hero-chip"><i class="fas fa-bolt"></i> Pronta entrega para makers e indústria</span>
+                    <h1 class="display-3 fw-bold">Placas eletrônicas<br>para <span style="color:#10b981;">tirar ideias do papel</span></h1>
+                    <p class="lead text-muted mb-4">Arduino, ESP32, Raspberry Pi, shields e acessórios com garantia e suporte técnico.</p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <button class="btn-ps" onclick="scrollToCatalogo()">Ver placas <i class="fas fa-arrow-right"></i></button>
+                        <button class="btn-ps-outline" onclick="document.getElementById('destaques').scrollIntoView({behavior:'smooth'})">Destaques</button>
+                    </div>
+                    <div class="d-flex gap-4 mt-4 text-muted">
+                        <span><strong class="text-white" id="statModelos">–</strong> modelos</span>
+                        <span><strong class="text-white">PIX −5%</strong> no checkout</span>
+                        <span><strong class="text-white">12x</strong> no cartão</span>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-center d-none d-lg-block">
+                    <i class="fas fa-microchip" style="font-size: 18rem; color: #10b981;"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="destaques" class="py-5" style="display:none;">
+        <div class="container">
+            <h2 class="text-center mb-4">Destaques <span style="color:#10b981;">da semana</span></h2>
+            <div id="psCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators" id="psIndicators"></div>
+                <div class="carousel-inner" id="psSlides"></div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#psCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#psCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-4">
+        <div class="container">
+            <div class="d-flex gap-2 flex-wrap justify-content-center" id="catChips"></div>
+        </div>
+    </section>
+
+    <section id="catalogo" class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Catálogo de <span style="color:#10b981;">placas</span></h2>
+            <div class="row g-4" id="productsContainer">
+                <div class="col-12 text-center"><div class="spinner-border" style="color:#10b981;"></div><p class="mt-2">Carregando...</p></div>
+            </div>
+            <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="psPager" style="display:none;">
+                <button class="btn btn-outline-light btn-sm" id="psPrev" onclick="mudarPagina(-1)">← Anterior</button>
+                <span class="text-muted small" id="psPageInfo">Página 1</span>
+                <button class="btn btn-outline-light btn-sm" id="psNext" onclick="mudarPagina(1)">Próxima →</button>
+            </nav>
+        </div>
+    </section>
+
+    <section class="trust py-4">
+        <div class="container">
+            <div class="row text-center g-3">
+                <div class="col-md-4"><i class="fas fa-truck-fast fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">Envio em 24h · Grátis acima de R$ 100</p></div>
+                <div class="col-md-4"><i class="fas fa-shield-halved fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">12 meses de garantia</p></div>
+                <div class="col-md-4"><i class="fas fa-headset fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">Suporte técnico especializado</p></div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <p class="mb-1"><span class="logo" style="font-size:1.3rem;"><i class="fas fa-microchip"></i> PlacaShop</span></p>
+            <p class="text-muted small">Demonstração multi-ramo sobre a mesma API TechStore · <a href="/index.html" class="text-white-50">Loja completa</a></p>
+            <p class="text-muted small">&copy; 2026 PlacaShop - Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <div class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js?v=2"></script>
+    <script>
+        const API = window.API_BASE;
+        let allProducts = [];
+        let psPage = 1;
+        const PS_LIMIT = 12;
+        let psPages = 1;
+        let psCat = '';
+        let searching = false;
+
+        function showToast(msg, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-custom';
+            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
+            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> `;
+            toast.appendChild(document.createTextNode(String(msg ?? '')));
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function updateAuthUI() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const authLink = document.getElementById('authLink');
+            if (user.nome) {
+                authLink.innerHTML = `<span class="navbar-text text-white"><i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}</span>`;
+            } else {
+                authLink.innerHTML = '<a href="/auth.html" class="btn btn-success btn-sm">Entrar</a>';
+            }
+        }
+
+        function logout() { window.logoutAll(); window.location.href = '/placas.html'; }
+        function scrollToCatalogo() { document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' }); }
+
+        function productImg(p, h) {
+            const url = window.safeImg(p.imagemUrl);
+            if (url) return `<img src="${url}" alt="${window.escapeHtml(p.nome)}" loading="lazy" style="height:${h}px;width:100%;object-fit:cover;" onerror="this.remove()">`;
+            return `<div class="d-flex align-items-center justify-content-center" style="height:${h}px;"><i class="fas fa-microchip fa-4x" style="color:#10b981;"></i></div>`;
+        }
+
+        async function loadDestaques() {
+            try {
+                const res = await fetch(`${API}/produtos?status=ativo&limit=100`);
+                const data = await res.json();
+                const dest = ((data.success && data.produtos) || []).filter(p => p.destaque).slice(0, 5);
+                if (!dest.length) return;
+                document.getElementById('destaques').style.display = '';
+                document.getElementById('psIndicators').innerHTML = dest.map((_, i) =>
+                    `<button type="button" data-bs-target="#psCarousel" data-bs-slide-to="${i}" class="${i === 0 ? 'active' : ''}"></button>`).join('');
+                document.getElementById('psSlides').innerHTML = dest.map((p, i) => `
+                    <div class="carousel-item ${i === 0 ? 'active' : ''}">
+                        ${productImg(p, 340)}
+                        <div class="carousel-caption">
+                            <h5>${window.escapeHtml(p.nome)}</h5>
+                            <p class="mb-1 small">${window.escapeHtml(window.truncate(p.descricao || '', 90))}</p>
+                            <p class="mb-2"><strong style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</strong>
+                            <button class="btn btn-success btn-sm ms-2" onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button></p>
+                        </div>
+                    </div>`).join('');
+                window.__psDestaques = dest;
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadCategorias() {
+            try {
+                const res = await fetch(API + '/categorias?status=ativo&limit=100');
+                const data = await res.json();
+                const cats = (data.success && data.categorias) || [];
+                document.getElementById('catChips').innerHTML =
+                    `<button class="chip-cat ${psCat === '' ? 'active' : ''}" onclick="filtrarCat('')">Todas</button>` +
+                    cats.map(c => `<button class="chip-cat ${psCat === c._id ? 'active' : ''}" onclick="filtrarCat('${c._id}')"><i class="fas ${window.safeIcon(c.icone)}"></i> ${window.escapeHtml(c.nome)}</button>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function filtrarCat(id) { psCat = id; psPage = 1; loadCategorias(); loadProducts(); }
+
+        async function loadProducts() {
+            try {
+                const q = `${API}/produtos?status=ativo&page=${psPage}&limit=${PS_LIMIT}` + (psCat ? `&categoria=${psCat}` : '');
+                const res = await fetch(q);
+                const data = await res.json();
+                if (data.success) {
+                    allProducts = data.produtos || [];
+                    psPages = data.pages || 1;
+                    document.getElementById('statModelos').textContent = data.total ?? allProducts.length;
+                    displayProducts(allProducts);
+                    renderPager();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function renderPager() {
+            const nav = document.getElementById('psPager');
+            if (!nav) return;
+            nav.style.display = searching ? 'none' : 'flex';
+            document.getElementById('psPageInfo').textContent = `Página ${psPage} de ${psPages}`;
+            document.getElementById('psPrev').disabled = psPage <= 1;
+            document.getElementById('psNext').disabled = psPage >= psPages;
+        }
+
+        function mudarPagina(delta) {
+            const next = psPage + delta;
+            if (next < 1 || next > psPages) return;
+            psPage = next;
+            loadProducts();
+            scrollToCatalogo();
+        }
+
+        function displayProducts(products) {
+            const container = document.getElementById('productsContainer');
+            if (!products || products.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">Nenhuma placa encontrada.</p></div>';
+                return;
+            }
+            container.innerHTML = products.map(p => `
+                <div class="col-md-3 col-6">
+                    <div class="product-card h-100">
+                        <div class="p-3 text-center">${productImg(p, 150)}</div>
+                        <div class="p-3">
+                            <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
+                            <p class="small text-muted" title="${window.escapeHtml(p.descricao || '')}">${window.escapeHtml(window.truncate(p.descricao || '', 80))}</p>
+                            <p class="fw-bold fs-5" style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
+                            <p class="small ${Number(p.quantidade) > 0 ? 'text-success' : 'text-danger'}">${Number(p.quantidade) > 0 ? `Em estoque (${p.quantidade})` : 'Esgotado'}</p>
+                            <button class="btn-ps w-100" ${Number(p.quantidade) > 0 ? '' : 'disabled'} onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        async function searchProducts() {
+            const term = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            if (!term) { searching = false; psPage = 1; loadProducts(); return; }
+            try {
+                searching = true;
+                const res = await fetch(`${API}/produtos?status=ativo&limit=100` + (psCat ? `&categoria=${psCat}` : ''));
+                const data = await res.json();
+                const filtered = ((data.success && data.produtos) || []).filter(p =>
+                    String(p.nome || '').toLowerCase().includes(term) || String(p.sku || '').toLowerCase().includes(term));
+                allProducts = filtered;
+                displayProducts(filtered);
+                renderPager();
+            } catch (e) { console.error(e); }
+        }
+
+        function addToCartById(id) {
+            const pool = [...(allProducts || []), ...((window.__psDestaques || []))];
+            const prod = pool.find(x => x._id === id);
+            if (!prod || Number(prod.quantidade) <= 0) { showToast('Produto indisponível', true); return; }
+            window.cartAdd(id, prod.nome, prod.preco);
+            showToast('Placa adicionada ao carrinho!');
+        }
+
+        function updateCartCount() {
+            try {
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                const el = document.getElementById('cartCount');
+                if (el) el.textContent = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+            } catch { /* ignora */ }
+        }
+
+        window.addEventListener('scroll', () => {
+            const btn = document.querySelector('.back-to-top');
+            if (window.scrollY > 300) btn.classList.add('show');
+            else btn.classList.remove('show');
+        });
+
+        loadDestaques();
+        loadCategorias();
+        loadProducts();
+        updateAuthUI();
+        updateCartCount();
+    </script>
+</body>
+</html>
