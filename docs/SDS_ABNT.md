@@ -554,7 +554,7 @@ Tabela 5 - Endpoints da API REST
 | GET | `/api/clientes` | Sim | Admin | Listar clientes |
 | GET | `/api/dashboard/stats` | Sim | Admin | Retornar indicadores administrativos |
 | GET | `/health` | Nao | Publico | Verificar saude do backend (liveness) |
-| GET | `/metrics` | Sim | Admin | Metricas (uptime, req, erros, memoria, mongo) |
+| GET | `/api/metrics` | Sim | Admin | Metricas (uptime, req, erros, memoria, mongo). CI com lint anti `/api` duplicado no frontend |
 | GET | `/api/config/loja/public` | Nao | Publico | Condicoes, parcelas, desconto, public key |
 | GET | `/api/config/loja` | Sim | Admin | Leitura mascarada |
 | PUT | `/api/config/loja` | Sim | Admin | Atualizacao parcial + segredos cifrados |

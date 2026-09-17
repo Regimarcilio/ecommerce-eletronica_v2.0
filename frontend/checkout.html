@@ -102,7 +102,7 @@
 
         async function loadCondicoes() {
             try {
-                const res = await fetch(API + '/api/config/loja/public');
+                const res = await fetch(API + '/config/loja/public');
                 const data = await res.json();
                 if (res.ok && data.success) {
                     cfgPix = Number(data.config.descontoPix ?? 5);

@@ -701,7 +701,7 @@ app.get('/api/config/whatsapp/status', auth, admin, asyncHandler(async (req, res
 }));
 
 // Metricas basicas (admin): uptime, contadores, memoria, estado do banco
-app.get('/metrics', auth, admin, asyncHandler(async (req, res) => {
+app.get('/api/metrics', auth, admin, asyncHandler(async (req, res) => {
     const mem = process.memoryUsage();
     res.json({
         success: true,

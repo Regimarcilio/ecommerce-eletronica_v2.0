@@ -654,7 +654,7 @@
             document.getElementById('pageTitle').innerHTML = 'Configurações';
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
-                const res = await fetch(API + '/api/config/loja', { headers: getHeaders() });
+                const res = await fetch(API + '/config/loja', { headers: getHeaders() });
                 const data = await res.json();
                 if (!data.success) { showToast(data.message || 'Erro ao carregar', true); return; }
                 const c = data.config;
@@ -694,7 +694,7 @@
 
         async function statusZap() {
             try {
-                const res = await fetch(API + '/api/config/whatsapp/status', { headers: getHeaders() });
+                const res = await fetch(API + '/config/whatsapp/status', { headers: getHeaders() });
                 const data = await res.json();
                 document.getElementById('zapStatus').textContent = !data.status?.configurado ? 'não configurado' : ('Evolution: ' + (data.status.estado || '?'));
             } catch { document.getElementById('zapStatus').textContent = 'erro'; }
@@ -714,7 +714,7 @@
             if (sn && sv) body.segredos = { [sn]: sv };
             else if (sn || sv) { showToast('Preencha nome e valor do segredo', true); return; }
             try {
-                const res = await fetch(API + '/api/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
                 const data = await res.json();
                 if (res.ok && data.success) { showToast('Configurações salvas!'); loadConfiguracoes(); }
                 else showToast(data.message || 'Erro ao salvar', true);

@@ -14,18 +14,18 @@ describe('e2e observabilidade', () => {
   });
 
   it('metrics sem token retorna 401', async () => {
-    const r = await api('GET', '/metrics');
+    const r = await api('GET', '/api/metrics');
     assert.equal(r.status, 401);
   });
 
   it('metrics como user retorna 403', async () => {
-    const r = await api('GET', '/metrics', { token: utok });
+    const r = await api('GET', '/api/metrics', { token: utok });
     assert.equal(r.status, 403);
   });
 
   it('metrics como admin retorna contadores', async () => {
     await api('GET', '/api/produtos');
-    const r = await api('GET', '/metrics', { token: atok });
+    const r = await api('GET', '/api/metrics', { token: atok });
     assert.equal(r.status, 200);
     assert.ok(r.data.metrics.uptimeSec >= 0);
     assert.ok(r.data.metrics.requests >= 1);

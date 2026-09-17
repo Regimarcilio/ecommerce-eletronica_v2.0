@@ -20,6 +20,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: node --check server.js
+      - name: lint frontend (sem /api duplicado nem hardcoded)
+        working-directory: .
+        run: |
+          if grep -rn "API + '/api/" frontend/; then echo "prefixo /api duplicado"; exit 1; fi
+          if grep -rn "localhost:5000" frontend/; then echo "API hardcoded"; exit 1; fi
   e2e:
     runs-on: ubuntu-latest
     services:
