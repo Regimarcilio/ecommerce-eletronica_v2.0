@@ -1,6 +1,6 @@
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { tag, api, register, adminToken } = require('./helpers');
+const { tag, api, register, adminToken, limparPorTag } = require('./helpers');
 
 describe('e2e pedido + estoque + enderecos', () => {
   let atok;
@@ -129,5 +129,6 @@ describe('e2e pedido + estoque + enderecos', () => {
   after(async () => {
     if (prodId) await api('DELETE', `/api/produtos/${prodId}`, { token: atok });
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });
+    await limparPorTag(atok, tag);
   });
 });

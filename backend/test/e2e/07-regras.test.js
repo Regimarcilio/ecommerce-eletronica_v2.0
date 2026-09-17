@@ -1,6 +1,6 @@
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { tag, api, register, adminToken } = require('./helpers');
+const { tag, api, register, adminToken, limparPorTag } = require('./helpers');
 
 describe('e2e regras: estados + soft-delete', () => {
   let atok;
@@ -105,5 +105,6 @@ describe('e2e regras: estados + soft-delete', () => {
 
   after(async () => {
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });
+    await limparPorTag(atok, tag);
   });
 });

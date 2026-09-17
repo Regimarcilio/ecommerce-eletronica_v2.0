@@ -1,6 +1,6 @@
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { tag, api, register, adminToken } = require('./helpers');
+const { tag, api, register, adminToken, limparPorTag } = require('./helpers');
 
 describe('e2e catalogo + rbac + paging', () => {
   let atok;
@@ -90,6 +90,14 @@ describe('e2e catalogo + rbac + paging', () => {
     });
     assert.equal(up.status, 200);
     assert.equal(up.data.produto.descricao, 'Atualizada');
+    const parcial = await api('PUT', `/api/produtos/${c.data.produto._id}`, {
+      token: atok,
+      body: { descricao: 'So descricao' },
+    });
+    assert.equal(parcial.status, 200);
+    assert.equal(parcial.data.produto.descricao, 'So descricao');
+    assert.equal(parcial.data.produto.preco, 99.9);
+    assert.equal(parcial.data.produto.imagemUrl, 'https://cdn.t/img/fone.png');
   });
 
   it('paging: 14 itens -> p1=12 p2=2 pages=2', async () => {
@@ -130,5 +138,6 @@ describe('e2e catalogo + rbac + paging', () => {
       await api('DELETE', `/api/produtos/${id}`, { token: atok });
     }
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });
+    await limparPorTag(atok, tag);
   });
 });

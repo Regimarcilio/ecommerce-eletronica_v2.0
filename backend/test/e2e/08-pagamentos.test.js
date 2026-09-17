@@ -1,6 +1,6 @@
 const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { tag, api, register, adminToken } = require('./helpers');
+const { tag, api, register, adminToken, limparPorTag } = require('./helpers');
 
 // Roda em modo mock (sem MP_ACCESS_TOKEN/MP_WEBHOOK_SECRET configurados).
 describe('e2e pagamentos + whatsapp', () => {
@@ -70,5 +70,6 @@ describe('e2e pagamentos + whatsapp', () => {
   after(async () => {
     if (prodId) await api('DELETE', `/api/produtos/${prodId}`, { token: atok });
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });
+    await limparPorTag(atok, tag);
   });
 });

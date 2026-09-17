@@ -41,4 +41,22 @@ async function adminToken() {
   return r.data.token;
 }
 
-module.exports = { BASE, tag, api, register, adminToken };
+module.exports = { BASE, tag, api, register, adminToken, limparPorTag };
+
+// Varredura best-effort por tag (residuo de run interrompida); ignora erros
+async function limparPorTag(atok, tg) {
+  try {
+    const prods = await api('GET', '/api/produtos?limit=100', { token: atok });
+    for (const p of prods.data?.produtos || []) {
+      if (String(p.nome || '').includes(tg) || String(p.sku || '').includes(tg)) {
+        await api('DELETE', `/api/produtos/${p._id}`, { token: atok }).catch(() => {});
+      }
+    }
+    const cats = await api('GET', '/api/categorias?limit=100', { token: atok });
+    for (const c of cats.data?.categorias || []) {
+      if (String(c.nome || '').includes(tg)) {
+        await api('DELETE', `/api/categorias/${c._id}`, { token: atok }).catch(() => {});
+      }
+    }
+  } catch { /* limpeza e best-effort */ }
+}

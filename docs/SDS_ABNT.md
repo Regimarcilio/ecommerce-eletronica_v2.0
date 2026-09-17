@@ -630,6 +630,8 @@ RN18 - A foto do produto e uma URL (`http/https` ou caminho relativo); `javascri
 
 RN21 - Pagamento: intent valida dono e `pendente` (409 se processado); webhook valida `x-signature` (HMAC) e e idempotente; sem `MP_WEBHOOK_SECRET`, modo teste aceita corpo direto com aviso.
 
+RN26 - `PUT` e parcial: chaves ausentes preservadas (sem zerar); E2E com `limparPorTag` best-effort; `check-env.sh` valida `.env`; unicidade parcial exige migração `syncIndexes`.
+
 RN22 - WhatsApp: numero normalizado (DDI 55), mensagem ≤1000 chars, `Notificacao` registrada (enviada/falha); Evolution via profile `integracoes`, pareamento por QR.
 
 RN20 - Configuracoes editaveis ficam no banco (`settings/loja`); segredos (`MP_*`, `EVO_*`) somente no `.env` e, se gravados via dashboard, cifrados (AES-256-GCM/`SETTINGS_KEY`), mascarados na leitura e com audit log; `GET /api/config/loja/public` expoe apenas condicoes, parcelas, desconto e public key.

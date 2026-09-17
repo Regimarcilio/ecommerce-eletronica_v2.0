@@ -465,14 +465,13 @@ app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
     res.json({ success: true, produto });
 }));
 
+// PUT parcial: só chaves PRESENTES no body entram no $set (ausente preserva)
 const pickProduto = (b) => {
-    const out = {
-        nome: b.nome, sku: b.sku, descricao: b.descricao ?? '',
-        imagemUrl: b.imagemUrl ?? '',
-        preco: b.preco, quantidade: b.quantidade,
-        status: b.status, destaque: b.destaque,
-        categoria: b.categoria || undefined
-    };
+    const out = {};
+    for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'quantidade', 'status', 'destaque', 'categoria']) {
+        if (b[k] !== undefined) out[k] = b[k];
+    }
+    if (out.categoria === '') delete out.categoria;
     if (out.preco !== undefined && (typeof out.preco !== 'number' || Number.isNaN(out.preco) || out.preco < 0)) {
         throw Object.assign(new Error('Preco invalido'), { statusCode: 400, code: 'VALIDATION' });
     }
@@ -535,7 +534,13 @@ app.get('/api/categorias/:id', asyncHandler(async (req, res) => {
     res.json({ success: true, categoria });
 }));
 
-const pickCategoria = (b) => ({ nome: b.nome, slug: b.slug, icone: b.icone, status: b.status });
+const pickCategoria = (b) => {
+    const out = {};
+    for (const k of ['nome', 'slug', 'icone', 'status']) {
+        if (b[k] !== undefined) out[k] = b[k];
+    }
+    return out;
+};
 
 app.post('/api/categorias', auth, admin, asyncHandler(async (req, res) => {
     const categoria = await Categoria.create(pickCategoria(req.body));
