@@ -37,6 +37,7 @@ jobs:
       ADMIN_EMAIL: e2e-admin@t.t
       ADMIN_PASSWORD: E2eAdmin123!
       ALLOW_RESET_TOKEN_RESPONSE: 'true'
+      SETTINGS_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
       E2E_ADMIN_EMAIL: e2e-admin@t.t
       E2E_ADMIN_PASSWORD: E2eAdmin123!
       E2E_BASE_URL: http://localhost:5000
