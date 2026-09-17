@@ -104,6 +104,7 @@
                 <small class="text-muted">Se a categoria não existir, clique em "Nova" para criar</small>
             </div>
             <div class="mb-3"><label class="form-label">Descrição</label><textarea id="prodDescricao" class="form-control" rows="3" maxlength="2000" placeholder="Detalhes do produto exibidos na página principal"></textarea></div>
+            <div class="mb-3"><label class="form-label">Foto do produto (URL)</label><input type="url" id="prodImagem" class="form-control" placeholder="https://..." oninput="previewProdImagem()"><div class="mt-2 text-center"><img id="prodImagemPrev" style="max-height:120px;max-width:100%;display:none;border-radius:8px;" alt="Prévia da foto"></div><small class="text-muted">Aparece no lugar do ícone padrão na página principal.</small></div>
             <div class="mb-3"><label class="form-label">Status</label><select id="prodStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
             <div class="mb-3 form-check"><input type="checkbox" id="prodDestaque" class="form-check-input"><label class="form-check-label" for="prodDestaque">Destaque na página principal</label></div>
         </div>
@@ -124,7 +125,7 @@
     <!-- Modal Categoria (CRUD normal) -->
     <div class="modal fade" id="categoriaModal" tabindex="-1">
         <div class="modal-dialog"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title" id="categoriaModalTitle"><i class="fas fa-tag"></i> Categoria</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body"><input type="hidden" id="categoriaId"><div class="mb-3"><label class="form-label">Nome</label><input type="text" id="catNome" class="form-control"></div><div class="mb-3"><label class="form-label">Ícone</label><input type="text" id="catIcone" class="form-control" value="fa-microchip"></div><div class="mb-3"><label class="form-label">Status</label><select id="catStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div></div>
+        <div class="modal-body"><input type="hidden" id="categoriaId"><div class="mb-3"><label class="form-label">Nome</label><input type="text" id="catNome" class="form-control"></div><div class="mb-3"><label class="form-label">Ícone</label><input type="hidden" id="catIcone" value="fa-microchip"><div class="d-flex align-items-center gap-2 mb-2"><span id="catIconePrev" class="fs-3 px-3 py-1 border rounded"><i class="fas fa-microchip"></i></span><input type="text" id="catIconeBusca" class="form-control" placeholder="Buscar ícone do seu ramo (ex: pizza, camisa, carro...)" oninput="renderIconPicker()"></div><div id="iconPicker" class="border rounded p-2" style="max-height:220px;overflow-y:auto;"></div></div><div class="mb-3"><label class="form-label">Status</label><select id="catStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div></div>
         <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" onclick="salvarCategoria()">Salvar</button></div></div></div>
     </div>
 
@@ -366,6 +367,8 @@
                 document.getElementById('prodQuantidade').value = produto.quantidade;
                 document.getElementById('prodCategoria').value = produto.categoria || '';
                 document.getElementById('prodDescricao').value = produto.descricao || '';
+                document.getElementById('prodImagem').value = produto.imagemUrl || '';
+                previewProdImagem();
                 document.getElementById('prodDestaque').checked = !!produto.destaque;
                 document.getElementById('prodStatus').value = produto.status;
             } else {
@@ -377,6 +380,8 @@
                 document.getElementById('prodQuantidade').value = 0;
                 document.getElementById('prodCategoria').value = '';
                 document.getElementById('prodDescricao').value = '';
+                document.getElementById('prodImagem').value = '';
+                document.getElementById('prodImagemPrev').style.display = 'none';
                 document.getElementById('prodDestaque').checked = false;
                 document.getElementById('prodStatus').value = 'ativo';
             }
@@ -392,6 +397,13 @@
             } catch(e) { showToast('Erro ao carregar produto', true); }
         }
         
+        function previewProdImagem() {
+            const url = window.safeImg(document.getElementById('prodImagem').value);
+            const img = document.getElementById('prodImagemPrev');
+            if (url) { img.src = url; img.style.display = ''; }
+            else { img.removeAttribute('src'); img.style.display = 'none'; }
+        }
+
         async function salvarProduto() {
             const id = document.getElementById('produtoId').value;
             const categoria = document.getElementById('prodCategoria').value;
@@ -405,11 +417,14 @@
             if (!Number.isInteger(quantidade) || quantidade < 0) { showToast('Quantidade inválida (inteiro 0 ou mais)!', true); return; }
             const descricao = document.getElementById('prodDescricao').value.trim();
             if (descricao.length > 2000) { showToast('Descrição com no máximo 2000 caracteres!', true); return; }
+            const imagemUrl = window.safeImg(document.getElementById('prodImagem').value);
+            if (document.getElementById('prodImagem').value.trim() && !imagemUrl) { showToast('URL da foto inválida (use http/https)!', true); return; }
 
             const produto = {
                 nome: document.getElementById('prodNome').value.trim(),
                 sku: document.getElementById('prodSku').value.trim(),
                 descricao,
+                imagemUrl,
                 preco,
                 quantidade,
                 categoria: categoria,
@@ -460,16 +475,45 @@
                 document.getElementById('catNome').value = categoria.nome;
                 document.getElementById('catIcone').value = categoria.icone || 'fa-microchip';
                 document.getElementById('catStatus').value = categoria.status;
+                renderIconPicker();
             } else {
                 document.getElementById('categoriaModalTitle').innerHTML = '<i class="fas fa-plus"></i> Nova Categoria';
                 document.getElementById('categoriaId').value = '';
                 document.getElementById('catNome').value = '';
                 document.getElementById('catIcone').value = 'fa-microchip';
                 document.getElementById('catStatus').value = 'ativo';
+                const busca = document.getElementById('catIconeBusca');
+                if (busca) busca.value = '';
+                renderIconPicker();
             }
             categoriaModal.show();
         }
         
+        function selectIcon(cls) {
+            document.getElementById('catIcone').value = window.safeIcon(cls);
+            document.getElementById('catIconePrev').innerHTML = `<i class="fas ${window.safeIcon(cls)}"></i>`;
+            renderIconPicker();
+        }
+
+        function renderIconPicker() {
+            const box = document.getElementById('iconPicker');
+            if (!box) return;
+            const current = window.safeIcon(document.getElementById('catIcone').value);
+            document.getElementById('catIconePrev').innerHTML = `<i class="fas ${current}"></i>`;
+            const term = ((document.getElementById('catIconeBusca') || {}).value || '').toLowerCase().trim();
+            let html = '';
+            for (const g of (window.ICON_LIB || [])) {
+                const icons = g.icons.filter((c) => !term || c.toLowerCase().includes(term) || g.group.toLowerCase().includes(term));
+                if (!icons.length) continue;
+                html += `<div class="text-muted small mt-2 mb-1">${window.escapeHtml(g.group)}</div><div class="d-flex flex-wrap gap-1">`;
+                for (const c of icons) {
+                    html += `<button type="button" class="btn btn-sm ${c === current ? 'btn-primary' : 'btn-outline-secondary'}" title="${c}" onclick="selectIcon('${c}')"><i class="fas ${c} fa-lg"></i></button>`;
+                }
+                html += '</div>';
+            }
+            box.innerHTML = html || '<p class="text-muted small m-0">Nenhum ícone encontrado.</p>';
+        }
+
         async function editarCategoria(id) { try { const res = await fetch(API + '/categorias/' + id, { headers: getHeaders() }); const data = await res.json(); if (data.success) abrirModalCategoria(data.categoria); else showToast('Erro ao carregar categoria', true); } catch(e) { showToast('Erro ao carregar categoria', true); } }
         
         async function salvarCategoria() {

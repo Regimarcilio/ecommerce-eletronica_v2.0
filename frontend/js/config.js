@@ -90,6 +90,29 @@
     }
     sel.value = v;
   };
+  // URL de imagem segura (http/https/relativa; resto vira vazio)
+  window.safeImg = function (v) {
+    const s = String(v || '').trim();
+    if (/^(https?:\/\/[^ "]+|\/[^ "]*)$/i.test(s)) return s;
+    return '';
+  };
+
+  // Biblioteca de icones por segmento (Font Awesome; multi-ramo: o cliente
+  // escolhe o que representa o negocio dele na hora de criar a categoria)
+  window.ICON_LIB = [
+    { group: 'Eletrônicos', icons: ['fa-microchip', 'fa-bolt', 'fa-plug', 'fa-battery-full', 'fa-wifi', 'fa-tv', 'fa-mobile-screen', 'fa-laptop', 'fa-headphones', 'fa-camera', 'fa-print', 'fa-robot', 'fa-satellite-dish', 'fa-sim-card', 'fa-keyboard', 'fa-lightbulb', 'fa-plug-circle-bolt'] },
+    { group: 'Moda e Vestuário', icons: ['fa-shirt', 'fa-shoe-prints', 'fa-hat-cowboy', 'fa-glasses', 'fa-gem', 'fa-bag-shopping', 'fa-cart-shopping', 'fa-tag', 'fa-percent', 'fa-gift'] },
+    { group: 'Alimentos', icons: ['fa-utensils', 'fa-pizza-slice', 'fa-burger', 'fa-ice-cream', 'fa-coffee', 'fa-cake-candles', 'fa-wine-glass', 'fa-fish', 'fa-apple-whole', 'fa-carrot', 'fa-bread-slice', 'fa-cheese', 'fa-egg', 'fa-cookie', 'fa-beer-mug-empty'] },
+    { group: 'Saúde e Beleza', icons: ['fa-heart-pulse', 'fa-pills', 'fa-syringe', 'fa-briefcase-medical', 'fa-spa', 'fa-pump-soap', 'fa-scissors', 'fa-spray-can-sparkles', 'fa-tooth'] },
+    { group: 'Casa e Construção', icons: ['fa-couch', 'fa-bed', 'fa-bath', 'fa-kitchen-set', 'fa-door-open', 'fa-hammer', 'fa-wrench', 'fa-screwdriver', 'fa-paint-roller'] },
+    { group: 'Esporte', icons: ['fa-dumbbell', 'fa-bicycle', 'fa-futbol', 'fa-basketball', 'fa-volleyball-ball', 'fa-person-swimming', 'fa-trophy', 'fa-medal'] },
+    { group: 'Automotivo', icons: ['fa-car', 'fa-motorcycle', 'fa-truck', 'fa-gas-pump', 'fa-gear', 'fa-oil-can', 'fa-car-battery'] },
+    { group: 'Pets', icons: ['fa-paw', 'fa-dog', 'fa-cat', 'fa-fish', 'fa-bone', 'fa-bird'] },
+    { group: 'Papelaria e Educação', icons: ['fa-book', 'fa-pen', 'fa-pencil', 'fa-ruler', 'fa-backpack', 'fa-graduation-cap'] },
+    { group: 'Lazer e Cultura', icons: ['fa-gamepad', 'fa-dice', 'fa-chess-knight', 'fa-puzzle-piece', 'fa-rocket', 'fa-star', 'fa-music', 'fa-film', 'fa-camera-retro', 'fa-palette', 'fa-cubes'] },
+    { group: 'Serviços', icons: ['fa-phone', 'fa-envelope', 'fa-calendar', 'fa-clock', 'fa-bell', 'fa-screwdriver-wrench', 'fa-truck-fast', 'fa-handshake'] },
+    { group: 'Geral', icons: ['fa-store', 'fa-box', 'fa-boxes-stacked', 'fa-warehouse', 'fa-clipboard-list', 'fa-chart-line', 'fa-credit-card', 'fa-truck-ramp-box', 'fa-circle-dot', 'fa-folder', 'fa-star-half-stroke', 'fa-fire', 'fa-thumbs-up', 'fa-crown'] },
+  ];
   // Trunca texto p/ cards (mantem original intacto)
   window.truncate = function (v, n) {
     const s = String(v ?? '').trim();

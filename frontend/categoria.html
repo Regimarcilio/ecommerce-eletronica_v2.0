@@ -180,7 +180,7 @@
                 <div class="col-md-3 col-6">
                     <div class="product-card h-100">
                         <div class="product-image p-4 text-center">
-                            <i class="fas fa-microchip fa-4x text-primary"></i>
+                            ${window.safeImg(p.imagemUrl) ? `<img src="${window.safeImg(p.imagemUrl)}" alt="${window.escapeHtml(p.nome)}" loading="lazy" style="max-height:120px;max-width:100%;object-fit:contain;" onerror="this.remove()">` : `<i class="fas fa-microchip fa-4x text-primary"></i>`}
                         </div>
                         <div class="product-info p-3">
                             <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>

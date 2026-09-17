@@ -120,6 +120,13 @@ const ProdutoSchema = new mongoose.Schema({
     nome: { type: String, required: true, trim: true, maxlength: 160 },
     sku: { type: String, required: true, unique: true, trim: true, maxlength: 60 },
     descricao: { type: String, trim: true, maxlength: 2000, default: '' },
+    imagemUrl: {
+        type: String, trim: true, maxlength: 500, default: '',
+        validate: {
+            validator: (v) => !v || /^(https?:\/\/[^ "]+|\/[^ "]*)$/.test(v),
+            message: 'URL de imagem invalida'
+        }
+    },
     preco: { type: Number, required: true, min: 0 },
     quantidade: { type: Number, required: true, min: 0, default: 0 },
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
@@ -380,6 +387,7 @@ app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
 const pickProduto = (b) => {
     const out = {
         nome: b.nome, sku: b.sku, descricao: b.descricao ?? '',
+        imagemUrl: b.imagemUrl ?? '',
         preco: b.preco, quantidade: b.quantidade,
         status: b.status, destaque: b.destaque,
         categoria: b.categoria || undefined
@@ -391,6 +399,9 @@ const pickProduto = (b) => {
         throw Object.assign(new Error('Quantidade invalida'), { statusCode: 400, code: 'VALIDATION' });
     }
     if (out.quantidade !== undefined) out.quantidade = Number(out.quantidade);
+    if (out.imagemUrl && !/^(https?:\/\/[^ "]+|\/[^ "]*)$/.test(out.imagemUrl)) {
+        throw Object.assign(new Error('URL de imagem invalida'), { statusCode: 400, code: 'VALIDATION' });
+    }
     return out;
 };
 

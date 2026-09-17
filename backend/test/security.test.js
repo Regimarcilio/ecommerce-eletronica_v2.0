@@ -56,6 +56,17 @@ describe('icone seguro (allowlist)', () => {
   it('pega ultimo token e valida', () => assert.equal(safeIcon('fas fa-cart-plus'), 'fa-cart-plus'));
 });
 
+describe('foto do produto (safeImg)', () => {
+  const safeImg = (v) => {
+    const s = String(v || '').trim();
+    if (/^(https?:\/\/[^ "]+|\/[^ "]*)$/i.test(s)) return s;
+    return '';
+  };
+  it('aceita https e caminho relativo', () => assert.equal(safeImg('https://x/y.png'), 'https://x/y.png') && assert.equal(safeImg('/img/a.jpg'), '/img/a.jpg'));
+  it('rejeita javascript: e vazio', () => assert.equal(safeImg('javascript:alert(1)'), '') && assert.equal(safeImg(''), ''));
+  it('rejeita texto com espaco/aspas', () => assert.equal(safeImg('https://x/a b.png'), ''));
+});
+
 describe('ficha do produto', () => {
   const pick = (b) => {
     const out = { descricao: b.descricao ?? '' };

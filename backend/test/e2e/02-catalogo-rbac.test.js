@@ -70,10 +70,16 @@ describe('e2e catalogo + rbac + paging', () => {
     const xss = '<img src=x onerror=alert(1)>Fone top';
     const c = await api('POST', '/api/produtos', {
       token: atok,
-      body: { nome: 'E2E Ficha', sku: `E2EFI-${tag}`, descricao: xss, preco: 99.9, quantidade: 7, categoria: catId },
+      body: { nome: 'E2E Ficha', sku: `E2EFI-${tag}`, descricao: xss, imagemUrl: 'https://cdn.t/img/fone.png', preco: 99.9, quantidade: 7, categoria: catId },
     });
     assert.equal(c.status, 200);
     assert.equal(c.data.produto.descricao, xss);
+    assert.equal(c.data.produto.imagemUrl, 'https://cdn.t/img/fone.png');
+    const badImg = await api('POST', '/api/produtos', {
+      token: atok,
+      body: { nome: 'Bad', sku: `BAD3-${tag}`, preco: 5, quantidade: 1, categoria: catId, imagemUrl: 'javascript:alert(1)' },
+    });
+    assert.equal(badImg.status, 400);
     prodIds.push(c.data.produto._id);
     const g = await api('GET', `/api/produtos/${c.data.produto._id}`);
     assert.equal(g.data.produto.preco, 99.9);
