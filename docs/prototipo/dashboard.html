@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[PROTÓTIPO] Dashboard — RF-016/017/018/019</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>body{background:#0a0a0f;color:#fff;font-family:'Segoe UI',sans-serif}.side{background:#111827;min-height:100vh}.mi{padding:10px;border-radius:8px;cursor:pointer;color:#9ca3af}.mi.on,.mi:hover{background:#4361ee;color:#fff}.card{background:#1a1a2e;border:1px solid #4361ee33;border-radius:16px}.note{border-left:3px solid #f59e0b;background:#f59e0b14;padding:8px 12px;border-radius:0 8px 8px 0;font-size:.85rem}.tab{display:none}.tab.on{display:block}.ico{font-size:1.6rem;cursor:pointer;padding:6px;border-radius:8px;border:1px solid #374151;margin:2px;display:inline-block}.ico.on{border-color:#4361ee;background:#4361ee33}</style>
+</head>
+<body>
+<div class="container-fluid"><div class="row">
+<div class="col-3 col-md-2 side p-3"><h5>Admin</h5>
+<div class="mi on" onclick="t('s0',this)">📊 Dashboard</div><div class="mi" onclick="t('s1',this)">📦 Produtos</div><div class="mi" onclick="t('s2',this)">🏷️ Categorias</div><div class="mi" onclick="t('s3',this)">🛒 Pedidos</div><div class="mi" onclick="t('s4',this)">👥 Clientes</div><div class="mi" onclick="t('s5',this)">⚙️ Config</div>
+<a href="index.html" class="small">← hub</a></div>
+<div class="col-9 col-md-10 p-4">
+<div id="s0" class="tab on"><h2>Indicadores</h2><div class="row g-3"><div class="col-md-3"><div class="card p-3">Produtos<br><b>24</b></div></div><div class="col-md-3"><div class="card p-3">Pedidos<br><b>130</b></div></div><div class="col-md-3"><div class="card p-3">Faturamento<br><b>R$ 8,4 mil</b></div></div><div class="col-md-3"><div class="card p-3">Saúde API<br><b class="text-success">OK · up 5h · 1,2k req</b><br><small class="text-muted">4xx:3 5xx:0 mem:80MB mongo:connected</small></div></div></div></div>
+<div id="s1" class="tab"><h2>Produtos <button class="btn btn-primary btn-sm" onclick="document.getElementById('mp').style.display='';void(0)">+ Novo</button></h2>
+<div id="mp" class="card p-3 mb-3"><h6>Ficha completa (RF-016)</h6><input class="form-control mb-2 bg-dark text-white" placeholder="Título *"><input class="form-control mb-2 bg-dark text-white" placeholder="SKU *"><textarea class="form-control mb-2 bg-dark text-white" placeholder="Descrição (máx 2000)"></textarea><input class="form-control mb-2 bg-dark text-white" placeholder="Foto (URL https://...)"><div class="row"><div class="col"><input class="form-control bg-dark text-white" placeholder="Valor ≥ 0"></div><div class="col"><input class="form-control bg-dark text-white" placeholder="Estoque int ≥ 0"></div></div><p class="small text-muted mt-2">Validação real (sem mascarar com || 0) + destaque ☑ + status.</p></div>
+<table class="table table-dark"><tr><th>Nome</th><th>Preço</th><th>Est.</th><th>Ações</th></tr><tr><td>Resistor 10k</td><td>R$ 4,90</td><td>200</td><td>Editar Excluir</td></tr></table>
+<nav class="d-flex gap-2"><button class="btn btn-sm btn-outline-light">←</button><span class="small text-muted">Página 1 de 3 (10/pág)</span><button class="btn btn-sm btn-outline-light">→</button></nav></div>
+<div id="s2" class="tab"><h2>Categorias</h2><input class="form-control bg-dark text-white mb-2" style="max-width:300px" placeholder="Buscar ícone..." oninput="filtro(this.value)"><div id="grid"></div>
+<p class="small text-muted">Biblioteca ICON_LIB (~130 ícones, 12 segmentos) no modal e no cadastro rápido. Fora do padrão → fa-microchip.</p></div>
+<div id="s3" class="tab"><h2>Pedidos</h2><table class="table table-dark"><tr><th>Nº</th><th>Total</th><th>Status</th><th></th></tr><tr><td>PED-1</td><td>R$ 120,00</td><td><select class="form-select bg-dark text-white"><option>pendente</option><option>pago</option><option>enviado</option><option>entregue</option><option>cancelado</option></select></td><td>Ver</td></tr></table></div>
+<div id="s4" class="tab"><h2>Clientes</h2><table class="table table-dark"><tr><th>Nome</th><th>Email</th><th>Status</th></tr><tr><td>Ana</td><td>ana@x</td><td>ativo</td></tr></table><p class="small text-muted">Sem coluna de senha.</p></div>
+<div id="s5" class="tab"><h2>Configurações (RF-019)</h2><div class="card p-3 mb-2"><h6>WhatsApp</h6><input class="form-control bg-dark text-white mb-2" placeholder="5511999999999"><input class="form-control bg-dark text-white mb-2" placeholder="instância Evolution"><p>Status: <b>open ✅</b> <button class="btn btn-sm btn-outline-light">Verificar</button></p></div>
+<div class="card p-3 mb-2"><h6>Pagamento</h6><textarea class="form-control bg-dark text-white mb-2" placeholder="Condições exibidas no checkout"></textarea><p class="small text-muted">Public Key, parcelas máx, desconto PIX. Segredos: nome+valor → cifrado, exibido ***.</p></div>
+<button class="btn btn-primary">Salvar</button></div>
+</div></div></div>
+<script>
+const ICONS=['fa-microchip','fa-shirt','fa-pizza-slice','fa-heart-pulse','fa-couch','fa-dumbbell','fa-car','fa-paw','fa-book','fa-gamepad','fa-wrench','fa-store','fa-bolt','fa-coffee','fa-gem','fa-rocket'];
+function t(id,el){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));document.getElementById(id).classList.add('on');document.querySelectorAll('.mi').forEach(x=>x.classList.remove('on'));el.classList.add('on');}
+function filtro(q){document.getElementById('grid').innerHTML=ICONS.filter(c=>c.includes(q.toLowerCase())).map(c=>`<span class="ico" onclick="this.classList.toggle('on')"><i class="fas ${c}"></i></span>`).join('')||'<span class="text-muted small">Nada encontrado.</span>';}
+filtro('');
+</script>
+</body>
+</html>
