@@ -143,10 +143,6 @@
             } catch(e) { console.error(e); }
         }
 
-        function getHeaders() {
-            return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
-        }
-
         function getStatusClass(status) {
             const classes = {
                 pendente: 'status-pendente',
