@@ -22,6 +22,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ecomme
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@techstore.com.br';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dev-troque-em-producao';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || true;
+// Segredos de integracao: SOMENTE .env (nunca via API/respostas)
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
+const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || '';
+const EVO_API_URL = (process.env.EVO_API_URL || '').replace(/\/$/, '');
+const EVO_APIKEY = process.env.EVO_APIKEY || '';
+const SETTINGS_KEY = process.env.SETTINGS_KEY || '';
+const FRONT_URL = process.env.FRONT_URL || 'http://localhost:8083';
 
 if (!process.env.JWT_SECRET || !process.env.ADMIN_PASSWORD || !process.env.MONGODB_URI) {
     console.warn('[seguranca] Usando valores de desenvolvimento (fallbacks). Defina JWT_SECRET, ADMIN_PASSWORD e MONGODB_URI no backend/.env para producao.');
@@ -155,12 +162,48 @@ const PedidoSchema = new mongoose.Schema({
     status: { type: String, enum: ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'], default: 'pendente' }
 }, { timestamps: true });
 
+// Configuracoes editaveis da loja (singleton "loja"); segredos vao cifrados
+const SettingsSchema = new mongoose.Schema({
+    chave: { type: String, required: true, unique: true, default: 'loja' },
+    whatsappNumero: { type: String, trim: true, maxlength: 20, default: '' },
+    evoInstance: { type: String, trim: true, maxlength: 80, default: '' },
+    condicoesPagamento: { type: String, trim: true, maxlength: 2000, default: '' },
+    mpPublicKey: { type: String, trim: true, maxlength: 200, default: '' },
+    parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
+    descontoPix: { type: Number, min: 0, max: 100, default: 5 },
+    segredos: { type: Map, of: String, default: {} }
+}, { timestamps: true, minimize: false });
+
+// AES-256-GCM com SETTINGS_KEY (hex 64). Sem chave: recusa gravar segredos.
+function cifraSegredo(texto) {
+    if (!SETTINGS_KEY || !/^[a-f0-9]{64}$/i.test(SETTINGS_KEY)) {
+        throw Object.assign(new Error('SETTINGS_KEY ausente/invalida no .env'), { statusCode: 500, code: 'CONFIG' });
+    }
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(SETTINGS_KEY, 'hex'), iv);
+    const enc = Buffer.concat([cipher.update(String(texto), 'utf8'), cipher.final()]);
+    return `${iv.toString('hex')}:${cipher.getAuthTag().toString('hex')}:${enc.toString('hex')}`;
+}
+function decifraSegredo(blob) {
+    const [iv, tag, data] = String(blob).split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(SETTINGS_KEY, 'hex'), Buffer.from(iv, 'hex'));
+    decipher.setAuthTag(Buffer.from(tag, 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(data, 'hex')), decipher.final()]).toString('utf8');
+}
+async function getSettings() {
+    let s = await Settings.findOne({ chave: 'loja' });
+    if (!s) s = await Settings.create({ chave: 'loja' });
+    return s;
+}
+const maskSegredos = (s) => Object.fromEntries([...(s.segredos || new Map()).keys()].map((k) => [k, '***']));
+
 const Usuario = mongoose.model('Usuario', UsuarioSchema);
 const Produto = mongoose.model('Produto', ProdutoSchema);
 const Categoria = mongoose.model('Categoria', CategoriaSchema);
 const Pedido = mongoose.model('Pedido', PedidoSchema);
 const RefreshToken = mongoose.model('RefreshToken', RefreshTokenSchema);
 const PasswordReset = mongoose.model('PasswordReset', PasswordResetSchema);
+const Settings = mongoose.model('Settings', SettingsSchema);
 
 // Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
@@ -518,7 +561,9 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         itemsCalc.push({ produtoId: prod._id, nome: prod.nome, preco: prod.preco, quantity: qtd });
     }
     const frete = subtotal > 100 ? 0 : 20;
-    const desconto = pagamento === 'pix' ? subtotal * 0.05 : 0;
+    const cfg = await getSettings();
+    const taxaPix = pagamento === 'pix' ? (Number(cfg.descontoPix ?? 5) / 100) : 0;
+    const desconto = subtotal * taxaPix;
     const total = subtotal + frete - desconto;
 
     // Baixa atomica de estoque
@@ -567,6 +612,93 @@ app.get('/api/dashboard/stats', auth, admin, asyncHandler(async (req, res) => {
 }));
 
 app.get('/health', (req, res) => res.json({ status: 'OK' }));
+
+// ========== CONFIGURACOES DA LOJA ==========
+// Publico: apenas campos exibidos no checkout (sem segredos)
+app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
+    const s = await getSettings();
+    res.json({
+        success: true,
+        config: {
+            condicoesPagamento: s.condicoesPagamento || '',
+            parcelasMax: s.parcelasMax ?? 12,
+            descontoPix: s.descontoPix ?? 5,
+            mpPublicKey: s.mpPublicKey || ''
+        }
+    });
+}));
+
+// Admin: leitura com segredos mascarados
+app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
+    const s = await getSettings();
+    res.json({
+        success: true,
+        config: {
+            whatsappNumero: s.whatsappNumero || '',
+            evoInstance: s.evoInstance || '',
+            condicoesPagamento: s.condicoesPagamento || '',
+            mpPublicKey: s.mpPublicKey || '',
+            parcelasMax: s.parcelasMax ?? 12,
+            descontoPix: s.descontoPix ?? 5,
+            segredos: maskSegredos(s)
+        }
+    });
+}));
+
+// Admin: atualiza somente campos enviados; segredos vao cifrados
+app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
+    const s = await getSettings();
+    const b = req.body || {};
+    if (b.whatsappNumero !== undefined) {
+        const raw = String(b.whatsappNumero ?? '').trim();
+        const n = raw.replace(/\D/g, '').slice(0, 15);
+        if (raw !== '' && !/^\+?[\d\s()\-]{10,22}$/.test(raw)) return err(res, 400, 'WhatsApp invalido (use digitos, ex. 5511999999999)', 'VALIDATION');
+        if (n && !/^\d{10,15}$/.test(n)) return err(res, 400, 'WhatsApp invalido (10-15 digitos)', 'VALIDATION');
+        s.whatsappNumero = n;
+    }
+    if (b.evoInstance !== undefined) s.evoInstance = String(b.evoInstance).trim().slice(0, 80);
+    if (b.condicoesPagamento !== undefined) s.condicoesPagamento = String(b.condicoesPagamento).slice(0, 2000);
+    if (b.mpPublicKey !== undefined) s.mpPublicKey = String(b.mpPublicKey).trim().slice(0, 200);
+    if (b.parcelasMax !== undefined) {
+        const v = Number(b.parcelasMax);
+        if (!Number.isInteger(v) || v < 1 || v > 21) return err(res, 400, 'Parcelas entre 1 e 21', 'VALIDATION');
+        s.parcelasMax = v;
+    }
+    if (b.descontoPix !== undefined) {
+        const v = Number(b.descontoPix);
+        if (Number.isNaN(v) || v < 0 || v > 100) return err(res, 400, 'Desconto entre 0 e 100', 'VALIDATION');
+        s.descontoPix = v;
+    }
+    if (b.segredos !== undefined && typeof b.segredos === 'object') {
+        try {
+            for (const [k, v] of Object.entries(b.segredos)) {
+                if (!/^[a-zA-Z0-9_]{1,40}$/.test(k)) return err(res, 400, 'Nome de segredo invalido', 'VALIDATION');
+                if (v === '***') continue;
+                if (v === '') { s.segredos.delete(k); continue; }
+                s.segredos.set(k, cifraSegredo(v));
+            }
+        } catch (error) { return err(res, error.statusCode || 500, error.message, error.code || 'INTERNAL'); }
+    }
+    await s.save();
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'config_atualizada', por: req.usuarioId }));
+    res.json({ success: true });
+}));
+
+// Admin: status do pareamento WhatsApp (proxy Evolution, sem vazar apikey)
+app.get('/api/config/whatsapp/status', auth, admin, asyncHandler(async (req, res) => {
+    if (!EVO_API_URL || !EVO_APIKEY) return res.json({ success: true, status: { configurado: false } });
+    const s = await getSettings();
+    if (!s.evoInstance) return res.json({ success: true, status: { configurado: false } });
+    try {
+        const r = await fetch(`${EVO_API_URL}/instance/connectionState/${encodeURIComponent(s.evoInstance)}`, {
+            headers: { apikey: EVO_APIKEY }
+        });
+        const data = await r.json().catch(() => ({}));
+        res.json({ success: true, status: { configurado: true, estado: data?.instance?.state || data?.state || 'desconhecido' } });
+    } catch {
+        return err(res, 502, 'Evolution inacessivel', 'UPSTREAM');
+    }
+}));
 
 // Metricas basicas (admin): uptime, contadores, memoria, estado do banco
 app.get('/metrics', auth, admin, asyncHandler(async (req, res) => {

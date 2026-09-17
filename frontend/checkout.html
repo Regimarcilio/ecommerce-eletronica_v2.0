@@ -60,8 +60,9 @@
                             <i class="fab fa-pix fa-2x me-2"></i> <strong>PIX</strong> (5% de desconto)
                         </div>
                         <div class="payment-option" onclick="selectPayment('card')" id="paymentCard">
-                            <i class="fas fa-credit-card fa-2x me-2"></i> <strong>Cartão de Crédito</strong> (Até 12x)
+                            <i class="fas fa-credit-card fa-2x me-2"></i> <strong>Cartão de Crédito</strong> (<span id="cardParcLabel">Até 12x</span>)
                         </div>
+                        <p class="text-muted small mt-2" id="condText" style="display:none;"></p>
                         <div class="payment-option" onclick="selectPayment('boleto')" id="paymentBoleto">
                             <i class="fas fa-barcode fa-2x me-2"></i> <strong>Boleto Bancário</strong>
                         </div>
@@ -97,6 +98,25 @@
         
         let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
         let selectedPayment = 'pix';
+        let cfgPix = 5, cfgParc = 12;
+
+        async function loadCondicoes() {
+            try {
+                const res = await fetch(API + '/api/config/loja/public');
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    cfgPix = Number(data.config.descontoPix ?? 5);
+                    cfgParc = Number(data.config.parcelasMax ?? 12);
+                    document.getElementById('cardParcLabel').textContent = `Até ${cfgParc}x`;
+                    if (data.config.condicoesPagamento) {
+                        const el = document.getElementById('condText');
+                        el.textContent = data.config.condicoesPagamento;
+                        el.style.display = '';
+                    }
+                    calcularTotal();
+                }
+            } catch { /* mantem padrao */ }
+        }
         let subtotal = 0;
         let savedAddrs = [];
 
@@ -147,7 +167,7 @@
             subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const frete = subtotal > 100 ? 0 : 20;
             let desconto = 0;
-            if (selectedPayment === 'pix') { desconto = subtotal * 0.05; document.getElementById('discountRow').style.display = 'flex'; }
+            if (selectedPayment === 'pix') { desconto = subtotal * (cfgPix / 100); document.getElementById('discountRow').style.display = 'flex'; document.getElementById('discountRow').firstElementChild.textContent = `Desconto PIX (${cfgPix}%):`; }
             else { document.getElementById('discountRow').style.display = 'none'; }
             const total = subtotal + frete - desconto;
             document.getElementById('orderSubtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
@@ -236,6 +256,7 @@
         selectPayment('pix');
         renderOrderItems();
         loadEnderecosSalvos();
+        loadCondicoes();
         window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
     </script>
 </body>

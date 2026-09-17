@@ -73,6 +73,7 @@
         <div class="menu-item" onclick="loadCategorias()"><i class="fas fa-tags"></i> <span>Categorias</span></div>
         <div class="menu-item" onclick="loadPedidos()"><i class="fas fa-shopping-cart"></i> <span>Pedidos</span></div>
         <div class="menu-item" onclick="loadClientes()"><i class="fas fa-users"></i> <span>Clientes</span></div>
+        <div class="menu-item" onclick="loadConfiguracoes()"><i class="fas fa-cog"></i> <span>Configurações</span></div>
     </div>
     <div class="main-content">
         <div class="top-bar">
@@ -648,6 +649,78 @@
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>'; }
         }
         
+        // ==================== CONFIGURACOES ====================
+        async function loadConfiguracoes() {
+            document.getElementById('pageTitle').innerHTML = 'Configurações';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const res = await fetch(API + '/api/config/loja', { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success) { showToast(data.message || 'Erro ao carregar', true); return; }
+                const c = data.config;
+                const segs = Object.entries(c.segredos || {}).map(([k]) =>
+                    `<span class="badge bg-secondary me-1">${window.escapeHtml(k)}: ***</span>`).join('') || '<span class="text-muted small">nenhum</span>';
+                document.getElementById('content').innerHTML = `
+                <div class="data-card">
+                    <h4><i class="fab fa-whatsapp"></i> WhatsApp da loja</h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">Número (só dígitos, com DDI)</label><input id="cfgZap" class="form-control" value="${window.escapeHtml(c.whatsappNumero || '')}" placeholder="5511999999999"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Instância Evolution</label><input id="cfgInst" class="form-control" value="${window.escapeHtml(c.evoInstance || '')}" placeholder="loja01"></div>
+                    </div>
+                    <p>Status pareamento: <strong id="zapStatus">—</strong> <button class="btn btn-sm btn-outline-light ms-2" onclick="statusZap()">Verificar</button></p>
+                    <small class="text-muted">Pareie pelo QR no log do serviço Evolution; o número recebe os avisos de pedido.</small>
+                </div>
+                <div class="data-card mt-3">
+                    <h4><i class="fas fa-credit-card"></i> Pagamento</h4>
+                    <div class="mb-3"><label class="form-label">Condições (exibidas no checkout)</label><textarea id="cfgCond" class="form-control" rows="3" maxlength="2000">${window.escapeHtml(c.condicoesPagamento || '')}</textarea></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label">Public Key MP</label><input id="cfgPk" class="form-control" value="${window.escapeHtml(c.mpPublicKey || '')}"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Parcelas máx</label><input id="cfgParc" type="number" min="1" max="21" class="form-control" value="${c.parcelasMax ?? 12}"></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Desconto PIX %</label><input id="cfgDesc" type="number" min="0" max="100" step="0.1" class="form-control" value="${c.descontoPix ?? 5}"></div>
+                    </div>
+                </div>
+                <div class="data-card mt-3">
+                    <h4><i class="fas fa-key"></i> Segredos cifrados</h4>
+                    <p>${segs}</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">Nome (novo)</label><input id="cfgSegNome" class="form-control" placeholder="ex: EVO_TOKEN_EXTRA"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Valor (novo)</label><input id="cfgSegValor" type="password" class="form-control" autocomplete="new-password"></div>
+                    </div>
+                    <small class="text-muted">Valores nunca voltam do servidor (aparecem como ***). Chave AES em SETTINGS_KEY no .env.</small>
+                </div>
+                <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
+        }
+
+        async function statusZap() {
+            try {
+                const res = await fetch(API + '/api/config/whatsapp/status', { headers: getHeaders() });
+                const data = await res.json();
+                document.getElementById('zapStatus').textContent = !data.status?.configurado ? 'não configurado' : ('Evolution: ' + (data.status.estado || '?'));
+            } catch { document.getElementById('zapStatus').textContent = 'erro'; }
+        }
+
+        async function salvarConfiguracoes() {
+            const body = {
+                whatsappNumero: document.getElementById('cfgZap').value,
+                evoInstance: document.getElementById('cfgInst').value,
+                condicoesPagamento: document.getElementById('cfgCond').value,
+                mpPublicKey: document.getElementById('cfgPk').value,
+                parcelasMax: Number(document.getElementById('cfgParc').value),
+                descontoPix: Number(document.getElementById('cfgDesc').value)
+            };
+            const sn = document.getElementById('cfgSegNome').value.trim();
+            const sv = document.getElementById('cfgSegValor').value;
+            if (sn && sv) body.segredos = { [sn]: sv };
+            else if (sn || sv) { showToast('Preencha nome e valor do segredo', true); return; }
+            try {
+                const res = await fetch(API + '/api/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Configurações salvas!'); loadConfiguracoes(); }
+                else showToast(data.message || 'Erro ao salvar', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+
         loadDashboard();
     </script>
 </body>
