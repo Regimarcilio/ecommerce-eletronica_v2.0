@@ -621,7 +621,7 @@ RN17 - Todo produto criado/editado pelo administrador via `POST/PUT /api/produto
 
 RN18 - A foto do produto e uma URL (`http/https` ou caminho relativo); `javascript:` e formatos invalidos sao rejeitados (400) e o card usa `safeImg` com fallback para o icone padrao. Upload de arquivos segue fora do escopo.
 
-RN19 - O icone da categoria e escolhido em biblioteca curada (`ICON_LIB`, ~130 icones em 12 segmentos) com busca e preview; valor fora do padrao `fa-*` cai para `fa-microchip` (`safeIcon`).
+RN19 - O icone da categoria e escolhido em biblioteca curada (`ICON_LIB`, ~130 icones em 12 segmentos) com busca e preview; valor fora do padrao `fa-*` cai para `fa-microchip` (`safeIcon`). Disponivel no modal de categorias e no cadastro rapido dentro do produto. HTML servido com `Cache-Control: no-store` e JS versionado (`config.js?v=N`) para evitar cache travado entre deploys.
 
 RN06 - A categoria possui nome unico.
 

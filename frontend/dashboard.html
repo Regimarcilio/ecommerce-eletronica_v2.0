@@ -116,7 +116,7 @@
         <div class="modal-dialog"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title"><i class="fas fa-plus-circle"></i> Nova Categoria</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
             <div class="mb-3"><label class="form-label">Nome da Categoria *</label><input type="text" id="novaCatNome" class="form-control" placeholder="Ex: Placa Mãe, Fonte, Memória..."></div>
-            <div class="mb-3"><label class="form-label">Ícone (Font Awesome)</label><input type="text" id="novaCatIcone" class="form-control" value="fa-microchip" placeholder="fa-microchip"></div>
+            <div class="mb-3"><label class="form-label">Ícone</label><input type="hidden" id="novaCatIcone" value="fa-microchip"><div class="d-flex align-items-center gap-2 mb-2"><span id="novaCatIconePrev" class="fs-4 px-3 py-1 border rounded"><i class="fas fa-microchip"></i></span><input type="text" id="novaCatIconeBusca" class="form-control" placeholder="Buscar ícone..." oninput="renderIconPicker(NOVA_PICKER)"></div><div id="novaIconPicker" class="border rounded p-2" style="max-height:180px;overflow-y:auto;"></div></div>
             <div class="mb-3"><label class="form-label">Slug (opcional)</label><input type="text" id="novaCatSlug" class="form-control" placeholder="deixe em branco para gerar automaticamente"></div>
         </div>
         <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" onclick="criarCategoriaRapida()">Criar e Usar</button></div></div></div>
@@ -143,7 +143,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js"></script>
+    <script src="js/config.js?v=2"></script>
     <script>
         const API = window.API_BASE;
         const token = localStorage.getItem('token');
@@ -242,7 +242,7 @@
             }
             
             const slug = document.getElementById('novaCatSlug').value.trim() || nome.toLowerCase().replace(/[^a-z0-9]/g, '-');
-            const icone = document.getElementById('novaCatIcone').value.trim() || 'fa-microchip';
+            const icone = window.safeIcon(document.getElementById('novaCatIcone').value.trim());
             
             try {
                 const res = await fetch(API + '/categorias', {
@@ -270,11 +270,15 @@
             }
         }
         
+        const NOVA_PICKER = { hidden: 'novaCatIcone', prev: 'novaCatIconePrev', search: 'novaCatIconeBusca', box: 'novaIconPicker' };
+
         function abrirModalNovaCategoriaRapida() {
             if (!novaCategoriaRapidaModal) novaCategoriaRapidaModal = new bootstrap.Modal(document.getElementById('novaCategoriaRapidaModal'));
             document.getElementById('novaCatNome').value = '';
             document.getElementById('novaCatSlug').value = '';
             document.getElementById('novaCatIcone').value = 'fa-microchip';
+            document.getElementById('novaCatIconeBusca').value = '';
+            renderIconPicker(NOVA_PICKER);
             novaCategoriaRapidaModal.show();
         }
         
@@ -489,18 +493,32 @@
             categoriaModal.show();
         }
         
-        function selectIcon(cls) {
-            document.getElementById('catIcone').value = window.safeIcon(cls);
-            document.getElementById('catIconePrev').innerHTML = `<i class="fas ${window.safeIcon(cls)}"></i>`;
-            renderIconPicker();
+        let pickerTarget = null;
+        function selectIcon(cls, target) {
+            target = target || pickerTarget || {};
+            const hidId = target.hidden || 'catIcone';
+            const prevId = target.prev || 'catIconePrev';
+            const searchId = target.search || 'catIconeBusca';
+            const boxId = target.box || 'iconPicker';
+            const safe = window.safeIcon(cls);
+            document.getElementById(hidId).value = safe;
+            document.getElementById(prevId).innerHTML = `<i class="fas ${safe}"></i>`;
+            renderIconPicker(target);
         }
 
-        function renderIconPicker() {
-            const box = document.getElementById('iconPicker');
+        function renderIconPicker(target) {
+            target = target || {};
+            pickerTarget = target;
+            const hidId = target.hidden || 'catIcone';
+            const prevId = target.prev || 'catIconePrev';
+            const searchId = target.search || 'catIconeBusca';
+            const boxId = target.box || 'iconPicker';
+            const box = document.getElementById(boxId);
             if (!box) return;
-            const current = window.safeIcon(document.getElementById('catIcone').value);
-            document.getElementById('catIconePrev').innerHTML = `<i class="fas ${current}"></i>`;
-            const term = ((document.getElementById('catIconeBusca') || {}).value || '').toLowerCase().trim();
+            const current = window.safeIcon(document.getElementById(hidId).value);
+            const prev = document.getElementById(prevId);
+            if (prev) prev.innerHTML = `<i class="fas ${current}"></i>`;
+            const term = ((document.getElementById(searchId) || {}).value || '').toLowerCase().trim();
             let html = '';
             for (const g of (window.ICON_LIB || [])) {
                 const icons = g.icons.filter((c) => !term || c.toLowerCase().includes(term) || g.group.toLowerCase().includes(term));
@@ -522,7 +540,7 @@
             if (!nome) { showToast('Preencha o nome da categoria!', true); return; }
             const categoria = {
                 nome: nome,
-                icone: document.getElementById('catIcone').value,
+                icone: window.safeIcon(document.getElementById('catIcone').value),
                 status: document.getElementById('catStatus').value,
                 slug: nome.toLowerCase().replace(/[^a-z0-9]/g, '-')
             };
