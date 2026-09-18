@@ -82,6 +82,26 @@ const parsePaging = (q) => {
     return { page, limit, skip: (page - 1) * limit };
 };
 
+// Frete por tabela (Settings) com fallback na regra legada; fonte unica p/ cotacao e pedido
+function cotarFrete(uf, subtotal, peso, faixas) {    const candidatas = (faixas || []).filter((f) =>
+        (!f.uf || f.uf === uf) && Number(peso) <= Number(f.atePeso ?? Infinity));
+    if (!candidatas.length) {
+        const valor = subtotal > 100 ? 0 : 20;
+        return { nome: 'Padrão', valor, prazoDias: 5 };
+    }
+    let melhor = null;
+    for (const f of candidatas) {
+        const gratis = Number(f.gratisAcima) > 0 && subtotal >= Number(f.gratisAcima);
+        const valor = gratis ? 0 : Number(f.valor);
+        if (!melhor || valor < melhor.valor) melhor = { nome: `Padrão ${f.uf || 'BR'}`, valor, prazoDias: Number(f.prazoDias) || 5 };
+    }
+    return melhor;
+}
+
+function pesoDosItens(itemsCalc) {
+    return (itemsCalc || []).reduce((s, it) => s + (Number(it.peso) || 0) * (Number(it.quantity) || 0), 0);
+}
+
 // Schemas com validacao basica server-side
 const EnderecoSchema = new mongoose.Schema({
     logradouro: { type: String, required: true, trim: true, maxlength: 160 },
@@ -146,6 +166,7 @@ const ProdutoSchema = new mongoose.Schema({
         }
     },
     preco: { type: Number, required: true, min: 0 },
+    peso: { type: Number, min: 0, default: 0.1 },
     quantidade: { type: Number, required: true, min: 0, default: 0 },
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
     destaque: { type: Boolean, default: false },
@@ -184,6 +205,13 @@ const SettingsSchema = new mongoose.Schema({
     mpPublicKey: { type: String, trim: true, maxlength: 200, default: '' },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
+    faixasFrete: [{
+        uf: { type: String, trim: true, uppercase: true, maxlength: 2, default: '' },
+        atePeso: { type: Number, min: 0, default: 30 },
+        valor: { type: Number, min: 0, required: true },
+        gratisAcima: { type: Number, min: 0, default: 0 },
+        prazoDias: { type: Number, min: 1, max: 60, default: 5 }
+    }],
     segredos: { type: Map, of: String, default: {} }
 }, { timestamps: true, minimize: false });
 
@@ -451,27 +479,44 @@ app.get('/api/produtos', asyncHandler(async (req, res) => {
     }
     const { page, limit, skip } = parsePaging(req.query);
     const visivel = { ...query, ...{ deletedAt: null } };
-    const [produtos, total] = await Promise.all([
-        Produto.find(visivel).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    const cfg = await getSettings();
+    const [lista, total] = await Promise.all([
+        Produto.find(visivel).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
         Produto.countDocuments(visivel)
     ]);
+    const produtos = lista.map((p) => enriquecerPreco(p, cfg));
     res.json({ success: true, produtos, page, limit, total, pages: Math.ceil(total / limit) });
 }));
+
+// Precos exibidos (fonte unica: Settings); nunca confia no cliente
+function enriquecerPreco(p, cfg) {
+    const taxa = Number(cfg?.descontoPix ?? 5) / 100;
+    const parc = Math.max(1, Number(cfg?.parcelasMax ?? 12));
+    const base = p.toObject ? p.toObject() : { ...p };
+    return {
+        ...base,
+        precoPix: +(Number(base.preco) * (1 - taxa)).toFixed(2),
+        parcela: { n: parc, valor: +(Number(base.preco) / parc).toFixed(2) }
+    };
+}
 
 app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
     const produto = await Produto.findOne({ _id: req.params.id, deletedAt: null });
     if (!produto) return err(res, 404, 'Produto não encontrado', 'NOT_FOUND');
-    res.json({ success: true, produto });
+    res.json({ success: true, produto: enriquecerPreco(produto, await getSettings()) });
 }));
 
 // PUT parcial: só chaves PRESENTES no body entram no $set (ausente preserva)
 const pickProduto = (b) => {
     const out = {};
-    for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'quantidade', 'status', 'destaque', 'categoria']) {
+    for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'peso', 'quantidade', 'status', 'destaque', 'categoria']) {
         if (b[k] !== undefined) out[k] = b[k];
     }
     if (out.categoria === '') delete out.categoria;
+    if (out.peso !== undefined && (typeof out.peso !== 'number' || Number.isNaN(out.peso) || out.peso < 0)) {
+        throw Object.assign(new Error('Peso invalido'), { statusCode: 400, code: 'VALIDATION' });
+    }
     if (out.preco !== undefined && (typeof out.preco !== 'number' || Number.isNaN(out.preco) || out.preco < 0)) {
         throw Object.assign(new Error('Preco invalido'), { statusCode: 400, code: 'VALIDATION' });
     }
@@ -604,11 +649,17 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         if (!prod || prod.status !== 'ativo') return err(res, 400, `Produto indisponível`, 'OUT_OF_STOCK');
         if ((prod.quantidade ?? 0) < qtd) return err(res, 409, `Estoque insuficiente para ${prod.nome}`, 'OUT_OF_STOCK');
         subtotal += prod.preco * qtd;
-        itemsCalc.push({ produtoId: prod._id, nome: prod.nome, preco: prod.preco, quantity: qtd });
+        itemsCalc.push({ produtoId: prod._id, nome: prod.nome, preco: prod.preco, quantity: qtd, peso: Number(prod.peso) || 0 });
     }
-    const frete = subtotal > 100 ? 0 : 20;
-    const cfg = await getSettings();
-    const taxaPix = pagamento === 'pix' ? (Number(cfg.descontoPix ?? 5) / 100) : 0;
+    const freteCfg = await getSettings();
+    const cot = cotarFrete(
+        String(endereco?.estado || '').toUpperCase(),
+        subtotal,
+        pesoDosItens(itemsCalc),
+        freteCfg.faixasFrete
+    );
+    const frete = cot.valor;
+    const taxaPix = pagamento === 'pix' ? (Number(freteCfg.descontoPix ?? 5) / 100) : 0;
     const desconto = subtotal * taxaPix;
     const total = subtotal + frete - desconto;
 
@@ -746,22 +797,24 @@ async function enviaWhatsApp(pedido, telefoneCadastro = '') {
         await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: 'Instancia Evolution ausente' });
         return { ok: false, motivo: 'sem-instancia', destino };
     }
-    try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
-        const r = await fetch(`${EVO_API_URL}/message/sendText/${encodeURIComponent(cfg.evoInstance)}`, {
-            method: 'POST',
-            signal: ctrl.signal,
-            headers: { 'Content-Type': 'application/json', apikey: EVO_APIKEY },
-            body: JSON.stringify({ number: destino, text: texto })
-        }).finally(() => clearTimeout(t));
-        if (!r.ok) throw new Error(`Evolution ${r.status}`);
-        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'enviada' });
-        return { ok: true, destino };
-    } catch (error) {
-        await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: error.message.slice(0, 200) });
-        return { ok: false, motivo: error.message.slice(0, 120), destino };
+    let lastErr = null;
+    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+        try {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 30000);
+            const r = await fetch(`${EVO_API_URL}/message/sendText/${encodeURIComponent(cfg.evoInstance)}`, {
+                method: 'POST',
+                signal: ctrl.signal,
+                headers: { 'Content-Type': 'application/json', apikey: EVO_APIKEY },
+                body: JSON.stringify({ number: destino, text: texto })
+            }).finally(() => clearTimeout(t));
+            if (!r.ok) throw new Error(`Evolution ${r.status}`);
+            await Notificacao.create({ pedidoId: pedido._id, destino, status: 'enviada' });
+            return { ok: true, destino };
+        } catch (error) { lastErr = error; }
     }
+    await Notificacao.create({ pedidoId: pedido._id, destino, status: 'falha', erro: String(lastErr?.message || 'timeout').slice(0, 200) });
+    return { ok: false, motivo: String(lastErr?.message || 'timeout').slice(0, 120), destino };
 }
 
 // Confirma pagamento de forma idempotente; WhatsApp nunca quebra o fluxo
@@ -819,6 +872,28 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
         await confirmaPagamento(pedidoId, pg.status === 'approved', String(pg.id || ''));
     } catch (error) { console.error('webhook mp:', error.message); }
     return res.json({ success: true });
+}));
+
+// Cotacao de frete (publica): mesma regra do pedido
+app.post('/api/frete/cotacao', asyncHandler(async (req, res) => {
+    const { uf, items } = req.body || {};
+    const UF = String(uf || '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(UF)) return err(res, 400, 'UF inválida', 'VALIDATION');
+    if (!Array.isArray(items) || !items.length) return err(res, 400, 'Itens obrigatórios', 'VALIDATION');
+    let subtotal = 0;
+    const calc = [];
+    for (const it of items) {
+        const id = it.produtoId || it.id;
+        const qtd = Number(it.quantity ?? 1);
+        if (!isValidId(id) || !Number.isInteger(qtd) || qtd <= 0) return err(res, 400, 'Item inválido', 'VALIDATION');
+        const prod = await Produto.findOne({ _id: id, deletedAt: null }).select('preco peso status');
+        if (!prod || prod.status !== 'ativo') return err(res, 400, 'Produto indisponível', 'OUT_OF_STOCK');
+        subtotal += prod.preco * qtd;
+        calc.push({ peso: Number(prod.peso) || 0, quantity: qtd });
+    }
+    const cfg = await getSettings();
+    const cot = cotarFrete(UF, subtotal, pesoDosItens(calc), cfg.faixasFrete);
+    res.json({ success: true, subtotal, peso: pesoDosItens(calc), ...cot });
 }));
 
 // ========== ROTAS DE CLIENTES ==========
@@ -887,6 +962,7 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             mpPublicKey: s.mpPublicKey || '',
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
+            faixasFrete: s.faixasFrete || [],
             segredos: maskSegredos(s)
         }
     });
@@ -916,6 +992,21 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         if (Number.isNaN(v) || v < 0 || v > 100) return err(res, 400, 'Desconto entre 0 e 100', 'VALIDATION');
         s.descontoPix = v;
     }
+    if (b.faixasFrete !== undefined) {
+        if (!Array.isArray(b.faixasFrete) || b.faixasFrete.length > 50) return err(res, 400, 'Faixas inválidas (máx 50)', 'VALIDATION');
+        for (const f of b.faixasFrete) {
+            const uf = String(f.uf || '').toUpperCase();
+            if (uf && !/^[A-Z]{2}$/.test(uf)) return err(res, 400, 'UF da faixa inválida', 'VALIDATION');
+            if (!(Number(f.atePeso) >= 0) || !(Number(f.valor) >= 0) || !(Number(f.gratisAcima ?? 0) >= 0)) {
+                return err(res, 400, 'Valores da faixa inválidos', 'VALIDATION');
+            }
+        }
+        s.faixasFrete = b.faixasFrete.map((f) => ({
+            uf: String(f.uf || '').toUpperCase(),
+            atePeso: Number(f.atePeso), valor: Number(f.valor),
+            gratisAcima: Number(f.gratisAcima ?? 0), prazoDias: Math.min(60, Math.max(1, Number(f.prazoDias ?? 5)))
+        }));
+    }
     if (b.segredos !== undefined && typeof b.segredos === 'object') {
         try {
             for (const [k, v] of Object.entries(b.segredos)) {
@@ -929,6 +1020,25 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
     await s.save();
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'config_atualizada', por: req.usuarioId }));
     res.json({ success: true });
+}));
+
+// Admin: QR/pairing frescos para parear (proxy; sem expor apikey)
+app.get('/api/config/whatsapp/qr', auth, admin, asyncHandler(async (req, res) => {
+    if (!EVO_API_URL || !EVO_APIKEY) return err(res, 502, 'Evolution nao configurado', 'UPSTREAM');
+    const s = await getSettings();
+    if (!s.evoInstance) return err(res, 400, 'Instancia nao definida', 'VALIDATION');
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 20000);
+    try {
+        const r = await fetch(`${EVO_API_URL}/instance/connect/${encodeURIComponent(s.evoInstance)}`, {
+            signal: ctrl.signal,
+            headers: { apikey: EVO_APIKEY }
+        }).finally(() => clearTimeout(t));
+        const data = await r.json();
+        res.json({ success: true, pairingCode: data.pairingCode || null, qr: data.base64 || null });
+    } catch {
+        return err(res, 502, 'Evolution inacessivel', 'UPSTREAM');
+    }
 }));
 
 // Admin: status do pareamento WhatsApp (proxy Evolution, sem vazar apikey)

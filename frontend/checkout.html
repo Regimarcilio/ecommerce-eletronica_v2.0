@@ -51,7 +51,7 @@
                             <div class="col-md-6 mb-3"><label>Complemento</label><input type="text" id="complemento" class="form-control"></div>
                             <div class="col-md-6 mb-3"><label>Bairro</label><input type="text" id="bairro" class="form-control" required></div>
                             <div class="col-md-6 mb-3"><label>Cidade</label><input type="text" id="cidade" class="form-control" required></div>
-                            <div class="col-md-4 mb-3"><label>Estado</label><select id="estado" class="form-select" required><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
+                            <div class="col-md-4 mb-3"><label>Estado</label><select id="estado" class="form-select" required onchange="cotarFrete()"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
                             <div class="col-md-2 mb-3"><label>CEP</label><input type="text" id="cep" class="form-control" required></div>
                         </div>
                         
@@ -186,6 +186,7 @@
             document.getElementById('cidade').value = e.cidade || '';
             window.setSelectValue(document.getElementById('estado'), e.estado || '');
             document.getElementById('cep').value = e.cep || '';
+            cotarFrete();
         }
         
         if (cart.length === 0) window.location.href = '/cart.html';
@@ -202,15 +203,37 @@
         
         function calcularTotal() {
             subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const frete = subtotal > 100 ? 0 : 20;
+            const frete = cotFrete != null ? cotFrete : (subtotal > 100 ? 0 : 20);
             let desconto = 0;
             if (selectedPayment === 'pix') { desconto = subtotal * (cfgPix / 100); document.getElementById('discountRow').style.display = 'flex'; document.getElementById('discountRow').firstElementChild.textContent = `Desconto PIX (${cfgPix}%):`; }
             else { document.getElementById('discountRow').style.display = 'none'; }
             const total = subtotal + frete - desconto;
             document.getElementById('orderSubtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
-            document.getElementById('orderFrete').innerHTML = frete === 0 ? '<span class="text-success">Grátis</span>' : `R$ ${frete.toFixed(2)}`;
+            document.getElementById('orderFrete').innerHTML = frete === 0 ? '<span class="text-success">Grátis</span>' : `R$ ${frete.toFixed(2)}` + (cotPrazo ? ` <small class="text-muted">(${cotPrazo} dias)</small>` : '');
             document.getElementById('discountAmount').innerText = `R$ ${desconto.toFixed(2)}`;
             document.getElementById('orderTotal').innerText = `R$ ${total.toFixed(2)}`;
+        }
+
+        let cotFrete = null, cotPrazo = null, cotTimer = null;
+        async function cotarFrete() {
+            const uf = document.getElementById('estado').value;
+            if (!uf || !cart.length) { cotFrete = null; cotPrazo = null; calcularTotal(); return; }
+            clearTimeout(cotTimer);
+            cotTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(API + '/frete/cotacao', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uf, items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 })) })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        cotFrete = Number(data.valor);
+                        cotPrazo = Number(data.prazoDias) || null;
+                    } else { cotFrete = null; cotPrazo = null; }
+                } catch { cotFrete = null; cotPrazo = null; }
+                calcularTotal();
+            }, 400);
         }
         
         function renderOrderItems() {

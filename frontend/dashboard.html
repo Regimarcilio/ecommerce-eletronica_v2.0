@@ -93,8 +93,9 @@
                 <div class="col-md-6 mb-3"><label class="form-label">SKU *</label><input type="text" id="prodSku" class="form-control"></div>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3"><label class="form-label">Preço (R$)</label><input type="number" step="0.01" id="prodPreco" class="form-control"></div>
-                <div class="col-md-6 mb-3"><label class="form-label">Quantidade em Estoque</label><input type="number" id="prodQuantidade" class="form-control"></div>
+                <div class="col-md-4 mb-3"><label class="form-label">Preço (R$)</label><input type="number" step="0.01" id="prodPreco" class="form-control"></div>
+                <div class="col-md-4 mb-3"><label class="form-label">Quantidade em Estoque</label><input type="number" id="prodQuantidade" class="form-control"></div>
+                <div class="col-md-4 mb-3"><label class="form-label">Peso (kg)</label><input type="number" step="0.01" min="0" id="prodPeso" class="form-control" placeholder="0.1"></div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Categoria *</label>
@@ -370,6 +371,7 @@
                 document.getElementById('prodSku').value = produto.sku;
                 document.getElementById('prodPreco').value = produto.preco;
                 document.getElementById('prodQuantidade').value = produto.quantidade;
+                document.getElementById('prodPeso').value = produto.peso ?? '';
                 document.getElementById('prodCategoria').value = produto.categoria || '';
                 document.getElementById('prodDescricao').value = produto.descricao || '';
                 document.getElementById('prodImagem').value = produto.imagemUrl || '';
@@ -383,6 +385,7 @@
                 document.getElementById('prodSku').value = '';
                 document.getElementById('prodPreco').value = '';
                 document.getElementById('prodQuantidade').value = 0;
+                document.getElementById('prodPeso').value = '';
                 document.getElementById('prodCategoria').value = '';
                 document.getElementById('prodDescricao').value = '';
                 document.getElementById('prodImagem').value = '';
@@ -420,6 +423,9 @@
             const quantidade = Number(document.getElementById('prodQuantidade').value);
             if (Number.isNaN(preco) || preco < 0) { showToast('Preço inválido (use 0 ou mais)!', true); return; }
             if (!Number.isInteger(quantidade) || quantidade < 0) { showToast('Quantidade inválida (inteiro 0 ou mais)!', true); return; }
+            const pesoRaw = document.getElementById('prodPeso').value.trim();
+            const peso = pesoRaw === '' ? undefined : Number(pesoRaw);
+            if (peso !== undefined && (Number.isNaN(peso) || peso < 0)) { showToast('Peso inválido!', true); return; }
             const descricao = document.getElementById('prodDescricao').value.trim();
             if (descricao.length > 2000) { showToast('Descrição com no máximo 2000 caracteres!', true); return; }
             const imagemUrl = window.safeImg(document.getElementById('prodImagem').value);
@@ -432,6 +438,7 @@
                 imagemUrl,
                 preco,
                 quantidade,
+                ...(peso !== undefined ? { peso } : {}),
                 categoria: categoria,
                 destaque: document.getElementById('prodDestaque').checked,
                 status: document.getElementById('prodStatus').value
@@ -680,6 +687,11 @@
                     </div>
                 </div>
                 <div class="data-card mt-3">
+                    <h4><i class="fas fa-truck"></i> Faixas de frete <small class="text-muted">(vazio = regra padrão)</small></h4>
+                    <div id="faixasList"></div>
+                    <button class="btn btn-sm btn-outline-light" onclick="addFaixaRow()">+ Adicionar faixa</button>
+                </div>
+                <div class="data-card mt-3">
                     <h4><i class="fas fa-key"></i> Segredos cifrados</h4>
                     <p>${segs}</p>
                     <div class="row">
@@ -689,6 +701,7 @@
                     <small class="text-muted">Valores nunca voltam do servidor (aparecem como ***). Chave AES em SETTINGS_KEY no .env.</small>
                 </div>
                 <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
+                (c.faixasFrete || []).forEach(addFaixaRow);
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -700,6 +713,30 @@
             } catch { document.getElementById('zapStatus').textContent = 'erro'; }
         }
 
+        function faixaRow(f) {
+            f = f || {};
+            return `<div class="row g-2 mb-2 fx-row">
+                <div class="col-2"><input class="form-control fx-uf" maxlength="2" placeholder="UF" value="${window.escapeHtml(f.uf || '')}"></div>
+                <div class="col-3"><input class="form-control fx-peso" type="number" min="0" step="0.1" placeholder="Até kg" value="${f.atePeso ?? ''}"></div>
+                <div class="col-2"><input class="form-control fx-valor" type="number" min="0" step="0.01" placeholder="R$" value="${f.valor ?? ''}"></div>
+                <div class="col-2"><input class="form-control fx-gratis" type="number" min="0" step="0.01" placeholder="Grátis+" value="${f.gratisAcima ?? ''}"></div>
+                <div class="col-2"><input class="form-control fx-prazo" type="number" min="1" max="60" placeholder="Dias" value="${f.prazoDias ?? ''}"></div>
+                <div class="col-1"><button class="btn btn-sm btn-outline-danger" onclick="this.closest('.fx-row').remove()">✕</button></div>
+            </div>`;
+        }
+        function addFaixaRow(f) {
+            document.getElementById('faixasList').insertAdjacentHTML('beforeend', faixaRow(f));
+        }
+        function collectFaixas() {
+            return [...document.querySelectorAll('#faixasList .fx-row')].map((r) => ({
+                uf: r.querySelector('.fx-uf').value.trim().toUpperCase(),
+                atePeso: Number(r.querySelector('.fx-peso').value),
+                valor: Number(r.querySelector('.fx-valor').value),
+                gratisAcima: Number(r.querySelector('.fx-gratis').value || 0),
+                prazoDias: Number(r.querySelector('.fx-prazo').value || 5)
+            }));
+        }
+
         async function salvarConfiguracoes() {
             const body = {
                 whatsappNumero: document.getElementById('cfgZap').value,
@@ -707,7 +744,8 @@
                 condicoesPagamento: document.getElementById('cfgCond').value,
                 mpPublicKey: document.getElementById('cfgPk').value,
                 parcelasMax: Number(document.getElementById('cfgParc').value),
-                descontoPix: Number(document.getElementById('cfgDesc').value)
+                descontoPix: Number(document.getElementById('cfgDesc').value),
+                faixasFrete: collectFaixas()
             };
             const sn = document.getElementById('cfgSegNome').value.trim();
             const sv = document.getElementById('cfgSegValor').value;

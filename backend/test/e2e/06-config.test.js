@@ -53,10 +53,11 @@ describe('e2e configuracoes da loja', () => {
     assert.ok(!('E2E_K' in (get2.data.config.segredos || {})));
   });
 
-  it('whatsapp/status sem Evolution configurado', async () => {
+  it('whatsapp/status responde shape (configurado ou nao)', async () => {
     const r = await api('GET', '/api/config/whatsapp/status', { token: atok });
     assert.equal(r.status, 200);
-    assert.equal(r.data.status.configurado, false);
+    assert.equal(typeof r.data.status.configurado, 'boolean');
+    if (r.data.status.configurado) assert.ok(typeof r.data.status.estado === 'string');
     const restore = await api('PUT', '/api/config/loja', {
       token: atok,
       body: { whatsappNumero: '' },

@@ -259,7 +259,9 @@
                         <div class="p-3">
                             <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
                             <p class="small text-muted" title="${window.escapeHtml(p.descricao || '')}">${window.escapeHtml(window.truncate(p.descricao || '', 80))}</p>
-                            <p class="fw-bold fs-5" style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
+                            <p class="fw-bold fs-5 mb-0" style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
+                            <p class="small text-muted mb-0">${p.parcela ? `${p.parcela.n}x de R$ ${Number(p.parcela.valor).toFixed(2)}` : ''}</p>
+                            <p class="small mb-1" style="color:#10b981;">${p.precoPix ? `R$ ${Number(p.precoPix).toFixed(2)} no PIX` : ''}</p>
                             <p class="small ${Number(p.quantidade) > 0 ? 'text-success' : 'text-danger'}">${Number(p.quantidade) > 0 ? `Em estoque (${p.quantidade})` : 'Esgotado'}</p>
                             <button class="btn-ps w-100" ${Number(p.quantidade) > 0 ? '' : 'disabled'} onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button>
                         </div>

@@ -557,6 +557,7 @@ Tabela 5 - Endpoints da API REST
 | GET | `/api/dashboard/stats` | Sim | Admin | Retornar indicadores administrativos |
 | GET | `/health` | Nao | Publico | Verificar saude do backend (liveness) |
 | GET | `/api/metrics` | Sim | Admin | Metricas (uptime, req, erros, memoria, mongo). CI com lint anti `/api` duplicado no frontend |
+| POST | `/api/frete/cotacao` | Nao | Publico | Cotacao por UF+itens (mesma regra do pedido) |
 | GET | `/api/config/loja/public` | Nao | Publico | Condicoes, parcelas, desconto, public key |
 | GET | `/api/config/loja` | Sim | Admin | Leitura mascarada |
 | PUT | `/api/config/loja` | Sim | Admin | Atualizacao parcial + segredos cifrados |
@@ -656,7 +657,9 @@ RN12 - O frete e gratis para subtotal superior a R$ 100,00; caso contrario, o va
 
 RN13 - Pagamento por PIX aplica desconto de 5% sobre o subtotal.
 
-RN14 - Os metodos de pagamento previstos no frontend sao PIX, cartao de credito e boleto bancario.
+RN14 - Os metodos sao PIX/cartao/boleto; cards exibem `Nx de R$`, `à vista` (precoPix) e selo, calculados no servidor (fonte unica).
+
+RN27 - Frete por tabela `faixasFrete` (UF, atePeso, valor, gratisAcima, prazo) editavel no dashboard; `POST /frete/cotacao` e pedido usam `cotarFrete` (fallback legado); peso por produto (kg).
 
 RN15 - O carrinho e mantido no navegador do usuario por meio do `localStorage`.
 
@@ -831,6 +834,7 @@ Matriz E2E (`backend/test/e2e/`, job `e2e` no CI com `mongo:7` em servico):
 | `04-observabilidade` | `/metrics` sem token 401, user 403, admin 200 com uptime/req/mongo; `06-config` public 401/403, validacoes 400, segredo cifrado/mascarado/limpo, status Evolution |;
 | `07-regras` | transicao ilegal 422, fluxo valido ate entregue, pos-entregue imutavel, soft-delete (lista/detalhe/PUT/pedido) |;
 | `08-pagamentos` | intent 403/409, preferencia mock, webhook aprova (pago) idempotente |
+| `09-frete` | validacao, legado, faixa SP/gratis, pedido usa tabela, faixa invalida 400 |
 | `03-pedido` | aceite retorna `lojaWhatsapp` + `whatsapp.{enviado,para}` mascarado; fallback cadastro; auditoria em `/notificacoes` |; `05-sessao` refresh rotaciona/invalida, logout revoga, forgot generico + reset 1 uso + re-login; logs JSON por requisicao (metodo, rota com `:id`, status, ms) |
 Limpeza em `after()` (produtos/categorias/enderecos de teste removidos; pedidos permanecem no banco efemero do CI).
 

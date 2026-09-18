@@ -69,6 +69,29 @@ describe('carrossel placas (filtro destaque)', () => {
   });
 });
 
+describe('frete (cotarFrete)', () => {
+  const cotar = (uf, sub, peso, faixas) => {
+    const c = (faixas || []).filter((f) => (!f.uf || f.uf === uf) && Number(peso) <= Number(f.atePeso ?? Infinity));
+    if (!c.length) return { valor: sub > 100 ? 0 : 20, prazoDias: 5 };
+    let m = null;
+    for (const f of c) { const v = (Number(f.gratisAcima) > 0 && sub >= Number(f.gratisAcima)) ? 0 : Number(f.valor); if (!m || v < m.valor) m = { valor: v }; }
+    return m;
+  };
+  it('sem faixa: legado', () => assert.equal(cotar('SP', 60, 4, []).valor, 20) && assert.equal(cotar('SP', 150, 4, []).valor, 0));
+  it('faixa por UF e gratis', () => {
+    const f = [{ uf: 'SP', atePeso: 30, valor: 15, gratisAcima: 200 }];
+    assert.equal(cotar('SP', 60, 4, f).valor, 15);
+    assert.equal(cotar('SP', 250, 4, f).valor, 0);
+    assert.equal(cotar('RJ', 60, 4, f).valor, 20);
+  });
+  it('peso acima ignora faixa', () => assert.equal(cotar('SP', 60, 99, [{ uf: 'SP', atePeso: 30, valor: 15 }]).valor, 20));
+  it('parcela e pix (fonte unica)', () => {
+    const parc = (preco, n) => +(Number(preco) / n).toFixed(2);
+    assert.equal(parc(100, 10), 10);
+    assert.equal(+(100 * (1 - 5 / 100)).toFixed(2), 95);
+  });
+});
+
 describe('whatsapp destino (normZap/maskFone)', () => {
   const normZap = (v) => { const d = String(v || '').replace(/\D/g, ''); if (!d) return ''; return d.length <= 11 ? `55${d}` : d; };
   const maskFone = (v) => { const d = String(v || '').replace(/\D/g, ''); return d.length >= 4 ? `***${d.slice(-4)}` : ''; };
