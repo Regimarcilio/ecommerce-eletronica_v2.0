@@ -171,6 +171,15 @@ const ProdutoSchema = new mongoose.Schema({
     status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
     destaque: { type: Boolean, default: false },
     categoria: { type: mongoose.Schema.Types.ObjectId, ref: 'Categoria' },
+    // Placas de TV: tipo da placa + compatibilidade + dimensoes (Correios)
+    tipoPlaca: { type: String, enum: ['PRINCIPAL', 'FONTE', 'TCOM'], uppercase: true, trim: true, default: undefined },
+    marca: { type: String, trim: true, maxlength: 60, default: '' },
+    modeloTV: { type: String, trim: true, maxlength: 120, default: '' },
+    dimensoes: {
+        c: { type: Number, min: 0, default: 40 },
+        l: { type: Number, min: 0, default: 30 },
+        a: { type: Number, min: 0, default: 5 }
+    },
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 
@@ -477,6 +486,17 @@ app.get('/api/produtos', asyncHandler(async (req, res) => {
         if (!isValidId(req.query.categoria)) return err(res, 400, 'Categoria inválida', 'VALIDATION');
         query.categoria = req.query.categoria;
     }
+    if (req.query.tipoPlaca) {
+        const t = String(req.query.tipoPlaca).toUpperCase();
+        if (!['PRINCIPAL', 'FONTE', 'TCOM'].includes(t)) return err(res, 400, 'Tipo de placa inválido', 'VALIDATION');
+        query.tipoPlaca = t;
+    }
+    if (req.query.marca) query.marca = new RegExp(String(req.query.marca).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (req.query.modelo) query.modeloTV = new RegExp(String(req.query.modelo).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (req.query.q) {
+        const rx = new RegExp(String(req.query.q).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        query.$or = [{ nome: rx }, { sku: rx }, { modeloTV: rx }];
+    }
     const { page, limit, skip } = parsePaging(req.query);
     const visivel = { ...query, ...{ deletedAt: null } };
     const cfg = await getSettings();
@@ -510,10 +530,36 @@ app.get('/api/produtos/:id', asyncHandler(async (req, res) => {
 // PUT parcial: só chaves PRESENTES no body entram no $set (ausente preserva)
 const pickProduto = (b) => {
     const out = {};
-    for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'peso', 'quantidade', 'status', 'destaque', 'categoria']) {
+    for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'peso', 'quantidade', 'status', 'destaque', 'categoria', 'tipoPlaca', 'marca', 'modeloTV']) {
         if (b[k] !== undefined) out[k] = b[k];
     }
     if (out.categoria === '') delete out.categoria;
+    if (out.tipoPlaca !== undefined) {
+        if (out.tipoPlaca === '' || out.tipoPlaca === null) delete out.tipoPlaca;
+        else {
+            out.tipoPlaca = String(out.tipoPlaca).toUpperCase();
+            if (!['PRINCIPAL', 'FONTE', 'TCOM'].includes(out.tipoPlaca)) {
+                throw Object.assign(new Error('Tipo de placa invalido (PRINCIPAL/FONTE/TCOM)'), { statusCode: 400, code: 'VALIDATION' });
+            }
+        }
+    }
+    for (const k of ['marca', 'modeloTV']) {
+        if (out[k] !== undefined) {
+            out[k] = String(out[k]).trim().slice(0, k === 'marca' ? 60 : 120);
+            if (!out[k]) delete out[k];
+        }
+    }
+    if (b.dimensoes !== undefined && b.dimensoes !== null && typeof b.dimensoes === 'object') {
+        const dim = {};
+        for (const k of ['c', 'l', 'a']) {
+            if (b.dimensoes[k] !== undefined) {
+                const v = Number(b.dimensoes[k]);
+                if (Number.isNaN(v) || v < 0) throw Object.assign(new Error('Dimensao invalida'), { statusCode: 400, code: 'VALIDATION' });
+                dim[k] = v;
+            }
+        }
+        if (Object.keys(dim).length) out.dimensoes = dim;
+    }
     if (out.peso !== undefined && (typeof out.peso !== 'number' || Number.isNaN(out.peso) || out.peso < 0)) {
         throw Object.assign(new Error('Peso invalido'), { statusCode: 400, code: 'VALIDATION' });
     }
