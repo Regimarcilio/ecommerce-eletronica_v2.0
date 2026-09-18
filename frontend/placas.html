@@ -1,361 +1,580 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PlacaTV - Placas de TV: Principal, Fonte e T-Con</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --ps-green: #10b981; --ps-dark: #064e3b; --ps-amber: #f59e0b; }
-        body { background: #06090f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: rgba(6,9,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #10b98133; }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #10b981, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .hero { min-height: 88vh; display: flex; align-items: center; position: relative; overflow: hidden;
-            background: radial-gradient(circle at 80% 20%, #10b98126 0%, transparent 60%), radial-gradient(circle at 10% 90%, #f59e0b1a 0%, transparent 50%); }
-        .hero-chip { display: inline-block; background: #10b98120; color: #6ee7b7; border: 1px solid #10b98155; padding: 6px 16px; border-radius: 30px; font-size: .85rem; margin-bottom: 18px; }
-        .btn-ps { background: linear-gradient(135deg, #10b981, #047857); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; }
-        .btn-ps:hover { color: #fff; filter: brightness(1.1); }
-        .btn-ps-outline { background: transparent; border: 2px solid #10b981; color: #10b981; padding: 10px 25px; border-radius: 30px; }
-        .btn-ps-outline:hover { background: #10b981; color: #fff; }
-        .carousel-item img.slide-img { height: 340px; width: 100%; object-fit: cover; border-radius: 20px; }
-        .carousel-caption { background: rgba(6,9,15,.72); border-radius: 14px; padding: 12px 18px; }
-        .chip-cat { background: #0d1512; border: 1px solid #10b98133; color: #fff; border-radius: 30px; padding: 8px 18px; cursor: pointer; transition: all .25s; }
-        .chip-cat:hover, .chip-cat.active { background: #10b981; color: #06090f; }
-        .product-card { background: #0d1512; border: 1px solid #10b98133; border-radius: 20px; overflow: hidden; transition: all .3s; height: 100%; }
-        .product-card:hover { transform: translateY(-5px); border-color: #10b981; }
-        .badge-tipo { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; margin-bottom: 8px; }
-        .badge-PRINCIPAL { background: #10b98122; color: #6ee7b7; border: 1px solid #10b98166; }
-        .badge-FONTE { background: #f59e0b22; color: #fbbf24; border: 1px solid #f59e0b66; }
-        .badge-TCOM { background: #3b82f622; color: #93c5fd; border: 1px solid #3b82f666; }
-        .compat-line { font-size: .8rem; color: #9ca3af; }
-        .trust { background: #0d1512; border-top: 1px solid #10b98122; border-bottom: 1px solid #10b98122; }
-        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
-        .footer { background: #06090f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
-        .back-to-top { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #047857); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: all .3s; z-index: 1000; }
-        .back-to-top.show { opacity: 1; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlacaCerta — A placa exata para a sua TV</title>
+<meta name="description" content="Placa principal, fonte e T-Con originais e testadas para LG, Samsung, Philco e mais. Ache pela modelo da TV.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36; --card2:#182242;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.grotesk{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+/* ===== announcement + header ===== */
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.45rem;letter-spacing:-.5px;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:36px;height:36px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#1a1000;font-size:1.05rem;box-shadow:0 4px 22px rgba(255,138,0,.45)}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.nav-cta{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:600;font-size:.9rem;padding:11px 22px;border-radius:999px;transition:.22s}
+.btn-fire{background:var(--grad);color:#1a1000;box-shadow:0 6px 26px rgba(255,138,0,.4)}
+.btn-fire:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(255,138,0,.55)}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;font-size:1rem}
+.cart-fab:hover{border-color:var(--amber)}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+/* ===== hero ===== */
+.hero{position:relative;overflow:hidden;background:radial-gradient(900px 480px at 85% -10%,rgba(255,138,0,.16),transparent 60%),radial-gradient(700px 500px at -10% 110%,rgba(56,225,255,.1),transparent 60%),var(--bg)}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:center;padding:72px 0 64px}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);background:rgba(255,178,36,.1);border:1px solid rgba(255,178,36,.3);padding:7px 16px;border-radius:999px;margin-bottom:20px}
+.hero h1{font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.05;letter-spacing:-1.5px;margin-bottom:18px}
+.hero h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p.sub{color:var(--mut);font-size:1.05rem;max-width:480px;margin-bottom:28px}
+.model-search{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:10px;display:flex;gap:8px;max-width:520px;box-shadow:0 18px 60px rgba(0,0,0,.5)}
+.model-search input{flex:1;background:transparent;border:none;outline:none;color:var(--txt);font-size:1rem;padding:12px 16px}
+.model-search input::placeholder{color:#5b6589}
+.hero-stats{display:flex;gap:30px;margin-top:30px}
+.hero-stats div b{font-family:'Space Grotesk';font-size:1.5rem;display:block}
+.hero-stats div span{font-size:.8rem;color:var(--mut)}
+/* floating TV visual */
+.tv-stage{position:relative;display:flex;justify-content:center}
+.tv{width:min(420px,100%);background:#05070f;border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 8px rgba(255,255,255,.02);transform:perspective(1200px) rotateY(-10deg) rotateX(3deg)}
+.tv-screen{background:linear-gradient(135deg,#101a3d,#0a2a4a 60%,#123);border-radius:12px;min-height:250px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:28px}
+.tv-screen::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.025) 3px 4px)}
+.tv-screen .row1{font-family:'Space Grotesk';font-size:1.6rem;font-weight:700}
+.tv-screen .row2{color:var(--cyan);font-size:.95rem;margin-top:6px}
+.tv-screen .price{margin-top:16px;display:flex;gap:12px;align-items:baseline}
+.tv-screen .price b{font-family:'Space Grotesk';font-size:2rem;color:var(--amber)}
+.tv-screen .price s{color:var(--mut)}
+.tv-stand{width:120px;height:12px;background:#1c2547;margin:0 auto;border-radius:0 0 8px 8px}
+.tv-base{width:220px;height:8px;background:#141b36;margin:6px auto 0;border-radius:99px}
+.chip-float{position:absolute;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px 16px;font-size:.82rem;display:flex;gap:8px;align-items:center;box-shadow:0 14px 40px rgba(0,0,0,.5);animation:bob 4s ease-in-out infinite}
+.chip-float i{color:var(--amber)}
+.cf1{top:6%;left:-2%}
+.cf2{bottom:14%;right:-2%;animation-delay:2s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* ===== brands ===== */
+.brands{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg2)}
+.brands .wrap{display:flex;gap:36px;align-items:center;overflow-x:auto;padding:18px 24px;font-family:'Space Grotesk';font-weight:600;color:var(--mut);white-space:nowrap}
+.brands .wrap span{font-size:.75rem;letter-spacing:2px;color:#5b6589}
+.brands button{background:none;border:none;color:var(--mut);font-family:'Space Grotesk';font-weight:600;font-size:1.05rem;cursor:pointer}
+.brands button:hover{color:var(--amber)}
+/* ===== sections ===== */
+section{padding:72px 0}
+.sec-head{text-align:center;max-width:620px;margin:0 auto 44px}
+.sec-head .kicker{margin-bottom:14px}
+.sec-head h2{font-size:clamp(1.6rem,3.4vw,2.4rem);letter-spacing:-.8px;margin-bottom:12px}
+.sec-head p{color:var(--mut)}
+/* shop by type */
+.type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.type-card{position:relative;background:linear-gradient(160deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:var(--r);padding:34px 28px;cursor:pointer;overflow:hidden;transition:.25s}
+.type-card:hover{transform:translateY(-6px);border-color:rgba(255,178,36,.5);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.type-card .ic{width:58px;height:58px;border-radius:16px;display:grid;place-items:center;font-size:1.4rem;margin-bottom:18px}
+.type-card h3{font-size:1.3rem;margin-bottom:8px}
+.type-card p{color:var(--mut);font-size:.9rem;margin-bottom:16px}
+.type-card .go{font-size:.85rem;font-weight:600;color:var(--amber)}
+.type-card .count{position:absolute;top:22px;right:24px;font-family:'Space Grotesk';font-size:.8rem;color:var(--mut);background:rgba(255,255,255,.06);padding:4px 12px;border-radius:99px}
+.t-principal .ic{background:rgba(56,225,255,.14);color:var(--cyan)}
+.t-fonte .ic{background:rgba(255,178,36,.14);color:var(--amber)}
+.t-tcom .ic{background:rgba(167,139,250,.16);color:#c4b5fd}
+/* ===== coverflow carousel ===== */
+#ofertas{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
+.coverflow{position:relative;max-width:1000px;margin:0 auto;min-height:430px}
+.cf-viewport{overflow:visible;display:flex;justify-content:center}
+.cf-card{flex:0 0 300px;margin:0 -42px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:26px 24px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
+.cf-card .foto{height:150px;display:grid;place-items:center;font-size:4rem;color:var(--amber);margin-bottom:12px}
+.cf-card .foto img{max-height:150px;max-width:100%;object-fit:contain;border-radius:12px}
+.cf-tag{position:absolute;top:16px;left:16px;font-size:.68rem;font-weight:700;letter-spacing:1px;background:var(--grad);color:#1a1000;padding:4px 12px;border-radius:99px}
+.cf-card h3{font-size:1.02rem;margin-bottom:4px;min-height:44px}
+.cf-card .compat{font-size:.78rem;color:var(--cyan);margin-bottom:10px}
+.cf-card .old{color:var(--mut);font-size:.85rem}
+.cf-card .now{font-family:'Space Grotesk';font-size:1.7rem;font-weight:700;color:var(--amber)}
+.cf-card .parc{font-size:.82rem;color:var(--mut);margin-bottom:14px}
+.cf-card .btn{width:100%;justify-content:center}
+.cf-card.off-l2{transform:translateX(-30px) scale(.72) perspective(900px) rotateY(28deg);opacity:.35}
+.cf-card.off-l1{transform:translateX(-10px) scale(.86) perspective(900px) rotateY(16deg);opacity:.7}
+.cf-card.active{transform:scale(1);opacity:1;pointer-events:auto;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,178,36,.35);z-index:3}
+.cf-card.off-r1{transform:translateX(10px) scale(.86) perspective(900px) rotateY(-16deg);opacity:.7}
+.cf-card.off-r2{transform:translateX(30px) scale(.72) perspective(900px) rotateY(-28deg);opacity:.35}
+.cf-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:30px}
+.cf-arrow{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--txt);cursor:pointer;font-size:1rem;transition:.2s}
+.cf-arrow:hover{border-color:var(--amber);color:var(--amber)}
+.cf-dots{display:flex;gap:8px}
+.cf-dots button{width:9px;height:9px;border-radius:99px;border:none;background:#2b3560;cursor:pointer;transition:.25s;padding:0}
+.cf-dots button.on{width:30px;background:var(--grad)}
+.cf-progress{max-width:1000px;margin:22px auto 0;height:3px;background:#1d2547;border-radius:99px;overflow:hidden}
+.cf-progress i{display:block;height:100%;width:0;background:var(--grad)}
+/* ===== catalog ===== */
+.pills{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:34px}
+.pill{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:99px;padding:9px 22px;font-size:.87rem;font-weight:500;cursor:pointer;transition:.2s}
+.pill:hover{border-color:var(--amber)}
+.pill.on{background:var(--grad);color:#1a1000;border-color:transparent;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.22s;display:flex;flex-direction:column}
+.pcard:hover{transform:translateY(-5px);border-color:rgba(255,178,36,.45)}
+.pcard .foto{height:160px;display:grid;place-items:center;background:#0b1128;font-size:3rem;color:#3d4a7d}
+.pcard .foto img{width:100%;height:160px;object-fit:cover}
+.pcard .body{padding:18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.ptype{font-size:.68rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--amber)}
+.pcard h3{font-size:.95rem;line-height:1.35}
+.pcard .compat{font-size:.78rem;color:var(--cyan)}
+.pcard .price-row{display:flex;align-items:baseline;gap:8px;margin-top:auto}
+.pcard .price-row b{font-family:'Space Grotesk';font-size:1.25rem}
+.pcard .pix{font-size:.8rem;color:#6ee7b7}
+.pcard .stock{font-size:.78rem}
+.ok{color:#6ee7b7}.out{color:#f87171}
+.pcard .btn{margin-top:8px;justify-content:center;padding:10px}
+.pager{display:flex;gap:14px;justify-content:center;align-items:center;margin-top:30px;color:var(--mut);font-size:.88rem}
+/* ===== finder ===== */
+#finder{background:linear-gradient(180deg,var(--bg2),var(--bg));border-top:1px solid var(--line)}
+.finder-box{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:40px;max-width:860px;margin:0 auto;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:26px 0}
+.steps label{font-size:.78rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--mut);display:block;margin-bottom:8px}
+.steps select{width:100%;background:#0b1128;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:13px 14px;font-size:.95rem;outline:none}
+.steps select:focus{border-color:var(--amber)}
+#finderResult{margin-top:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.fres{background:#0b1128;border:1px solid rgba(255,178,36,.35);border-radius:14px;padding:18px;text-align:center}
+.fres b{display:block;margin-bottom:4px}
+.fres span{font-size:.8rem;color:var(--cyan)}
+.fres .btn{margin-top:12px;width:100%;justify-content:center;padding:9px;font-size:.82rem}
+/* ===== testimonials / warranty / faq ===== */
+.testi{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px}
+.tcard .stars{color:var(--amber);font-size:.8rem;margin-bottom:12px}
+.tcard p{font-size:.92rem;color:#cdd5f0;margin-bottom:16px}
+.tcard footer{font-size:.82rem;color:var(--mut)}
+.warranty{background:var(--grad);border-radius:26px;padding:44px;display:flex;gap:28px;align-items:center;color:#1a1000;margin-top:20px;flex-wrap:wrap}
+.warranty h2{font-size:1.8rem;letter-spacing:-.5px;margin-bottom:8px}
+.warranty p{font-weight:500;opacity:.8}
+.warranty .btn{background:#1a1000;color:#ffb224;margin-left:auto}
+.faq{max-width:760px;margin:0 auto}
+.faq-item{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.faq-item button{width:100%;background:none;border:none;color:var(--txt);text-align:left;padding:18px 22px;font-size:.95rem;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.faq-item .a{max-height:0;overflow:hidden;transition:max-height .3s;color:var(--mut);font-size:.9rem}
+.faq-item .a p{padding:0 22px 18px}
+.faq-item.open .a{max-height:200px}
+/* ===== footer ===== */
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:56px 0 28px}
+.fgrid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:28px;margin-bottom:36px}
+.fgrid h4{font-size:.8rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut);margin-bottom:14px}
+.fgrid a{display:block;font-size:.9rem;color:#cdd5f0;margin-bottom:9px}
+.fgrid a:hover{color:var(--amber)}
+.copy{border-top:1px solid var(--line);padding-top:22px;display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+/* toast */
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.toast-msg{background:#0d1330;border:1px solid var(--line);border-left:3px solid var(--amber);padding:13px 20px;border-radius:12px;font-size:.88rem;box-shadow:0 16px 44px rgba(0,0,0,.55);animation:tin .3s}
+@keyframes tin{from{transform:translateX(30px);opacity:0}}
+@media(max-width:960px){
+  .hero-grid{grid-template-columns:1fr;padding:48px 0}
+  .tv-stage{display:none}
+  .type-grid,.testi{grid-template-columns:1fr}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr}
+  #finderResult{grid-template-columns:1fr}
+  .fgrid{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+  .cf-card{flex-basis:260px;margin:0 -56px}
+}
+</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="logo" href="/placas.html"><i class="fas fa-tv"></i> PlacaTV</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon bg-white"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="mx-auto">
-                    <div class="input-group">
-                        <input type="text" id="searchInput" class="form-control bg-dark text-white border-success" placeholder="Buscar por modelo (ex: TU8000, 43UJ6525)..." style="width: 300px;" onkeydown="if(event.key==='Enter')searchProducts()">
-                        <button class="btn btn-success" onclick="searchProducts()"><i class="fas fa-search"></i></button>
-                    </div>
-                </div>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link text-white" href="/placas.html"><i class="fas fa-home"></i> Início</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="#" onclick="scrollToCatalogo()"><i class="fas fa-tv"></i> Placas</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/index.html"><i class="fas fa-store"></i> Loja completa</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/cart.html"><i class="fas fa-shopping-cart"></i> Carrinho</a></li>
-                    <li class="nav-item" id="authLink"></li>
-                </ul>
-            </div>
-        </div>
+
+<div class="announce"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 100 &nbsp;·&nbsp; 5% OFF no PIX &nbsp;·&nbsp; 12x no cartão</div>
+
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="#tipos">Tipos de placa</a>
+      <a href="#ofertas">Ofertas</a>
+      <a href="#catalogo">Catálogo</a>
+      <a href="#finder">Achar minha placa</a>
+      <a href="#faq">Dúvidas</a>
     </nav>
-
-    <section class="hero">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
-                    <span class="hero-chip"><i class="fas fa-screwdriver-wrench"></i> Peças testadas para assistência técnica</span>
-                    <h1 class="display-3 fw-bold">Placas de TV<br>para <span style="color:#10b981;">reparo garantido</span></h1>
-                    <p class="lead text-muted mb-4">Placa principal, fonte e T-Con para LG, Samsung, Philco e mais. Informe o modelo da TV e ache a placa compatível.</p>
-                    <div class="d-flex gap-3 flex-wrap">
-                        <button class="btn-ps" onclick="scrollToCatalogo()">Ver placas <i class="fas fa-arrow-right"></i></button>
-                        <button class="btn-ps-outline" onclick="document.getElementById('destaques').scrollIntoView({behavior:'smooth'})">Destaques</button>
-                    </div>
-                    <div class="d-flex gap-4 mt-4 text-muted flex-wrap">
-                        <span><strong class="text-white" id="statModelos">–</strong> modelos</span>
-                        <span><strong class="text-white">Principal · Fonte · T-Con</strong></span>
-                        <span><strong class="text-white">PIX −5%</strong> no checkout</span>
-                        <span><strong class="text-white">12x</strong> no cartão</span>
-                    </div>
-                </div>
-                <div class="col-lg-5 text-center d-none d-lg-block">
-                    <i class="fas fa-tv" style="font-size: 16rem; color: #10b981;"></i>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="destaques" class="py-5" style="display:none;">
-        <div class="container">
-            <h2 class="text-center mb-4">Destaques <span style="color:#10b981;">da semana</span></h2>
-            <div id="psCarousel" class="carousel slide" data-bs-ride="carousel">
-                <div class="carousel-indicators" id="psIndicators"></div>
-                <div class="carousel-inner" id="psSlides"></div>
-                <button class="carousel-control-prev" type="button" data-bs-target="#psCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon"></span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#psCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon"></span>
-                </button>
-            </div>
-        </div>
-    </section>
-
-    <section class="py-4">
-        <div class="container">
-            <div class="d-flex gap-2 flex-wrap justify-content-center" id="tipoChips">
-                <button class="chip-cat active" data-tipo="" onclick="filtrarTipo('')">Todas</button>
-                <button class="chip-cat" data-tipo="PRINCIPAL" onclick="filtrarTipo('PRINCIPAL')"><i class="fas fa-microchip"></i> Principal</button>
-                <button class="chip-cat" data-tipo="FONTE" onclick="filtrarTipo('FONTE')"><i class="fas fa-plug"></i> Fonte</button>
-                <button class="chip-cat" data-tipo="TCOM" onclick="filtrarTipo('TCOM')"><i class="fas fa-display"></i> T-Con</button>
-            </div>
-            <div class="d-flex gap-2 flex-wrap justify-content-center mt-3" id="marcaChips"></div>
-        </div>
-    </section>
-
-    <section id="catalogo" class="py-5">
-        <div class="container">
-            <h2 class="text-center mb-5">Catálogo de <span style="color:#10b981;">placas de TV</span></h2>
-            <div class="row g-4" id="productsContainer">
-                <div class="col-12 text-center"><div class="spinner-border" style="color:#10b981;"></div><p class="mt-2">Carregando...</p></div>
-            </div>
-            <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="psPager" style="display:none;">
-                <button class="btn btn-outline-light btn-sm" id="psPrev" onclick="mudarPagina(-1)">← Anterior</button>
-                <span class="text-muted small" id="psPageInfo">Página 1</span>
-                <button class="btn btn-outline-light btn-sm" id="psNext" onclick="mudarPagina(1)">Próxima →</button>
-            </nav>
-        </div>
-    </section>
-
-    <section class="py-5">
-        <div class="container">
-            <h3 class="text-center mb-4">Como achar <span style="color:#10b981;">sua placa</span></h3>
-            <div class="row text-center g-3">
-                <div class="col-md-4"><div class="product-card p-4"><i class="fas fa-magnifying-glass fa-2x mb-2" style="color:#10b981;"></i><p class="fw-bold mb-1">1. Anote o modelo da TV</p><p class="text-muted small mb-0">Etiqueta traseira ou menu (ex: UN50TU8000).</p></div></div>
-                <div class="col-md-4"><div class="product-card p-4"><i class="fas fa-filter fa-2x mb-2" style="color:#10b981;"></i><p class="fw-bold mb-1">2. Filtre por tipo</p><p class="text-muted small mb-0">Principal, fonte ou T-Con + busca pelo modelo.</p></div></div>
-                <div class="col-md-4"><div class="product-card p-4"><i class="fas fa-cart-plus fa-2x mb-2" style="color:#10b981;"></i><p class="fw-bold mb-1">3. Finalize no checkout</p><p class="text-muted small mb-0">Frete cotado por UF, Pix −5% ou 12x no cartão.</p></div></div>
-            </div>
-        </div>
-    </section>
-
-    <section class="trust py-4">
-        <div class="container">
-            <div class="row text-center g-3">
-                <div class="col-md-4"><i class="fas fa-truck-fast fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">Envio em 24h · Grátis acima de R$ 100</p></div>
-                <div class="col-md-4"><i class="fas fa-shield-halved fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">90 dias de garantia em placas testadas</p></div>
-                <div class="col-md-4"><i class="fas fa-headset fa-2x mb-2" style="color:#10b981;"></i><p class="mb-0">Suporte técnico para compatibilidade</p></div>
-            </div>
-        </div>
-    </section>
-
-    <footer class="footer">
-        <div class="container text-center">
-            <p class="mb-1"><span class="logo" style="font-size:1.3rem;"><i class="fas fa-tv"></i> PlacaTV</span></p>
-            <p class="text-muted small">Placas de TV sobre a mesma API TechStore · <a href="/index.html" class="text-white-50">Loja completa</a></p>
-            <p class="text-muted small">&copy; 2026 PlacaTV - Todos os direitos reservados.</p>
-        </div>
-    </footer>
-
-    <div class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
-        <i class="fas fa-arrow-up"></i>
+    <div class="nav-cta">
+      <a class="cart-fab" href="/cart.html" title="Carrinho"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
+      <a class="btn btn-fire" href="#catalogo">Comprar <i class="fa-solid fa-arrow-right"></i></a>
     </div>
+  </div>
+</header>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js?v=2"></script>
-    <script>
-        const API = window.API_BASE;
-        const TIPO_LABEL = { PRINCIPAL: 'Principal', FONTE: 'Fonte', TCOM: 'T-Con' };
-        let allProducts = [];
-        let psPage = 1;
-        const PS_LIMIT = 12;
-        let psPages = 1;
-        let psTipo = '';
-        let psMarca = '';
-        let psQuery = '';
-        let searching = false;
+<section class="hero" style="padding:0">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="kicker"><i class="fa-solid fa-screwdriver-wrench"></i> Peças testadas · assistência técnica</span>
+      <h1>A placa exata<br>para a sua <span>TV voltar a ligar.</span></h1>
+      <p class="sub">Principal, fonte e T-Con para LG, Samsung, Philco e mais. Digite o modelo da TV e a gente mostra as placas compatíveis.</p>
+      <div class="model-search">
+        <input id="heroModel" placeholder="Ex: UN50TU8000, 43UJ6525, PTV32..." onkeydown="if(event.key==='Enter')buscarModelo()">
+        <button class="btn btn-fire" onclick="buscarModelo()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+      </div>
+      <div class="hero-stats">
+        <div><b id="statModelos">–</b><span>modelos em estoque</span></div>
+        <div><b>90 dias</b><span>de garantia</span></div>
+        <div><b>24h</b><span>envio rápido</span></div>
+      </div>
+    </div>
+    <div class="tv-stage">
+      <div style="position:relative">
+        <div class="tv">
+          <div class="tv-screen" id="heroScreen">
+            <div class="row1" id="heroName">Placa Principal 50" TU8000</div>
+            <div class="row2" id="heroCompat">Samsung · comp. UN50TU8000</div>
+            <div class="price"><b id="heroPrice">R$ 219,90</b><s id="heroOld"></s></div>
+          </div>
+        </div>
+        <div class="tv-stand"></div><div class="tv-base"></div>
+        <div class="chip-float cf1"><i class="fa-solid fa-circle-check"></i> Testada antes do envio</div>
+        <div class="chip-float cf2"><i class="fa-solid fa-shield-halved"></i> 90 dias de garantia</div>
+      </div>
+    </div>
+  </div>
+</section>
 
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast-custom';
-            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> `;
-            toast.appendChild(document.createTextNode(String(msg ?? '')));
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
+<div class="brands"><div class="wrap" id="brandStrip"><span>MARCAS</span></div></div>
 
-        function updateAuthUI() {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const authLink = document.getElementById('authLink');
-            if (user.nome) {
-                authLink.innerHTML = `<span class="navbar-text text-white"><i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}</span>`;
-            } else {
-                authLink.innerHTML = '<a href="/auth.html" class="btn btn-success btn-sm">Entrar</a>';
-            }
-        }
+<section id="tipos" style="padding-bottom:20px">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Compre por tipo</span>
+      <h2>Sua TV liga? Tem som? Tem imagem?</h2>
+      <p>O sintoma indica a placa. Escolha o tipo e veja só peças compatíveis.</p>
+    </div>
+    <div class="type-grid">
+      <div class="type-card t-principal" onclick="filtrarTipo('PRINCIPAL')">
+        <span class="count" id="countPRINCIPAL">–</span>
+        <div class="ic"><i class="fa-solid fa-microchip"></i></div>
+        <h3>Placa Principal</h3>
+        <p>TV não liga, trava na logo ou sem funções smart — o cérebro da TV.</p>
+        <span class="go">Ver principais <i class="fa-solid fa-arrow-right"></i></span>
+      </div>
+      <div class="type-card t-fonte" onclick="filtrarTipo('FONTE')">
+        <span class="count" id="countFONTE">–</span>
+        <div class="ic"><i class="fa-solid fa-plug-circle-bolt"></i></div>
+        <h3>Placa Fonte</h3>
+        <p>LED standby apagado ou TV desliga sozinha — problema de alimentação.</p>
+        <span class="go">Ver fontes <i class="fa-solid fa-arrow-right"></i></span>
+      </div>
+      <div class="type-card t-tcom" onclick="filtrarTipo('TCOM')">
+        <span class="count" id="countTCOM">–</span>
+        <div class="ic"><i class="fa-solid fa-display"></i></div>
+        <h3>Placa T-Con</h3>
+        <p>Tem som mas sem imagem, listras ou tela branca — controle do display.</p>
+        <span class="go">Ver T-Con <i class="fa-solid fa-arrow-right"></i></span>
+      </div>
+    </div>
+  </div>
+</section>
 
-        function scrollToCatalogo() { document.getElementById('catalogo').scrollIntoView({ behavior: 'smooth' }); }
+<section id="ofertas">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Ofertas da semana</span>
+      <h2>Placas em destaque</h2>
+      <p>Arraste, use as setas ou aguarde — o carrossel gira sozinho.</p>
+    </div>
+  </div>
+  <div class="coverflow"><div class="cf-viewport" id="cfTrack"></div></div>
+  <div class="cf-nav">
+    <button class="cf-arrow" onclick="cfGo(cfIdx-1)" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+    <div class="cf-dots" id="cfDots"></div>
+    <button class="cf-arrow" onclick="cfGo(cfIdx+1)" aria-label="Próxima"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+  <div class="cf-progress"><i id="cfBar"></i></div>
+</section>
 
-        function productImg(p, h) {
-            const url = window.safeImg(p.imagemUrl);
-            if (url) return `<img src="${url}" alt="${window.escapeHtml(p.nome)}" loading="lazy" style="height:${h}px;width:100%;object-fit:cover;" onerror="this.remove()">`;
-            return `<div class="d-flex align-items-center justify-content-center" style="height:${h}px;"><i class="fas fa-tv fa-4x" style="color:#10b981;"></i></div>`;
-        }
+<section id="catalogo" style="padding-top:72px">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Catálogo completo</span>
+      <h2>Todas as placas</h2>
+      <p>Filtre por tipo ou marca. Preços com Pix e parcelamento calculados na hora.</p>
+    </div>
+    <div class="pills" id="tipoPills">
+      <button class="pill on" data-t="" onclick="filtrarTipo('')">Todas</button>
+      <button class="pill" data-t="PRINCIPAL" onclick="filtrarTipo('PRINCIPAL')">Principal</button>
+      <button class="pill" data-t="FONTE" onclick="filtrarTipo('FONTE')">Fonte</button>
+      <button class="pill" data-t="TCOM" onclick="filtrarTipo('TCOM')">T-Con</button>
+    </div>
+    <div class="pills" id="marcaPills"></div>
+    <div class="grid" id="grid"></div>
+    <div class="pager" id="pager" style="display:none">
+      <button class="btn btn-ghost" id="pgPrev" onclick="mudarPagina(-1)">← Anterior</button>
+      <span id="pgInfo">Página 1</span>
+      <button class="btn btn-ghost" id="pgNext" onclick="mudarPagina(1)">Próxima →</button>
+    </div>
+  </div>
+</section>
 
-        function compatLine(p) {
-            const bits = [];
-            if (p.marca) bits.push(window.escapeHtml(p.marca));
-            if (p.modeloTV) bits.push('comp. ' + window.escapeHtml(p.modeloTV));
-            return bits.length ? `<p class="compat-line mb-1"><i class="fas fa-circle-check"></i> ${bits.join(' · ')}</p>` : '';
-        }
+<section id="finder">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Localizador de compatibilidade</span>
+      <h2>Ache sua placa em 3 passos</h2>
+      <p>Selecione a marca, o modelo da TV e o tipo de placa.</p>
+    </div>
+    <div class="finder-box">
+      <div class="steps">
+        <div><label>1 · Marca</label><select id="fMarca" onchange="finderModelos()"><option value="">Selecione...</option></select></div>
+        <div><label>2 · Modelo da TV</label><select id="fModelo" disabled><option value="">Primeiro a marca...</option></select></div>
+        <div><label>3 · Tipo de placa</label><select id="fTipo"><option value="">Qualquer</option><option value="PRINCIPAL">Principal</option><option value="FONTE">Fonte</option><option value="TCOM">T-Con</option></select></div>
+      </div>
+      <button class="btn btn-fire" style="width:100%;justify-content:center" onclick="finderBuscar()"><i class="fa-solid fa-wand-magic-sparkles"></i> Encontrar minha placa</button>
+      <div id="finderResult"></div>
+    </div>
+  </div>
+</section>
 
-        function tipoBadge(p) {
-            if (!p.tipoPlaca || !TIPO_LABEL[p.tipoPlaca]) return '';
-            return `<span class="badge-tipo badge-${window.escapeHtml(p.tipoPlaca)}">${window.escapeHtml(TIPO_LABEL[p.tipoPlaca])}</span>`;
-        }
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="kicker">Quem comprou, aprovou</span>
+      <h2>Técnicos que voltaram a ligar TVs</h2>
+    </div>
+    <div class="testi">
+      <div class="tcard"><div class="stars">★★★★★</div><p>"Achei a principal da 50TU8000 pelo modelo em 1 minuto. Chegou testada, TV funcionando no mesmo dia."</p><footer><b>Marcos R.</b> · Assistência em SP</footer></div>
+      <div class="tcard"><div class="stars">★★★★★</div><p>"Fonte da LG 43 com preço justo e garantia de 90 dias. Virou meu fornecedor oficial de placas."</p><footer><b>Ana Paula</b> · Eletrônica em Curitiba</footer></div>
+      <div class="tcard"><div class="stars">★★★★★</div><p>"T-Con compatível certinha com o modelo. O localizador de compatibilidade economiza meu tempo."</p><footer><b>Diego F.</b> · Técnico autônomo</footer></div>
+    </div>
+    <div class="warranty">
+      <div style="font-size:2.6rem"><i class="fa-solid fa-shield-halved"></i></div>
+      <div><h2>Toda placa sai testada daqui.</h2><p>Bancada própria · 90 dias de garantia · troca fácil em caso de defeito.</p></div>
+      <a class="btn" href="#catalogo">Ver estoque <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </div>
+</section>
 
-        async function loadDestaques() {
-            try {
-                const res = await fetch(`${API}/produtos?status=ativo&limit=100`);
-                const data = await res.json();
-                const dest = ((data.success && data.produtos) || []).filter(p => p.destaque && p.tipoPlaca).slice(0, 5);
-                if (!dest.length) return;
-                document.getElementById('destaques').style.display = '';
-                document.getElementById('psIndicators').innerHTML = dest.map((_, i) =>
-                    `<button type="button" data-bs-target="#psCarousel" data-bs-slide-to="${i}" class="${i === 0 ? 'active' : ''}"></button>`).join('');
-                document.getElementById('psSlides').innerHTML = dest.map((p, i) => `
-                    <div class="carousel-item ${i === 0 ? 'active' : ''}">
-                        ${productImg(p, 340)}
-                        <div class="carousel-caption">
-                            <h5>${window.escapeHtml(p.nome)}</h5>
-                            <p class="mb-1 small">${tipoBadge(p)} ${compatLine(p)}</p>
-                            <p class="mb-2"><strong style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</strong>
-                            <button class="btn btn-success btn-sm ms-2" onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button></p>
-                        </div>
-                    </div>`).join('');
-                window.__psDestaques = dest;
-            } catch (e) { console.error(e); }
-        }
+<section id="faq" style="padding-top:20px">
+  <div class="wrap">
+    <div class="sec-head"><span class="kicker">Dúvidas frequentes</span><h2>Antes de comprar</h2></div>
+    <div class="faq">
+      <div class="faq-item"><button onclick="this.parentElement.classList.toggle('open')">Como sei qual placa está com defeito? <i class="fa-solid fa-chevron-down"></i></button><div class="a"><p>TV que não liga (standby apagado) → fonte. Liga mas trava ou sem smart → principal. Tem som e sem imagem → T-Con. Na dúvida, fale com nosso suporte técnico.</p></div></div>
+      <div class="faq-item"><button onclick="this.parentElement.classList.toggle('open')">A placa serve no meu modelo exato? <i class="fa-solid fa-chevron-down"></i></button><div class="a"><p>Use o localizador acima com marca + modelo da TV. Cada anúncio mostra a compatibilidade ("comp. UN50TU8000").</p></div></div>
+      <div class="faq-item"><button onclick="this.parentElement.classList.toggle('open')">Quais as formas de pagamento? <i class="fa-solid fa-chevron-down"></i></button><div class="a"><p>Pix com 5% de desconto, cartão em até 12x ou boleto — tudo calculado no checkout.</p></div></div>
+      <div class="faq-item"><button onclick="this.parentElement.classList.toggle('open')">Como funciona o frete? <i class="fa-solid fa-chevron-down"></i></button><div class="a"><p>Cotado por UF no checkout, com prazo estimado. Acima de R$ 100 o envio sai grátis.</p></div></div>
+    </div>
+  </div>
+</section>
 
-        function paintTipoChips() {
-            document.querySelectorAll('#tipoChips .chip-cat').forEach(b =>
-                b.classList.toggle('active', (b.dataset.tipo || '') === psTipo));
-        }
+<footer class="site">
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <a class="brand" href="/placas.html" style="margin-bottom:14px"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+        <p style="color:var(--mut);font-size:.9rem;max-width:280px">A placa exata para a sua TV voltar a ligar. Principal, fonte e T-Con testadas.</p>
+      </div>
+      <div><h4>Comprar</h4><a href="#tipos">Placa principal</a><a href="#tipos">Placa fonte</a><a href="#tipos">Placa T-Con</a><a href="#catalogo">Catálogo</a></div>
+      <div><h4>Ajuda</h4><a href="#finder">Achar minha placa</a><a href="#faq">Dúvidas</a><a href="/cart.html">Carrinho</a><a href="/index.html">Loja completa</a></div>
+      <div><h4>Conta</h4><a href="/auth.html">Entrar</a><a href="/pedidos.html">Meus pedidos</a><a href="/minha-conta.html">Minha conta</a></div>
+    </div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
+  </div>
+</footer>
 
-        async function loadMarcas() {
-            try {
-                const res = await fetch(`${API}/produtos?status=ativo&limit=100`);
-                const data = await res.json();
-                const marcas = [...new Set(((data.success && data.produtos) || []).filter(p => p.tipoPlaca && p.marca).map(p => p.marca))].sort();
-                document.getElementById('marcaChips').innerHTML = marcas.length
-                    ? `<button class="chip-cat ${psMarca === '' ? 'active' : ''}" onclick="filtrarMarca('')">Todas as marcas</button>` +
-                      marcas.map(m => `<button class="chip-cat ${psMarca === m ? 'active' : ''}" onclick="filtrarMarca(${JSON.stringify(m)})">${window.escapeHtml(m)}</button>`).join('')
-                    : '';
-            } catch (e) { console.error(e); }
-        }
+<div id="toast"></div>
+<script src="js/config.js?v=2"></script>
+<script>
+const API = window.API_BASE;
+const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
+const TIPO_ICON = { PRINCIPAL:'fa-microchip', FONTE:'fa-plug-circle-bolt', TCOM:'fa-display' };
+let catalog = [], page = 1, pages = 1, fTipo = '', fMarca = '', fQuery = '';
+const LIMIT = 12;
 
-        function filtrarTipo(t) { psTipo = t; psPage = 1; paintTipoChips(); loadProducts(); }
-        function filtrarMarca(m) { psMarca = m; psPage = 1; loadMarcas(); loadProducts(); }
+/* ---------- helpers ---------- */
+function toast(msg, err=false){
+  const t=document.createElement('div');t.className='toast-msg';
+  t.style.borderLeftColor=err?'#f87171':'#ffb224';t.textContent=msg;
+  document.getElementById('toast').appendChild(t);setTimeout(()=>t.remove(),3200);
+}
+function money(v){return 'R$ '+(Number(v)||0).toFixed(2)}
+function esc(v){return window.escapeHtml(String(v??''))}
+function updateCart(){
+  try{const c=JSON.parse(localStorage.getItem('cart')||'[]');
+  document.getElementById('cartCount').textContent=c.reduce((s,i)=>s+(Number(i.quantity)||0),0);}catch{}
+}
+function updateAuth(){
+  const u=JSON.parse(localStorage.getItem('user')||'{}');
+  document.getElementById('authLink').innerHTML=u.nome
+    ? `<span style="font-size:.85rem;color:var(--mut)"><i class="fa-solid fa-user"></i> ${esc(u.nome.split(' ')[0])}</span>`
+    : `<a href="/auth.html" class="btn btn-ghost" style="padding:9px 18px">Entrar</a>`;
+}
+function foto(p,icon){const u=window.safeImg(p.imagemUrl);
+  return u?`<img src="${u}" alt="${esc(p.nome)}" loading="lazy" onerror="this.remove()">`:`<i class="fa-solid ${p.tipoPlaca&&TIPO_ICON[p.tipoPlaca]?'fa-solid '+TIPO_ICON[p.tipoPlaca]:'fa-tv'}"></i>`;}
+function compat(p){const b=[];if(p.marca)b.push(esc(p.marca));if(p.modeloTV)b.push('comp. '+esc(p.modeloTV));return b.join(' · ')}
+function buy(id){
+  const pool=[...catalog,...cfItems];
+  const p=pool.find(x=>x._id===id);
+  if(!p||Number(p.quantidade)<=0){toast('Produto indisponível',true);return}
+  window.cartAdd(id,p.nome,p.preco);updateCart();toast('Placa adicionada ao carrinho!');
+}
 
-        function buildQuery(page) {
-            let q = `${API}/produtos?status=ativo&page=${page}&limit=${PS_LIMIT}`;
-            if (psTipo) q += `&tipoPlaca=${encodeURIComponent(psTipo)}`;
-            if (psMarca) q += `&marca=${encodeURIComponent(psMarca)}`;
-            if (psQuery) q += `&q=${encodeURIComponent(psQuery)}`;
-            return q;
-        }
+/* ---------- hero / marcas / contadores ---------- */
+async function boot(){
+  try{
+    const r=await fetch(`${API}/produtos?status=ativo&limit=100`);const d=await r.json();
+    const all=(d.success&&d.produtos||[]).filter(p=>p.tipoPlaca);
+    document.getElementById('statModelos').textContent=all.length||'–';
+    for(const t of Object.keys(TIPO_LABEL)){
+      const n=all.filter(p=>p.tipoPlaca===t).length;
+      document.getElementById('count'+t).textContent=n?`${n} modelos`:'em breve';
+    }
+    const marcas=[...new Set(all.filter(p=>p.marca).map(p=>p.marca))].sort();
+    document.getElementById('brandStrip').innerHTML='<span>MARCAS</span>'+marcas.map(m=>
+      `<button onclick="filtrarMarca(${JSON.stringify(m)})">${esc(m)}</button>`).join('');
+    buildMarcaPills(marcas);
+    // hero usa o primeiro destaque (ou primeiro item)
+    const hero=all.find(p=>p.destaque)||all[0];
+    if(hero){document.getElementById('heroName').textContent=hero.nome;
+      document.getElementById('heroCompat').textContent=compat(hero)||'Pronta entrega';
+      document.getElementById('heroPrice').textContent=money(hero.preco);}
+    cfBuild(all.filter(p=>p.destaque).concat(all.filter(p=>!p.destaque)).slice(0,7));
+    finderInit(all);
+  }catch(e){console.error(e)}
+}
+function buildMarcaPills(marcas){
+  document.getElementById('marcaPills').innerHTML='<button class="pill on" data-m="" onclick="filtrarMarca(\'\')">Todas as marcas</button>'+
+    marcas.map(m=>`<button class="pill" data-m="${esc(m)}" onclick="filtrarMarca(${JSON.stringify(m)})">${esc(m)}</button>`).join('');
+}
 
-        async function loadProducts() {
-            try {
-                const res = await fetch(buildQuery(psPage));
-                const data = await res.json();
-                if (data.success) {
-                    allProducts = data.produtos || [];
-                    psPages = data.pages || 1;
-                    document.getElementById('statModelos').textContent = data.total ?? allProducts.length;
-                    displayProducts(allProducts);
-                    renderPager();
-                }
-            } catch (e) { console.error(e); }
-        }
+/* ---------- coverflow ---------- */
+let cfItems=[],cfIdx=0,cfTimer=null,cfT0=0;const CF_MS=5200;
+function cfBuild(items){
+  cfItems=items;cfIdx=0;
+  const track=document.getElementById('cfTrack');
+  if(!items.length){track.innerHTML='<p style="color:var(--mut)">Em breve: ofertas de placas.</p>';return}
+  track.innerHTML=items.map((p,i)=>`
+    <article class="cf-card" data-i="${i}">
+      <span class="cf-tag">OFERTA</span>
+      <div class="foto">${foto(p)}</div>
+      <div class="ptype" style="margin-bottom:6px">${esc(TIPO_LABEL[p.tipoPlaca]||'')}</div>
+      <h3>${esc(p.nome)}</h3>
+      <div class="compat">${compat(p)}</div>
+      <div class="now">${money(p.preco)}</div>
+      <div class="parc">${p.parcela?`${p.parcela.n}x de ${money(p.parcela.valor)} · `:''}${p.precoPix?money(p.precoPix)+' no PIX':''}</div>
+      <button class="btn btn-fire" onclick="buy('${p._id}')"><i class="fa-solid fa-cart-plus"></i> Adicionar</button>
+    </article>`).join('');
+  document.getElementById('cfDots').innerHTML=items.map((_,i)=>
+    `<button aria-label="Ir para ${i+1}" onclick="cfGo(${i})"></button>`).join('');
+  // arraste
+  let x0=null;
+  track.addEventListener('pointerdown',e=>{x0=e.clientX;cfStop()});
+  track.addEventListener('pointerup',e=>{if(x0===null)return;const dx=e.clientX-x0;
+    if(dx<-40)cfGo(cfIdx+1);else if(dx>40)cfGo(cfIdx-1);else cfStart();x0=null});
+  cfPaint();cfStart();
+}
+function cfPaint(){
+  const cards=[...document.querySelectorAll('.cf-card')];
+  const n=cards.length;if(!n)return;
+  cards.forEach(c=>{
+    let d=(+c.dataset.i-cfIdx)%n;if(d>n/2)d-=n;if(d<-n/2)d+=n;
+    c.className='cf-card '+(d===0?'active':d===-1||d===n-1?'off-l1':d===1||d===1-n?'off-r1':d<0?'off-l2':'off-r2');
+  });
+  [...document.querySelectorAll('#cfDots button')].forEach((b,i)=>b.classList.toggle('on',i===cfIdx));
+}
+function cfGo(i){cfIdx=(i+cfItems.length)%cfItems.length;cfPaint();cfRestart()}
+function cfStart(){cfStop();cfT0=performance.now();cfTick()}
+function cfStop(){if(cfTimer)cancelAnimationFrame(cfTimer);cfTimer=null}
+function cfRestart(){cfStart()}
+function cfTick(){
+  const el=performance.now()-cfT0;
+  document.getElementById('cfBar').style.width=Math.min(100,el/CF_MS*100)+'%';
+  if(el>=CF_MS){cfIdx=(cfIdx+1)%cfItems.length;cfPaint();cfT0=performance.now()}
+  cfTimer=requestAnimationFrame(cfTick);
+}
+document.querySelector('.coverflow').addEventListener('mouseenter',cfStop);
+document.querySelector('.coverflow').addEventListener('mouseleave',cfStart);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')cfGo(cfIdx-1);if(e.key==='ArrowRight')cfGo(cfIdx+1)});
 
-        function renderPager() {
-            const nav = document.getElementById('psPager');
-            if (!nav) return;
-            nav.style.display = searching ? 'none' : 'flex';
-            document.getElementById('psPageInfo').textContent = `Página ${psPage} de ${psPages}`;
-            document.getElementById('psPrev').disabled = psPage <= 1;
-            document.getElementById('psNext').disabled = psPage >= psPages;
-        }
+/* ---------- catálogo ---------- */
+function paintPills(){
+  document.querySelectorAll('#tipoPills .pill').forEach(b=>b.classList.toggle('on',(b.dataset.t||'')===fTipo));
+  document.querySelectorAll('#marcaPills .pill').forEach(b=>b.classList.toggle('on',(b.dataset.m||'')===fMarca));
+}
+function filtrarTipo(t){fTipo=t;page=1;paintPills();
+  document.getElementById('catalogo').scrollIntoView({behavior:'smooth'});loadGrid()}
+function filtrarMarca(m){fMarca=m;page=1;paintPills();loadGrid()}
+function buscarModelo(){
+  fQuery=document.getElementById('heroModel').value.trim();
+  fTipo='';fMarca='';page=1;paintPills();
+  document.getElementById('catalogo').scrollIntoView({behavior:'smooth'});loadGrid();
+}
+async function loadGrid(){
+  const box=document.getElementById('grid');
+  try{
+    let q=`${API}/produtos?status=ativo&page=${page}&limit=${LIMIT}`;
+    if(fTipo)q+=`&tipoPlaca=${encodeURIComponent(fTipo)}`;
+    if(fMarca)q+=`&marca=${encodeURIComponent(fMarca)}`;
+    if(fQuery)q+=`&q=${encodeURIComponent(fQuery)}`;
+    const r=await fetch(q);const d=await r.json();
+    catalog=(d.success&&d.produtos)||[];pages=d.pages||1;
+    box.innerHTML=catalog.length?catalog.map(p=>`
+      <article class="pcard">
+        <div class="foto">${foto(p)}</div>
+        <div class="body">
+          <span class="ptype">${esc(TIPO_LABEL[p.tipoPlaca]||'Peça')}</span>
+          <h3>${esc(p.nome)}</h3>
+          <div class="compat">${compat(p)}</div>
+          <div class="price-row"><b>${money(p.preco)}</b></div>
+          <div class="pix">${p.precoPix?money(p.precoPix)+' no PIX · ':''}${p.parcela?`${p.parcela.n}x ${money(p.parcela.valor)}`:''}</div>
+          <div class="stock ${Number(p.quantidade)>0?'ok':'out'}">${Number(p.quantidade)>0?`Em estoque (${p.quantidade})`:'Esgotado'}</div>
+          <button class="btn btn-fire" ${Number(p.quantidade)>0?'':'disabled style="opacity:.4"'} onclick="buy('${p._id}')">Comprar</button>
+        </div>
+      </article>`).join('')
+      :'<p style="color:var(--mut);grid-column:1/-1;text-align:center">Nenhuma placa encontrada. Tente outro modelo ou filtro.</p>';
+    document.getElementById('pager').style.display='flex';
+    document.getElementById('pgInfo').textContent=`Página ${page} de ${pages}`;
+    document.getElementById('pgPrev').disabled=page<=1;
+    document.getElementById('pgNext').disabled=page>=pages;
+  }catch(e){box.innerHTML='<p style="color:var(--mut)">Erro ao carregar. Tente novamente.</p>'}
+}
+function mudarPagina(d){const n=page+d;if(n<1||n>pages)return;page=n;loadGrid();
+  document.getElementById('catalogo').scrollIntoView({behavior:'smooth'})}
 
-        function mudarPagina(delta) {
-            const next = psPage + delta;
-            if (next < 1 || next > psPages) return;
-            psPage = next;
-            loadProducts();
-            scrollToCatalogo();
-        }
+/* ---------- finder ---------- */
+let finderAll=[];
+function finderInit(all){
+  finderAll=all;
+  const marcas=[...new Set(all.filter(p=>p.marca).map(p=>p.marca))].sort();
+  document.getElementById('fMarca').innerHTML='<option value="">Selecione...</option>'+marcas.map(m=>`<option>${esc(m)}</option>`).join('');
+}
+function finderModelos(){
+  const m=document.getElementById('fMarca').value;
+  const sel=document.getElementById('fModelo');
+  const mods=[...new Set(finderAll.filter(p=>p.marca===m&&p.modeloTV).map(p=>p.modeloTV))].sort();
+  sel.disabled=!mods.length;
+  sel.innerHTML=mods.length?'<option value="">Selecione...</option>'+mods.map(x=>`<option>${esc(x)}</option>`).join(''):'<option value="">Sem modelos</option>';
+}
+function finderBuscar(){
+  const m=document.getElementById('fMarca').value,mo=document.getElementById('fModelo').value,t=document.getElementById('fTipo').value;
+  const box=document.getElementById('finderResult');
+  if(!m){toast('Escolha a marca primeiro',true);return}
+  const res=finderAll.filter(p=>p.marca===m&&(!mo||p.modeloTV===mo)&&(!t||p.tipoPlaca===t)).slice(0,3);
+  box.innerHTML=res.length?res.map(p=>`
+    <div class="fres"><b>${esc(p.nome)}</b><span>${esc(TIPO_LABEL[p.tipoPlaca]||'')} · ${money(p.preco)}</span>
+    <button class="btn btn-fire" onclick="buy('${p._id}')">Adicionar</button></div>`).join('')
+    :'<p style="color:var(--mut);grid-column:1/-1;text-align:center">Nenhuma placa encontrada para essa combinação. Fale com o suporte.</p>';
+}
 
-        function displayProducts(products) {
-            const container = document.getElementById('productsContainer');
-            if (!products || products.length === 0) {
-                container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">Nenhuma placa encontrada. Tente outro modelo ou tipo.</p></div>';
-                return;
-            }
-            container.innerHTML = products.map(p => `
-                <div class="col-md-3 col-6">
-                    <div class="product-card h-100">
-                        <div class="p-3 text-center">${productImg(p, 150)}</div>
-                        <div class="p-3">
-                            ${tipoBadge(p)}
-                            <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
-                            ${compatLine(p)}
-                            <p class="small text-muted" title="${window.escapeHtml(p.descricao || '')}">${window.escapeHtml(window.truncate(p.descricao || '', 80))}</p>
-                            <p class="fw-bold fs-5 mb-0" style="color:#10b981;">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>
-                            <p class="small text-muted mb-0">${p.parcela ? `${p.parcela.n}x de R$ ${Number(p.parcela.valor).toFixed(2)}` : ''}</p>
-                            <p class="small mb-1" style="color:#10b981;">${p.precoPix ? `R$ ${Number(p.precoPix).toFixed(2)} no PIX` : ''}</p>
-                            <p class="small ${Number(p.quantidade) > 0 ? 'text-success' : 'text-danger'}">${Number(p.quantidade) > 0 ? `Em estoque (${p.quantidade})` : 'Esgotado'}</p>
-                            <button class="btn-ps w-100" ${Number(p.quantidade) > 0 ? '' : 'disabled'} onclick="addToCartById('${p._id}')"><i class="fas fa-cart-plus"></i> Comprar</button>
-                        </div>
-                    </div>
-                </div>`).join('');
-        }
-
-        async function searchProducts() {
-            psQuery = (document.getElementById('searchInput').value || '').trim();
-            psPage = 1;
-            searching = !!psQuery;
-            loadProducts();
-        }
-
-        function addToCartById(id) {
-            const pool = [...(allProducts || []), ...((window.__psDestaques || []))];
-            const prod = pool.find(x => x._id === id);
-            if (!prod || Number(prod.quantidade) <= 0) { showToast('Produto indisponível', true); return; }
-            window.cartAdd(id, prod.nome, prod.preco);
-            showToast('Placa adicionada ao carrinho!');
-        }
-
-        function updateCartCount() {
-            try {
-                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                const el = document.getElementById('cartCount');
-                if (el) el.textContent = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-            } catch { /* ignora */ }
-        }
-
-        window.addEventListener('scroll', () => {
-            const btn = document.querySelector('.back-to-top');
-            if (window.scrollY > 300) btn.classList.add('show');
-            else btn.classList.remove('show');
-        });
-
-        loadDestaques();
-        loadMarcas();
-        loadProducts();
-        updateAuthUI();
-        updateCartCount();
-    </script>
+boot();loadGrid();updateAuth();updateCart();
+</script>
 </body>
 </html>

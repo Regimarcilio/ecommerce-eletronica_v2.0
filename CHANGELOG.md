@@ -4,7 +4,7 @@ Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em
 
 ## v1.2.0 — 2026-09-18 — Placas de TV (principal/fonte/tcom)
 - Produto: `tipoPlaca` (PRINCIPAL/FONTE/TCOM), `marca`, `modeloTV`, `dimensoes {c,l,a}`; filtros `GET /produtos?tipoPlaca=&marca=&modelo=&q=` (q busca nome/sku/modelo)
-- Landing `placas.html` vira **PlacaTV**: chips por tipo, chips por marca, busca por modelo, badges + compatibilidade nos cards, carrossel só de placas em destaque, guia "como achar sua placa"
+- Landing `placas.html` **100% nova (PlacaCerta)**: identidade própria sem Bootstrap, busca por modelo na hero, faixa de marcas, cards por tipo com diagnóstico por sintoma, **carrossel coverflow 3D** (autoplay + progresso + arraste + setas), catálogo com pills, **localizador de compatibilidade** (marca→modelo→tipo), depoimentos, garantia, FAQ
 - Dashboard: modal produto com Tipo/Marca/Modelo TV
 - Seed: categoria `Placas de TV` + 9 produtos (LG/Samsung/Philco × principal/fonte/tcom)
 - Testes: `10-placas-tv.test.js` (5 casos) — 49 unit + 60 E2E verdes
