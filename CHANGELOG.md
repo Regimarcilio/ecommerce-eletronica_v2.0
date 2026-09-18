@@ -10,6 +10,7 @@ Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em
 - Seed: categoria `Placas de TV` + 9 produtos (LG/Samsung/Philco × principal/fonte/tcom)
 - Testes: `10-placas-tv.test.js` (5 casos) — 49 unit + 60 E2E verdes
 - Fix env: `EVO_API_URL` → `http://evolution:8080` (localhost dentro do container não alcança o Evolution; causava 502 no `/whatsapp/status`)
+- Dashboard no padrão PlacaCerta (tokens âmbar/noite, Space Grotesk, logo nova; tabela de produtos com coluna Tipo + compatibilidade)
 
 ## v1.1.0 — 2026-09-16 — Hardening + sessao + observabilidade
 - Seguranca backend: `helmet`, CORS restrito, rate-limit por rota (login/register 20, refresh 30, forgot+reset 10/15min), validacao de schemas, erros `{success,message,code}` sem vazar stack
