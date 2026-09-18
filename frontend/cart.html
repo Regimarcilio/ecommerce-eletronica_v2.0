@@ -1,261 +1,227 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carrinho | TechStore</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .cart-item { background: #1a1a2e; border: 1px solid #4361ee33; border-radius: 16px; padding: 20px; margin-bottom: 20px; transition: all 0.3s; }
-        .cart-item:hover { border-color: #4361ee; }
-        .summary-card { background: #1a1a2e; border: 1px solid #4361ee33; border-radius: 16px; padding: 25px; position: sticky; top: 20px; }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; transition: all 0.3s; }
-        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 20px #4361ee66; }
-        .btn-outline-custom { background: transparent; border: 2px solid #4361ee; color: #4361ee; padding: 10px 25px; border-radius: 30px; transition: all 0.3s; }
-        .btn-outline-custom:hover { background: #4361ee; color: #fff; }
-        .quantity-input { width: 70px; padding: 8px; background: #0a0a0f; border: 1px solid #4361ee; border-radius: 8px; color: #fff; text-align: center; }
-        .empty-cart { text-align: center; padding: 80px 20px; }
-        .empty-cart i { font-size: 5rem; color: #4361ee; margin-bottom: 20px; }
-        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
-        .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carrinho | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36; --card2:#182242;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px;width:100%}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.45rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:36px;height:36px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#1a1000;font-size:1.05rem}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:600;font-size:.9rem;padding:11px 22px;border-radius:999px;transition:.22s}
+.btn-fire{background:var(--grad);color:#1a1000;box-shadow:0 6px 26px rgba(255,138,0,.4)}
+.btn-fire:hover{transform:translateY(-2px)}
+.btn-fire:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--amber);display:grid;place-items:center;font-size:1rem}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+/* layout */
+main{flex:1;padding:48px 0 72px}
+.page-title{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+.page-title i{color:var(--amber)}
+.page-title h1{font-size:1.9rem;letter-spacing:-.5px}
+.cart-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+.cart-item{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:16px;display:grid;grid-template-columns:76px 1fr auto;gap:18px;align-items:center;transition:.22s}
+.cart-item:hover{border-color:rgba(255,178,36,.4)}
+.thumb{width:76px;height:76px;border-radius:14px;background:#0b1128;display:grid;place-items:center;font-size:1.8rem;color:var(--amber);overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.ptype{font-size:.66rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--amber)}
+.cname{font-weight:600;font-size:.98rem;margin:2px 0}
+.ccompat{font-size:.78rem;color:var(--cyan)}
+.cprice{font-family:'Space Grotesk';font-weight:700;font-size:1.05rem;margin-top:6px}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#0b1128;color:var(--txt);cursor:pointer;font-size:.85rem}
+.qty button:hover{border-color:var(--amber);color:var(--amber)}
+.qty b{min-width:26px;text-align:center;font-family:'Space Grotesk'}
+.line-total{font-family:'Space Grotesk';font-weight:700;color:var(--amber);text-align:right;min-width:96px}
+.rm{background:none;border:none;color:var(--mut);cursor:pointer;font-size:.78rem;margin-top:8px;display:inline-flex;gap:6px;align-items:center}
+.rm:hover{color:#f87171}
+/* summary */
+.summary{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;position:sticky;top:96px}
+.summary h2{font-size:1.15rem;margin-bottom:20px}
+.srow{display:flex;justify-content:space-between;font-size:.9rem;color:var(--mut);margin-bottom:12px}
+.srow b{color:var(--txt)}
+.srow.total{border-top:1px solid var(--line);padding-top:16px;margin-top:16px;font-size:1rem}
+.srow.total b{font-family:'Space Grotesk';font-size:1.5rem;color:var(--amber)}
+.summary .btn{width:100%;justify-content:center;margin-top:8px;padding:14px}
+.pix-note{font-size:.8rem;color:#6ee7b7;text-align:center;margin-top:10px}
+/* empty */
+.empty{text-align:center;padding:80px 20px;background:var(--card);border:1px dashed var(--line);border-radius:22px}
+.empty i{font-size:4rem;color:#3d4a7d;margin-bottom:18px}
+.empty h3{margin-bottom:8px}
+.empty p{color:var(--mut);margin-bottom:22px}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 24px;margin-top:auto}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.toast-msg{background:#0d1330;border:1px solid var(--line);border-left:3px solid var(--amber);padding:13px 20px;border-radius:12px;font-size:.88rem;box-shadow:0 16px 44px rgba(0,0,0,.55)}
+@media(max-width:900px){.cart-layout{grid-template-columns:1fr}.nav-links{display:none}.summary{position:static}}
+</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="logo" href="/"><i class="fas fa-microchip"></i> TechStore</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon bg-white"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link text-white" href="/"><i class="fas fa-home"></i> Início</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/#produtos"><i class="fas fa-box"></i> Produtos</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/#categorias"><i class="fas fa-tags"></i> Categorias</a></li>
-                    <li class="nav-item"><a class="nav-link text-white position-relative" href="/cart.html">
-                        <i class="fas fa-shopping-cart"></i> Carrinho
-                        <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
-                    </a></li>
-                    <li class="nav-item" id="authLink"></li>
-                </ul>
-            </div>
-        </div>
+<div class="announce"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 100 &nbsp;·&nbsp; 5% OFF no PIX</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="/placas.html">Início</a>
+      <a href="/placas.html#tipos">Tipos de placa</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
+      <a href="/index.html">Loja completa</a>
     </nav>
-
-    <div class="container py-5" style="margin-top: 60px;">
-        <h2 class="mb-4"><i class="fas fa-shopping-cart text-primary"></i> Meu Carrinho</h2>
-        
-        <div class="row">
-            <div class="col-lg-8">
-                <div id="cartItemsList"></div>
-            </div>
-            <div class="col-lg-4">
-                <div class="summary-card">
-                    <h4 class="mb-3">Resumo do Pedido</h4>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Subtotal:</span>
-                        <span id="subtotal" class="fw-bold">R$ 0,00</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Frete:</span>
-                        <span id="frete">Grátis acima de R$ 100</span>
-                    </div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-3">
-                        <strong>TOTAL:</strong>
-                        <strong id="total" style="color: #4361ee; font-size: 1.5rem;">R$ 0,00</strong>
-                    </div>
-                    <button class="btn btn-primary-custom w-100" onclick="finalizarCompra()">
-                        <i class="fas fa-check-circle"></i> Finalizar Compra
-                    </button>
-                    <a href="/" class="btn btn-outline-custom w-100 mt-3">
-                        <i class="fas fa-arrow-left"></i> Continuar Comprando
-                    </a>
-                </div>
-            </div>
-        </div>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
     </div>
+  </div>
+</header>
 
-    <footer class="footer">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <h5><i class="fas fa-microchip"></i> TechStore</h5>
-                    <p>Sua loja especializada em componentes eletrônicos desde 2024.</p>
-                </div>
-                <div class="col-md-2 mb-4">
-                    <h5>Institucional</h5>
-                    <ul class="list-unstyled"><li><a href="#" class="text-white-50 text-decoration-none">Sobre Nós</a></li><li><a href="#" class="text-white-50 text-decoration-none">Contato</a></li></ul>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <h5>Atendimento</h5>
-                    <ul class="list-unstyled"><li><i class="fab fa-whatsapp text-primary"></i> (11) 99999-9999</li><li><i class="fas fa-envelope text-primary"></i> contato@techstore.com.br</li></ul>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <h5>Formas de Pagamento</h5>
-                    <div class="d-flex gap-3 fs-1"><i class="fab fa-cc-visa"></i><i class="fab fa-cc-mastercard"></i><i class="fab fa-pix"></i><i class="fas fa-barcode"></i></div>
-                </div>
-            </div>
-            <hr class="bg-secondary">
-            <div class="text-center"><small>&copy; 2024 TechStore - Todos os direitos reservados.</small></div>
+<main>
+  <div class="wrap">
+    <div class="page-title"><i class="fa-solid fa-cart-shopping fa-lg"></i><h1>Meu Carrinho</h1></div>
+    <div class="cart-layout">
+      <div id="cartItemsList"></div>
+      <aside class="summary">
+        <h2>Resumo do pedido</h2>
+        <div class="srow"><span>Subtotal</span><b id="subtotal">R$ 0,00</b></div>
+        <div class="srow"><span>Frete</span><b id="frete">—</b></div>
+        <div class="srow total"><span>TOTAL</span><b id="total">R$ 0,00</b></div>
+        <button class="btn btn-fire" id="btnCheckout" onclick="finalizarCompra()"><i class="fa-solid fa-circle-check"></i> Finalizar compra</button>
+        <a href="/placas.html" class="btn btn-ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-arrow-left"></i> Continuar comprando</a>
+        <p class="pix-note"><i class="fa-solid fa-bolt"></i> 5% OFF pagando no PIX no checkout</p>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
+</footer>
+
+<div id="toast"></div>
+<script src="js/config.js?v=2"></script>
+<script>
+const API = window.API_BASE;
+const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
+const detailCache = {};
+
+function getCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
+function saveCart(c){ localStorage.setItem('cart', JSON.stringify(c)); renderCart(); updateCartCount(); }
+function updateCartCount(){
+  const n = getCart().reduce((s,i)=>s+(Number(i.quantity)||0),0);
+  const el = document.getElementById('cartCount'); if (el) el.textContent = n;
+}
+function updateQuantity(id, qtd){
+  qtd = parseInt(qtd, 10);
+  if (!Number.isInteger(qtd) || qtd < 1 || qtd > 99) { renderCart(); return; }
+  const cart = getCart(); const it = cart.find(i=>i.id===id);
+  if (it) { it.quantity = qtd; saveCart(cart); }
+}
+function stepQty(id, d){
+  const cart = getCart(); const it = cart.find(i=>i.id===id);
+  if (!it) return;
+  const n = (Number(it.quantity)||1) + d;
+  if (n < 1) { removeFromCart(id); return; }
+  if (n > 99) return;
+  it.quantity = n; saveCart(cart);
+}
+function removeFromCart(id){
+  saveCart(getCart().filter(i=>i.id!==id));
+  toast('Placa removida do carrinho');
+}
+async function enrich(item){
+  if (detailCache[item.id]) return detailCache[item.id];
+  try {
+    const r = await fetch(`${API}/produtos/${item.id}`);
+    const d = await r.json();
+    if (d.success && d.produto) { detailCache[item.id] = d.produto; return d.produto; }
+  } catch {}
+  return null;
+}
+function thumb(p){
+  const u = p && window.safeImg(p.imagemUrl);
+  if (u) return `<img src="${u}" alt="" onerror="this.remove()">`;
+  return '<i class="fa-solid fa-tv"></i>';
+}
+async function renderCart(){
+  const cart = getCart();
+  const box = document.getElementById('cartItemsList');
+  const subEl = document.getElementById('subtotal'), totEl = document.getElementById('total'), frEl = document.getElementById('frete');
+  const btn = document.getElementById('btnCheckout');
+  if (!cart.length) {
+    box.innerHTML = `<div class="empty"><i class="fa-solid fa-cart-shopping"></i><h3>Seu carrinho está vazio</h3><p>Que tal achar a placa exata para a sua TV?</p><a href="/placas.html" class="btn btn-fire">Ver placas</a></div>`;
+    subEl.textContent = 'R$ 0,00'; totEl.textContent = 'R$ 0,00'; frEl.textContent = '—';
+    btn.disabled = true; return;
+  }
+  btn.disabled = false;
+  const details = await Promise.all(cart.map(enrich));
+  let sub = 0;
+  box.innerHTML = cart.map((item, idx) => {
+    const price = Number(item.price)||0, qty = Number(item.quantity)||1;
+    sub += price * qty;
+    const p = details[idx] || {};
+    const tipo = p.tipoPlaca && TIPO_LABEL[p.tipoPlaca] ? `<div class="ptype">${window.escapeHtml(TIPO_LABEL[p.tipoPlaca])}</div>` : '';
+    const compBits = [p.marca, p.modeloTV && ('comp. '+p.modeloTV)].filter(Boolean);
+    const comp = compBits.length ? `<div class="ccompat">${window.escapeHtml(compBits.join(' · '))}</div>` : '';
+    return `<div class="cart-item">
+      <div class="thumb">${thumb(p)}</div>
+      <div>${tipo}<div class="cname">${window.escapeHtml(item.name)}</div>${comp}
+        <div class="cprice">R$ ${price.toFixed(2)}</div>
+        <div class="qty" style="margin-top:10px">
+          <button onclick="stepQty(${JSON.stringify(item.id)},-1)" aria-label="Diminuir">−</button>
+          <b>${qty}</b>
+          <button onclick="stepQty(${JSON.stringify(item.id)},1)" aria-label="Aumentar">+</button>
         </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js?v=2"></script>
-    <script>
-        // ========== FUNÇÕES DO CARRINHO ==========
-        function getCart() {
-            return JSON.parse(localStorage.getItem('cart') || '[]');
-        }
-        
-        function saveCart(cart) {
-            localStorage.setItem('cart', JSON.stringify(cart));
-            renderCart();
-            updateCartCount();
-        }
-        
-        function updateCartCount() {
-            const cart = getCart();
-            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const cartCount = document.getElementById('cartCount');
-            if (cartCount) cartCount.textContent = count;
-        }
-        
-        function updateQuantity(productId, newQuantity) {
-            const qtd = parseInt(newQuantity, 10);
-            if (!Number.isInteger(qtd) || qtd <= 0 || qtd > 99) return;
-            let cart = getCart();
-            const item = cart.find(i => i.id === productId);
-            if (item) {
-                item.quantity = qtd;
-                saveCart(cart);
-            }
-        }
-        
-        function removeFromCart(productId) {
-            let cart = getCart();
-            cart = cart.filter(i => i.id !== productId);
-            saveCart(cart);
-            showToast('Produto removido do carrinho!', 'danger');
-        }
-        
-        function renderCart() {
-            const cart = getCart();
-            const container = document.getElementById('cartItemsList');
-            const subtotalSpan = document.getElementById('subtotal');
-            const totalSpan = document.getElementById('total');
-            const freteSpan = document.getElementById('frete');
-            
-            if (cart.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-cart">
-                        <i class="fas fa-shopping-cart"></i>
-                        <h4>Seu carrinho está vazio</h4>
-                        <p>Que tal dar uma olhada nos nossos produtos?</p>
-                        <a href="/" class="btn btn-primary-custom">Explorar Produtos</a>
-                    </div>
-                `;
-                subtotalSpan.innerText = 'R$ 0,00';
-                totalSpan.innerText = 'R$ 0,00';
-                freteSpan.innerText = 'Grátis acima de R$ 100';
-                return;
-            }
-            
-            let subtotal = 0;
-            container.innerHTML = '';
-            
-            cart.forEach(item => {
-                subtotal += item.price * item.quantity;
-                container.innerHTML += `
-                    <div class="cart-item">
-                        <div class="row align-items-center">
-                            <div class="col-md-1 col-3 text-center">
-                                <i class="fas fa-microchip fa-2x text-primary"></i>
-                            </div>
-                            <div class="col-md-4 col-9">
-                                <h5 class="mb-1">${item.name}</h5>
-                                <small class="text-muted">SKU: ${item.sku || 'N/A'}</small>
-                            </div>
-                            <div class="col-md-2 col-4 text-center mt-2 mt-md-0">
-                                <p class="mb-0 fw-bold">R$ ${item.price.toFixed(2)}</p>
-                            </div>
-                            <div class="col-md-2 col-4 text-center mt-2 mt-md-0">
-                                <input type="number" class="quantity-input" value="${item.quantity}" min="1" 
-                                       onchange="updateQuantity('${item.id}', this.value)">
-                            </div>
-                            <div class="col-md-3 col-4 text-end mt-2 mt-md-0">
-                                <button class="btn btn-outline-danger btn-sm" onclick="removeFromCart('${item.id}')">
-                                    <i class="fas fa-trash"></i> Remover
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            const frete = subtotal > 100 ? 0 : 20;
-            const total = subtotal + frete;
-            
-            subtotalSpan.innerText = `R$ ${subtotal.toFixed(2)}`;
-            freteSpan.innerHTML = frete === 0 ? '<span class="text-success">Grátis</span>' : `R$ ${frete.toFixed(2)}`;
-            totalSpan.innerText = `R$ ${total.toFixed(2)}`;
-        }
-        
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = 'toast-custom';
-            toast.style.borderLeftColor = type === 'success' ? '#10b981' : '#ef4444';
-            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i> ${message}`;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function finalizarCompra() {
-            const cart = getCart();
-            if (cart.length === 0) {
-                showToast('Seu carrinho está vazio!', 'danger');
-                return;
-            }
-            
-            // Salvar carrinho para o checkout
-            localStorage.setItem('checkoutCart', JSON.stringify(cart));
-            window.location.href = '/checkout.html';
-        }
-        
-        // ========== AUTENTICAÇÃO ==========
-        function updateAuthUI() {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            const authLink = document.getElementById('authLink');
-            if (user.nome) {
-                authLink.innerHTML = `<div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                        <li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>
-                        ${user.role === 'admin' ? '<li><a class="dropdown-item text-white" href="/dashboard.html"><i class="fas fa-chart-line"></i> Admin</a></li>' : ''}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-white" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
-                    </ul>
-                </div>`;
-            } else {
-                authLink.innerHTML = '<a href="/auth.html" class="btn btn-primary-custom">Entrar / Cadastrar</a>';
-            }
-        }
-        
-        function logout() { window.logoutAll(); window.location.href = '/'; }
-        
-        // ========== INICIALIZAR ==========
-        renderCart();
-        updateCartCount();
-        updateAuthUI();
-    </script>
+        <button class="rm" onclick="removeFromCart(${JSON.stringify(item.id)})"><i class="fa-solid fa-trash"></i> Remover</button>
+      </div>
+      <div class="line-total">R$ ${(price*qty).toFixed(2)}</div>
+    </div>`;
+  }).join('');
+  const frete = sub > 100 ? 0 : 20;
+  subEl.textContent = `R$ ${sub.toFixed(2)}`;
+  frEl.innerHTML = frete === 0 ? '<span style="color:#6ee7b7">Grátis</span>' : `R$ ${frete.toFixed(2)}`;
+  totEl.textContent = `R$ ${(sub+frete).toFixed(2)}`;
+}
+function toast(msg){
+  const t = document.createElement('div'); t.className = 'toast-msg'; t.textContent = String(msg ?? '');
+  document.getElementById('toast').appendChild(t); setTimeout(()=>t.remove(), 3000);
+}
+function finalizarCompra(){
+  const cart = getCart();
+  if (!cart.length) { toast('Seu carrinho está vazio'); return; }
+  localStorage.setItem('checkoutCart', JSON.stringify(cart));
+  window.location.href = '/checkout.html';
+}
+function updateAuthUI(){
+  const u = JSON.parse(localStorage.getItem('user')||'{}');
+  document.getElementById('authLink').innerHTML = u.nome
+    ? `<span style="font-size:.85rem;color:var(--mut)"><i class="fa-solid fa-user"></i> ${window.escapeHtml(String(u.nome).split(' ')[0])}</span>`
+    : `<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>`;
+}
+function logout(){ window.logoutAll(); window.location.href = '/placas.html'; }
+renderCart(); updateCartCount(); updateAuthUI();
+</script>
 </body>
 </html>
