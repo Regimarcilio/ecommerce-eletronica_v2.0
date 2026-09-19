@@ -82,7 +82,7 @@ RN01 e-mail único · RN02 hash · RN03 novo usuário `user` · RN04 admin boots
 
 ## 6. Interfaces externas
 
-- MongoDB via Mongoose; Evolution (`/instance/connectionState`, `/message/sendText`); Mercado Pago (preferências, webhooks, users/me p/ status); navegador moderno.
+- MongoDB via Mongoose; Evolution (`/instance/connectionState`, `/message/sendText`); Mercado Pago (preferências, webhooks, users/me p/ status — ref. oficial: https://www.mercadopago.com.br/developers/pt/reference); navegador moderno.
 
 ## 7. Rastreabilidade (amostra; matriz E2E completa no SDS §17)
 

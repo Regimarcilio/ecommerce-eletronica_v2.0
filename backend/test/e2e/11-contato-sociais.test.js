@@ -48,7 +48,23 @@ describe('e2e contato + redes sociais', () => {
     assert.equal(bad.status, 400);
   });
 
+  it('email + horario da loja: salva, publica e valida', async () => {
+    const put = await api('PUT', '/api/config/loja', {
+      token: atok,
+      body: { emailLoja: 'loja@t.t', horarioAtendimento: 'Seg–Sex, 8h às 18h' },
+    });
+    assert.equal(put.status, 200);
+    const pub = await api('GET', '/api/config/loja/public');
+    assert.equal(pub.data.config.emailLoja, 'loja@t.t');
+    assert.equal(pub.data.config.horarioAtendimento, 'Seg–Sex, 8h às 18h');
+    const bad = await api('PUT', '/api/config/loja', {
+      token: atok,
+      body: { emailLoja: 'nao-email' },
+    });
+    assert.equal(bad.status, 400);
+  });
+
   after(async () => {
-    await api('PUT', '/api/config/loja', { token: atok, body: { redesSociais: { instagram: '', facebook: '', youtube: '', tiktok: '' } } });
+    await api('PUT', '/api/config/loja', { token: atok, body: { redesSociais: { instagram: '', facebook: '', youtube: '', tiktok: '' }, emailLoja: '', horarioAtendimento: '' } });
   });
 });

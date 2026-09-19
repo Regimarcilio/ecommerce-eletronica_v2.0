@@ -73,7 +73,7 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 2
       <a href="/placas.html#tipos">Tipos de placa</a>
       <a href="/placas.html#catalogo">Catálogo</a>
       <a href="/contato.html">Contato</a>
-      <a href="/index.html">Loja completa</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
     </nav>
     <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
       <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
@@ -92,8 +92,8 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 2
   <div class="card">
     <h2>Canais diretos</h2>
     <div class="chan"><div class="ic"><i class="fa-brands fa-whatsapp"></i></div><div><b>WhatsApp</b><span id="zapLine">—</span></div></div>
-    <div class="chan"><div class="ic"><i class="fa-solid fa-envelope"></i></div><div><b>E-mail</b><span>contato@placacerta.com.br</span></div></div>
-    <div class="chan"><div class="ic"><i class="fa-solid fa-clock"></i></div><div><b>Horário</b><span>Seg–Sex, 8h às 18h</span></div></div>
+    <div class="chan"><div class="ic"><i class="fa-solid fa-envelope"></i></div><div><b>E-mail</b><span id="mailLine">contato@placacerta.com.br</span></div></div>
+    <div class="chan"><div class="ic"><i class="fa-solid fa-clock"></i></div><div><b>Horário</b><span id="horaLine">Seg–Sex, 8h às 18h</span></div></div>
     <div id="socialBox"></div>
   </div>
   <div class="card">
@@ -162,8 +162,11 @@ async function boot(){
   document.getElementById('authLink').innerHTML = window.userLink() || '<a href="/auth.html" class="btn" style="padding:9px 18px">Entrar</a>';
   try{
     const r = await fetch(API + '/config/loja/public'); const d = await r.json();
-    const zap = d.success && d.config && d.config.whatsappNumero;
+    const cfg = (d.success && d.config) || {};
+    const zap = cfg.whatsappNumero;
     if (zap) document.getElementById('zapLine').innerHTML = `<a href="https://wa.me/${window.escapeHtml(zap)}" target="_blank" rel="noopener" style="color:var(--amber)">Chamar no WhatsApp</a>`;
+    if (cfg.emailLoja) document.getElementById('mailLine').textContent = cfg.emailLoja;
+    if (cfg.horarioAtendimento) document.getElementById('horaLine').textContent = cfg.horarioAtendimento;
   }catch{}
   window.renderSocial('socialBox'); window.renderSocial('socialFooter');
 }

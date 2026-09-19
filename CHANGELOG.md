@@ -5,12 +5,15 @@ Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em
 ## v1.3.0 — 2026-09-18 — Detalhe, contato, sociais + mobile
 - `produto.html` (nova): ficha completa, qtd, adicionar/comprar agora, relacionados; cards da landing/loja linkam para ela
 - Nome do usuário clicável por papel (`roleHome/userLink` no config.js): admin → dashboard, cliente → minha conta
-- Carrossel coverflow centralizado com respiro lateral (padding 84px, margens −30px) + modo mobile (só ativo + vizinhos ≤640px)
+- Carrossel coverflow centralizado com respiro lateral + modo mobile (só ativo + vizinhos ≤640px); **limitado a 5 itens, bordas ocultas**
 - RNF-06 mobile: grids 4→2→1, finder/formulários em coluna, CTA preservado, tabelas admin com scroll
 - Redes sociais no rodapé via admin (instagram/facebook/youtube/tiktok; ícone oculto se vazio) + `renderSocial` compartilhado
 - `contato.html` (nova) + `POST /contato` (rate-limit, validação) + `GET/PUT /contato` admin; protocolo de retorno
+- Loja: **landings antigas excluídas** (`frontend/index.html` + `docs/prototipo/`); raiz e nginx servem a PlacaCerta; links "Loja completa" → catálogo
+- Admin: **e-mail da loja + horário de atendimento** configuráveis (público no contato, validado no PUT)
+- Docs: ref. oficial Mercado Pago (https://www.mercadopago.com.br/developers/pt/reference) no SRS §6 + comentário no `server.js`
 - SRS: RF-003a/004a/011a/016a/019a/019b/020 + RNF-06 + rastreabilidade e2e-11
-- Testes: `11-contato-sociais.test.js` (4 casos) — 49 unit + 64 E2E verdes
+- Testes: `11-contato-sociais.test.js` (5 casos, incl. email/horário) — 49 unit + 65 E2E verdes
 - Produto: `tipoPlaca` (PRINCIPAL/FONTE/TCOM), `marca`, `modeloTV`, `dimensoes {c,l,a}`; filtros `GET /produtos?tipoPlaca=&marca=&modelo=&q=` (q busca nome/sku/modelo)
 - Landing `placas.html` **100% nova (PlacaCerta)**: identidade própria sem Bootstrap, busca por modelo na hero, faixa de marcas, cards por tipo com diagnóstico por sintoma, **carrossel coverflow 3D** (autoplay + progresso + arraste + setas), catálogo com pills, **localizador de compatibilidade** (marca→modelo→tipo), depoimentos, garantia, FAQ
 - `cart.html` e `auth.html` no tema PlacaCerta (sem Bootstrap; carrinho com badges tipo/compat, stepper, thumb real via API e escape anti-XSS; login com painel lateral)

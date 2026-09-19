@@ -227,6 +227,8 @@ const SettingsSchema = new mongoose.Schema({
         youtube: { type: String, trim: true, maxlength: 300, default: '' },
         tiktok: { type: String, trim: true, maxlength: 300, default: '' }
     },
+    emailLoja: { type: String, trim: true, lowercase: true, maxlength: 160, default: '' },
+    horarioAtendimento: { type: String, trim: true, maxlength: 120, default: '' },
     segredos: { type: Map, of: String, default: {} }
 }, { timestamps: true, minimize: false });
 
@@ -769,6 +771,8 @@ app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) =>
 }));
 
 // ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
+// Referência oficial da API: https://www.mercadopago.com.br/developers/pt/reference
+// (preferences, payments e webhooks usados abaixo seguem essa referência)
 const mpConfigurado = () => !!MP_ACCESS_TOKEN;
 const evoConfigurado = () => !!(EVO_API_URL && EVO_APIKEY);
 
@@ -1008,6 +1012,8 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             descontoPix: s.descontoPix ?? 5,
             mpPublicKey: s.mpPublicKey || '',
             whatsappNumero: s.whatsappNumero || '',
+            emailLoja: s.emailLoja || '',
+            horarioAtendimento: s.horarioAtendimento || '',
             redesSociais: {
                 instagram: s.redesSociais?.instagram || '',
                 facebook: s.redesSociais?.facebook || '',
@@ -1026,6 +1032,8 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         config: {
             whatsappNumero: s.whatsappNumero || '',
             evoInstance: s.evoInstance || '',
+            emailLoja: s.emailLoja || '',
+            horarioAtendimento: s.horarioAtendimento || '',
             condicoesPagamento: s.condicoesPagamento || '',
             mpPublicKey: s.mpPublicKey || '',
             parcelasMax: s.parcelasMax ?? 12,
@@ -1054,6 +1062,12 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         s.whatsappNumero = n;
     }
     if (b.evoInstance !== undefined) s.evoInstance = String(b.evoInstance).trim().slice(0, 80);
+    if (b.emailLoja !== undefined) {
+        const v = String(b.emailLoja ?? '').trim().toLowerCase().slice(0, 160);
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return err(res, 400, 'E-mail da loja inválido', 'VALIDATION');
+        s.emailLoja = v;
+    }
+    if (b.horarioAtendimento !== undefined) s.horarioAtendimento = String(b.horarioAtendimento ?? '').trim().slice(0, 120);
     if (b.condicoesPagamento !== undefined) s.condicoesPagamento = String(b.condicoesPagamento).slice(0, 2000);
     if (b.mpPublicKey !== undefined) s.mpPublicKey = String(b.mpPublicKey).trim().slice(0, 200);
     if (b.parcelasMax !== undefined) {

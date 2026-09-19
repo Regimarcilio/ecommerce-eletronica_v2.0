@@ -97,7 +97,7 @@ section{padding:72px 0}
 .t-tcom .ic{background:rgba(167,139,250,.16);color:#c4b5fd}
 /* ===== coverflow carousel ===== */
 #ofertas{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
-.coverflow{position:relative;max-width:1120px;margin:0 auto;padding:10px 84px 0;min-height:440px}
+.coverflow{position:relative;max-width:920px;margin:0 auto;padding:10px 64px 0;min-height:440px}
 .cf-viewport{overflow:visible;display:flex;justify-content:center}
 .cf-card{flex:0 0 300px;margin:0 -30px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:26px 24px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
 .cf-card .foto{height:150px;display:grid;place-items:center;font-size:4rem;color:var(--amber);margin-bottom:12px}
@@ -110,6 +110,7 @@ section{padding:72px 0}
 .cf-card .parc{font-size:.82rem;color:var(--mut);margin-bottom:14px}
 .cf-card .btn{width:100%;justify-content:center}
 .cf-card.off-l2{transform:translateX(-30px) scale(.72) perspective(900px) rotateY(28deg);opacity:.35}
+.cf-card.off-l2,.cf-card.off-r2{display:none}
 .cf-card.off-l1{transform:translateX(-10px) scale(.86) perspective(900px) rotateY(16deg);opacity:.7}
 .cf-card.active{transform:scale(1);opacity:1;pointer-events:auto;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,178,36,.35);z-index:3}
 .cf-card.off-r1{transform:translateX(10px) scale(.86) perspective(900px) rotateY(-16deg);opacity:.7}
@@ -397,7 +398,7 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:56px 0 2
         <p style="color:var(--mut);font-size:.9rem;max-width:280px">A placa exata para a sua TV voltar a ligar. Principal, fonte e T-Con testadas.</p>
       </div>
       <div><h4>Comprar</h4><a href="#tipos">Placa principal</a><a href="#tipos">Placa fonte</a><a href="#tipos">Placa T-Con</a><a href="#catalogo">Catálogo</a></div>
-      <div><h4>Ajuda</h4><a href="#finder">Achar minha placa</a><a href="#faq">Dúvidas</a><a href="/contato.html">Contato</a><a href="/cart.html">Carrinho</a><a href="/index.html">Loja completa</a></div>
+      <div><h4>Ajuda</h4><a href="#finder">Achar minha placa</a><a href="#faq">Dúvidas</a><a href="/contato.html">Contato</a><a href="/cart.html">Carrinho</a></div>
       <div><h4>Conta</h4><a href="/auth.html">Entrar</a><a href="/pedidos.html">Meus pedidos</a><a href="/minha-conta.html">Minha conta</a></div>
     </div>
     <div id="socialFooter" style="margin-bottom:18px"></div>
@@ -459,7 +460,7 @@ async function boot(){
     if(hero){document.getElementById('heroName').textContent=hero.nome;
       document.getElementById('heroCompat').textContent=compat(hero)||'Pronta entrega';
       document.getElementById('heroPrice').textContent=money(hero.preco);}
-    cfBuild(all.filter(p=>p.destaque).concat(all.filter(p=>!p.destaque)).slice(0,7));
+    cfBuild(all.filter(p=>p.destaque).concat(all.filter(p=>!p.destaque)).slice(0,5));
     finderInit(all);
   }catch(e){console.error(e)}
 }

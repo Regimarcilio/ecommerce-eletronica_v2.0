@@ -739,6 +739,13 @@
                     <button class="btn btn-sm btn-outline-light" onclick="addFaixaRow()">+ Adicionar faixa</button>
                 </div>
                 <div class="data-card mt-3">
+                    <h4><i class="fas fa-address-card"></i> Loja <small class="text-muted">(exibidos no contato/rodapé)</small></h4>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-envelope"></i> E-mail da loja</label><input id="cfgEmailLoja" type="email" class="form-control" maxlength="160" value="${window.escapeHtml(c.emailLoja || '')}" placeholder="contato@sualoja.com.br"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-clock"></i> Horário de atendimento</label><input id="cfgHorario" class="form-control" maxlength="120" value="${window.escapeHtml(c.horarioAtendimento || '')}" placeholder="Seg–Sex, 8h às 18h"></div>
+                    </div>
+                </div>
+                <div class="data-card mt-3">
                     <h4><i class="fas fa-share-nodes"></i> Redes sociais <small class="text-muted">(vazio = ícone oculto no rodapé)</small></h4>
                     <div class="row">
                         <div class="col-md-6 mb-3"><label class="form-label"><i class="fab fa-instagram"></i> Instagram</label><input id="cfgRedeInstagram" class="form-control" maxlength="300" value="${window.escapeHtml(c.redesSociais?.instagram || '')}" placeholder="https://instagram.com/sualoja"></div>
@@ -802,6 +809,8 @@
                 parcelasMax: Number(document.getElementById('cfgParc').value),
                 descontoPix: Number(document.getElementById('cfgDesc').value),
                 faixasFrete: collectFaixas(),
+                emailLoja: document.getElementById('cfgEmailLoja').value.trim(),
+                horarioAtendimento: document.getElementById('cfgHorario').value.trim(),
                 redesSociais: {
                     instagram: document.getElementById('cfgRedeInstagram').value.trim(),
                     facebook: document.getElementById('cfgRedeFacebook').value.trim(),
