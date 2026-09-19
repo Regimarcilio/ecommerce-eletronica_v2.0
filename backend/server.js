@@ -126,7 +126,7 @@ const UsuarioSchema = new mongoose.Schema({
     password: { type: String, required: true, select: false },
     telefone: { type: String, trim: true, default: '' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    status: { type: String, enum: ['ativo', 'inativo'], default: 'ativo' },
+    status: { type: String, enum: ['ativo', 'inativo', 'bloqueado'], default: 'ativo' },
     enderecos: { type: [EnderecoSchema], default: [] }
 }, { timestamps: true });
 
@@ -1127,6 +1127,20 @@ app.get('/api/clientes', auth, admin, asyncHandler(async (req, res) => {
         Usuario.countDocuments({ role: 'user' })
     ]);
     res.json({ success: true, clientes, page, limit, total, pages: Math.ceil(total / limit) });
+}));
+
+// Admin: muda status do cliente (ativo/inativo/bloqueado); bloqueado não loga nem usa token
+app.put('/api/clientes/:id/status', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const st = String(req.body?.status || '');
+    if (!['ativo', 'inativo', 'bloqueado'].includes(st)) return err(res, 400, 'Status inválido (ativo/inativo/bloqueado)', 'VALIDATION');
+    const cli = await Usuario.findOne({ _id: req.params.id, role: 'user' });
+    if (!cli) return err(res, 404, 'Cliente não encontrado', 'NOT_FOUND');
+    cli.status = st;
+    await cli.save();
+    if (st !== 'ativo') await RefreshToken.updateMany({ usuarioId: cli._id, revoked: false }, { $set: { revoked: true } });
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'cliente_status', por: req.usuarioId, id: cli._id, status: st }));
+    res.json({ success: true });
 }));
 
 // ========== DASHBOARD STATS ==========

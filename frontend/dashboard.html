@@ -703,12 +703,25 @@
                 const data = await res.json();
                 if (data.success && data.clientes && data.clientes.length > 0) {
                     pgCli.pages = data.pages || 1;
-                    let html = '<div class="data-card"><h4>Clientes (' + (data.total ?? data.clientes.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th></tr></thead><tbody>';
-                    for (const c of data.clientes) { html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${window.escapeHtml(c.email || '-')}</td><td>${window.escapeHtml(c.telefone || '-')}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-'}</td><td><span class="badge-active">${window.escapeHtml(c.status)}</span></td></tr>`; }
-                    html += '</tbody></table></div>' + pagerNav('ped', pgPed) + '</div>';
+                    let html = '<div class="data-card"><h4>Clientes (' + (data.total ?? data.clientes.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    for (const c of data.clientes) {
+                        const badge = c.status === 'bloqueado' ? '<span class="badge bg-danger">bloqueado</span>' : c.status === 'inativo' ? '<span class="badge-warning">inativo</span>' : '<span class="badge-active">ativo</span>';
+                        html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${window.escapeHtml(c.email || '-')}</td><td>${window.escapeHtml(c.telefone || '-')}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-'}</td><td>${badge}</td><td>${c.status !== 'bloqueado' ? `<button class="btn-view" style="color:#f87171" onclick="statusCliente('${c._id}','bloqueado')">Bloquear</button>` : `<button class="btn-view" onclick="statusCliente('${c._id}','ativo')">Ativar</button>`}</td></tr>`;
+                    }
+                    html += '</tbody></table></div>' + pagerNav('cli', pgCli) + '</div>';
                     document.getElementById('content').innerHTML = html;
                 }
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>'; }
+        }
+
+        async function statusCliente(id, st) {
+            if (st !== 'ativo' && !confirm(`${st === 'bloqueado' ? 'Bloquear' : 'Inativar'} este cliente? Ele perderá o acesso.`)) return;
+            try {
+                const res = await fetch(`${API}/clientes/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: st }) });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Cliente ' + (st === 'ativo' ? 'ativado' : st === 'bloqueado' ? 'bloqueado' : 'inativado')); loadClientes(); }
+                else showToast(data.message || 'Erro', true);
+            } catch { showToast('Erro ao conectar', true); }
         }
         
         // ==================== MENSAGENS (contato do site) ====================
