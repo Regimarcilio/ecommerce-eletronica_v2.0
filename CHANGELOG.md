@@ -2,6 +2,10 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.7.2 — 2026-09-19 — Docs PagSeguro + .env.example
+- `docs/PAGSEGURO.md`: ambientes (produção/sandbox), envs, fluxo PIX, regras da API, rotas, testes, frontend
+- `.env.example`: `PGS_EMAIL`, `API_PUBLIC_URL`, URLs base + link da ref oficial (sem segredos)
+
 ## v1.7.1 — 2026-09-19 — PagSeguro real (sandbox)
 - Credenciais reais ativadas (só `backend/.env` local, ignorado pelo git): token válido no **sandbox** (`PGS_SANDBOX=true`), 401 na produção
 - Payload alinhado à Orders API oficial: `tax_id` (CPF/CNPJ obrigatório, erro 400 claro), `phones`, `reference_id` por item, `notification_urls` só com `API_PUBLIC_URL` https (localhost é rejeitado pela API)
