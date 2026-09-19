@@ -219,10 +219,11 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 2
 <script src="js/config.js?v=3"></script>
 <script>
 const API = window.API_BASE;
+function safeJSON(k, fb) { try { const v = JSON.parse(localStorage.getItem(k) || ''); return (v === null || v === undefined) ? fb : v; } catch { return fb; } }
 const token = localStorage.getItem('token');
-const user = JSON.parse(localStorage.getItem('user') || '{}');
+const user = safeJSON('user', {});
 if (!token) window.location.href = '/auth.html';
-let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
+let cart = safeJSON('checkoutCart', null) || safeJSON('cart', []);
 let selectedPayment = 'pix';
 let cfgPix = 5, cfgParc = 12;
 
@@ -249,10 +250,12 @@ async function loadCondicoes() {
 let subtotal = 0;
 let savedAddrs = [];
 let addrChoice = 'outro'; // 'outro' | indice salvo
-// Perfil fresco do cadastro: nome, e-mail e telefone vêm do servidor
+// Perfil fresco do cadastro: nome, e-mail e telefone vêm do servidor (renova sessão no 401)
 async function loadPerfil() {
+    const get = () => fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
     try {
-        const res = await fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
+        let res = await get();
+        if (res.status === 401 && await window.refreshSession()) res = await get();
         const data = await res.json();
         if (res.ok && data.success && data.user) {
             const u = data.user;
@@ -263,12 +266,15 @@ async function loadPerfil() {
             maskTelefone(document.getElementById('telefone'));
             return;
         }
+        if (res.status === 401) { window.logoutAll(); window.location.href = '/auth.html'; return; }
     } catch { /* cai para o cache local */ }
     if (user.nome) {
         document.getElementById('nome').value = user.nome || '';
         document.getElementById('email').value = user.email || '';
         document.getElementById('telefone').value = user.telefone || '';
         maskTelefone(document.getElementById('telefone'));
+    } else {
+        showToast('Não foi possível carregar seus dados. Verifique a conexão.', true);
     }
 }
 function maskTelefone(el) {
@@ -300,8 +306,10 @@ function waSendUrl(loja, pedido) {
     return `https://api.whatsapp.com/send/?phone=${loja}&text=${encodeURIComponent(buildWaText(pedido))}&type=phone_number&app_absent=0`;
 }
 async function loadEnderecosSalvos() {
+    const get = () => fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
     try {
-        const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
+        let res = await get();
+        if (res.status === 401 && await window.refreshSession()) res = await get();
         const data = await res.json();
         if (res.ok && data.success && (data.enderecos || []).length > 0) {
             savedAddrs = data.enderecos;
@@ -344,7 +352,6 @@ function enderecoDeEnvio() {
         cep: document.getElementById('cep').value.trim()
     };
 }
-if (cart.length === 0) window.location.href = '/cart.html';
 function selectPayment(method) {
     selectedPayment = method;
     document.getElementById('paymentMethod').value = method;
@@ -552,12 +559,18 @@ async function verificarPagamento() {
         else { msg.textContent = 'Cobrança ainda não gerada — clique em pagar acima.'; }
     } catch { msg.style.display = ''; msg.textContent = 'Erro ao verificar. Tente novamente.'; }
 }
-selectPayment('pix');
-renderOrderItems();
-loadPerfil();
-loadEnderecosSalvos();
-loadCondicoes();
-window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
+// Sessão primeiro (renova token expirado), depois render + dados; erro visível, nunca tela muda
+async function initCheckout() {
+    const ok = await window.ensureSession();
+    if (!ok) { window.location.href = '/auth.html'; return; }
+    if (!Array.isArray(cart) || cart.length === 0) { window.location.href = '/cart.html'; return; }
+    selectPayment('pix');
+    renderOrderItems();
+    await loadPerfil();
+    await loadEnderecosSalvos();
+    await loadCondicoes();
+}
+initCheckout().catch(() => showToast('Erro ao carregar checkout. Recarregue a página.', true));
 </script>
 </body>
 </html>
