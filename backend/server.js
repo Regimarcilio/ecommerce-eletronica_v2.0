@@ -25,6 +25,12 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || true;
 // Segredos de integracao: SOMENTE .env (nunca via API/respostas)
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || '';
+// PagSeguro (PagBank): token via .env ou segredos cifrados do painel admin
+const PGS_TOKEN_ENV = process.env.PGS_TOKEN || '';
+const PGS_EMAIL_ENV = process.env.PGS_EMAIL || '';
+const PGS_WEBHOOK_TOKEN = process.env.PGS_WEBHOOK_TOKEN || '';
+const PGS_SANDBOX = String(process.env.PGS_SANDBOX || '').toLowerCase() === 'true';
+const PGS_API = PGS_SANDBOX ? 'https://sandbox.api.pagseguro.com' : 'https://api.pagseguro.com';
 const EVO_API_URL = (process.env.EVO_API_URL || '').replace(/\/$/, '');
 const EVO_APIKEY = process.env.EVO_APIKEY || '';
 const SETTINGS_KEY = process.env.SETTINGS_KEY || '';
@@ -198,6 +204,7 @@ const PedidoSchema = new mongoose.Schema({
     cliente: { type: Object, required: true },
     endereco: { type: Object, required: true },
     pagamento: { type: String, enum: ['pix', 'card', 'boleto'], required: true },
+    provedorPagamento: { type: String, enum: ['mercadopago', 'pagseguro'], default: 'mercadopago' },
     items: { type: Array, required: true },
     subtotal: { type: Number, required: true, min: 0 },
     frete: { type: Number, required: true, min: 0 },
@@ -256,11 +263,13 @@ async function getSettings() {
 }
 const maskSegredos = (s) => Object.fromEntries([...(s.segredos || new Map()).keys()].map((k) => [k, '***']));
 
-// Pagamentos (MP) e notificacoes (WhatsApp)
+// Pagamentos (MP + PagSeguro) e notificacoes (WhatsApp)
 const PagamentoSchema = new mongoose.Schema({
     pedidoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Pedido', required: true, unique: true },
-    provedor: { type: String, default: 'mercadopago' },
+    provedor: { type: String, enum: ['mercadopago', 'pagseguro'], default: 'mercadopago' },
     mpPreferenceId: { type: String, default: '' },
+    pgsOrderId: { type: String, default: '' },
+    pgsQrText: { type: String, default: '' },
     initPoint: { type: String, default: '' },
     modo: { type: String, enum: ['real', 'mock'], default: 'mock' },
     status: { type: String, enum: ['criado', 'aprovado', 'recusado'], default: 'criado' }
@@ -830,6 +839,54 @@ async function mpBuscarPagamento(paymentId) {
     } finally { clearTimeout(t); }
 }
 
+// ---- PagSeguro (PagBank Orders API) ----
+// Ref: https://dev.pagseguro.uol.com.br/reference/orders
+async function pgsTokenAtivo() {
+    if (PGS_TOKEN_ENV) return PGS_TOKEN_ENV;
+    try {
+        const s = await Settings.findOne({ chave: 'loja' }).select('segredos').lean();
+        const blob = s?.segredos?.get
+            ? s.segredos.get('pagseguro_token')
+            : s?.segredos?.['pagseguro_token'];
+        if (blob && blob !== '***') {
+            try { return decifraSegredo(blob); } catch { return ''; }
+        }
+    } catch { /* sem segredo: mock */ }
+    return '';
+}
+async function pgsCriarCobranca(pedido, email) {
+    const token = await pgsTokenAtivo();
+    if (!token) {
+        return { modo: 'mock', orderId: `mock-pgs-${pedido.numero}`, qrText: '', init_point: `${FRONT_URL}/pedidos.html?mock=${pedido.numero}` };
+    }
+    // Orders API: cobra o total em centavos via PIX QR (sem expor dados do cliente)
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    try {
+        const r = await fetch(`${PGS_API}/orders`, {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+                reference_id: String(pedido._id),
+                customer: { name: String(pedido.cliente?.nome || 'Cliente').slice(0, 100), email: String(email || pedido.cliente?.email || '').slice(0, 100) },
+                items: pedido.items.map((i) => ({ name: String(i.nome || 'Item').slice(0, 100), quantity: Number(i.quantity) || 1, unit_amount: Math.round((Number(i.preco) || 0) * 100) })),
+                qr_codes: [{ amount: { value: Math.round(Number(pedido.total) * 100) }, expiration_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString() }],
+                notification_urls: [`${process.env.API_PUBLIC_URL || `http://localhost:${PORT}`}/api/pagamentos/pagseguro/webhook`]
+            })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message || data.error_messages?.[0]?.description || 'PagSeguro erro');
+        const qr = (data.qr_codes || [])[0] || {};
+        return {
+            modo: 'real',
+            orderId: data.id,
+            qrText: qr.text || '',
+            init_point: (data.links || []).find((l) => l.rel === 'PAY')?.href || ''
+        };
+    } finally { clearTimeout(t); }
+}
+
 function montaMsgPedido(pedido, lojaNumero = '') {
     const linhas = (pedido.items || []).slice(0, 10).map((i) => `• ${i.quantity}x ${i.nome} — R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)}`);
     return [
@@ -886,12 +943,12 @@ async function enviaWhatsApp(pedido, telefoneCadastro = '') {
 }
 
 // Confirma pagamento de forma idempotente; WhatsApp nunca quebra o fluxo
-async function confirmaPagamento(pedidoId, aprovado, provedorId = '') {
+async function confirmaPagamento(pedidoId, aprovado, provedorId = '', provedor = 'mercadopago') {
     const pedido = await Pedido.findById(pedidoId);
     if (!pedido) return { ok: false };
     await Pagamento.findOneAndUpdate(
         { pedidoId: pedido._id },
-        { $set: { status: aprovado ? 'aprovado' : 'recusado', ...(provedorId ? { mpPreferenceId: provedorId } : {}) } },
+        { $set: { status: aprovado ? 'aprovado' : 'recusado', provedor, ...(provedorId ? (provedor === 'pagseguro' ? { pgsOrderId: provedorId } : { mpPreferenceId: provedorId }) : {}) } },
         { upsert: true }
     );
     if (!aprovado || pedido.status !== 'pendente') return { ok: true, jaProcessado: pedido.status !== 'pendente' };
@@ -939,6 +996,60 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
         const pedidoId = pg.external_reference;
         await confirmaPagamento(pedidoId, pg.status === 'approved', String(pg.id || ''));
     } catch (error) { console.error('webhook mp:', error.message); }
+    return res.json({ success: true });
+}));
+
+// Status do pagamento de um pedido (dono ou admin; polling da tela de pagamento)
+app.get('/api/pagamentos/:pedidoId', auth, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(req.params.pedidoId).select('usuarioId status total numero');
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
+        return err(res, 403, 'Acesso negado', 'FORBIDDEN');
+    }
+    const pg = await Pagamento.findOne({ pedidoId: pedido._id }).lean();
+    res.json({ success: true, pedido: { status: pedido.status, total: pedido.total, numero: pedido.numero }, pagamento: pg || null });
+}));
+
+// Cria cobranca PagSeguro (dono do pedido; apenas se pendente)
+app.post('/api/pagamentos/pagseguro/intent', auth, asyncHandler(async (req, res) => {
+    const { pedidoId } = req.body || {};
+    if (!isValidId(pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(pedidoId);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
+        return err(res, 403, 'Acesso negado', 'FORBIDDEN');
+    }
+    if (pedido.status !== 'pendente') return err(res, 409, 'Pedido já processado', 'STATE');
+    const user = await Usuario.findById(req.usuarioId).select('email');
+    const cob = await pgsCriarCobranca(pedido, user?.email || '');
+    await Pagamento.findOneAndUpdate(
+        { pedidoId: pedido._id },
+        { $set: { provedor: 'pagseguro', pgsOrderId: cob.orderId || '', pgsQrText: cob.qrText || '', initPoint: cob.init_point || '', modo: cob.modo, status: 'criado' } },
+        { upsert: true }
+    );
+    pedido.provedorPagamento = 'pagseguro';
+    await pedido.save();
+    res.json({ success: true, orderId: cob.orderId, qrText: cob.qrText, initPoint: cob.init_point, modo: cob.modo });
+}));
+
+// Webhook PagSeguro (publico; valida token; modo teste sem segredo aceita corpo direto)
+// Ref notification: Authorization Bearer ou ?token=
+app.post('/api/pagamentos/pagseguro/webhook', asyncHandler(async (req, res) => {
+    if (!PGS_WEBHOOK_TOKEN) {
+        const { pedidoId, status } = req.body || {};
+        console.warn('[pagamento] webhook pagseguro em modo teste (sem PGS_WEBHOOK_TOKEN)');
+        if (!isValidId(pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+        await confirmaPagamento(pedidoId, status === 'aprovado' || status === 'paid', 'mock', 'pagseguro');
+        return res.json({ success: true, modo: 'mock' });
+    }
+    const got = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '') || String(req.query.token || '');
+    if (got !== PGS_WEBHOOK_TOKEN) return err(res, 401, 'Assinatura inválida', 'AUTH');
+    try {
+        const ref = req.body?.reference_id || req.body?.referenceId;
+        const st = String(req.body?.status || '').toUpperCase();
+        await confirmaPagamento(ref, ['PAID', 'APPROVED', 'AUTHORIZED'].includes(st), String(req.body?.id || ''), 'pagseguro');
+    } catch (error) { console.error('webhook pgs:', error.message); }
     return res.json({ success: true });
 }));
 
@@ -1006,6 +1117,7 @@ app.get('/health', (req, res) => res.json({ status: 'OK' }));
 // Publico: apenas campos exibidos no checkout (sem segredos)
 app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
     const s = await getSettings();
+    const pgsAtivo = !!(PGS_TOKEN_ENV || [...(s.segredos || new Map()).keys()].includes('pagseguro_token'));
     res.json({
         success: true,
         config: {
@@ -1013,6 +1125,8 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
             mpPublicKey: s.mpPublicKey || '',
+            mpAtivo: mpConfigurado(),
+            pagseguroAtivo: pgsAtivo,
             whatsappNumero: s.whatsappNumero || '',
             emailLoja: s.emailLoja || '',
             horarioAtendimento: s.horarioAtendimento || '',

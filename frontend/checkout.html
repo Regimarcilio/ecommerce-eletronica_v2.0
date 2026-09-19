@@ -171,14 +171,37 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 2
     </aside>
   </div>
 
-  <div id="payStep" class="layout" style="grid-template-columns:1fr;max-width:640px;margin:0 auto">
+  <div id="payStep" class="layout" style="grid-template-columns:1fr;max-width:680px;margin:0 auto">
     <div class="card">
       <div class="payhero">
         <div class="okic"><i class="fa-solid fa-check"></i></div>
         <h2 id="payTitle">Pedido confirmado!</h2>
         <p id="paySub">Agora finalize o pagamento para enviarmos sua placa.</p>
       </div>
-      <div class="srow total" style="border:none;padding:0;margin-bottom:6px"><span>TOTAL</span><b id="payTotal">R$ 0,00</b></div>
+      <div class="srow"><span>Pedido</span><b id="payNum">—</b></div>
+      <div class="srow"><span>Método escolhido</span><b id="payMethod">—</b></div>
+      <div class="srow total" style="border:none;padding:0;margin:6px 0 18px"><span>TOTAL</span><b id="payTotal">R$ 0,00</b></div>
+      <div class="tabs" style="display:flex;background:#0b1128;border:1px solid var(--line);border-radius:999px;padding:5px;margin-bottom:18px">
+        <button id="provMpBtn" class="on" onclick="selectProvedor('mercadopago')" style="flex:1;background:none;border:none;color:var(--mut);font-weight:700;font-size:.85rem;padding:10px;border-radius:999px;cursor:pointer;font-family:'Inter'"><i class="fa-solid fa-bolt"></i> Mercado Pago</button>
+        <button id="provPgsBtn" onclick="selectProvedor('pagseguro')" style="flex:1;background:none;border:none;color:var(--mut);font-weight:700;font-size:.85rem;padding:10px;border-radius:999px;cursor:pointer;font-family:'Inter'"><i class="fa-solid fa-qrcode"></i> PagSeguro</button>
+      </div>
+      <div id="provMp">
+        <p class="cond" id="mpStatus">Mercado Pago: Pix, cartão em até 12x e boleto.</p>
+        <div class="paybtns"><button class="btn btn-fire" onclick="pagarAgora()"><i class="fa-solid fa-bolt"></i> Pagar com Mercado Pago</button></div>
+      </div>
+      <div id="provPgs" style="display:none">
+        <p class="cond" id="pgsStatus">PagSeguro: PIX com QR Code e cartão.</p>
+        <div class="paybtns"><button class="btn btn-fire" onclick="pagarPagSeguro()"><i class="fa-solid fa-qrcode"></i> Gerar cobrança PagSeguro</button></div>
+        <div id="pgsQrBox" style="display:none;text-align:center;margin-top:14px">
+          <p style="font-size:.85rem;color:var(--mut);margin-bottom:10px">Escaneie o QR ou use o código copia e cola:</p>
+          <div class="field"><textarea id="pgsQrText" rows="3" readonly style="width:100%;background:#0b1128;border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--txt);font-size:.8rem"></textarea></div>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="copiarQr()"><i class="fa-solid fa-copy"></i> Copiar código PIX</button>
+        </div>
+      </div>
+      <div class="paybtns" style="margin-top:14px">
+        <button class="btn btn-ghost" onclick="verificarPagamento()"><i class="fa-solid fa-rotate"></i> Já paguei — verificar status</button>
+      </div>
+      <p class="cond" id="payCheckMsg" style="display:none;margin-top:12px"></p>
       <div class="paybtns" id="payBtns"></div>
       <div class="paybtns">
         <a class="btn btn-ghost" href="/pedidos.html"><i class="fa-solid fa-list"></i> Meus pedidos</a>
@@ -210,6 +233,8 @@ async function loadCondicoes() {
         if (res.ok && data.success) {
             cfgPix = Number(data.config.descontoPix ?? 5);
             cfgParc = Number(data.config.parcelasMax ?? 12);
+            cfgMpAtivo = data.config.mpAtivo !== false;
+            cfgPgsAtivo = !!data.config.pagseguroAtivo;
             document.getElementById('cardParcLabel').textContent = `Em até ${cfgParc}x via Mercado Pago`;
             document.getElementById('pixDesc').textContent = `Aprovação imediata com ${cfgPix}% de desconto`;
             if (data.config.condicoesPagamento) {
@@ -369,9 +394,17 @@ function renderOrderItems() {
         const name = window.escapeHtml(item.name);
         const qty = Number(item.quantity) || 0;
         const line = (Number(item.price) || 0) * qty;
-        container.innerHTML += `<div class="oitem"><span>${name} ×${qty}</span><b>R$ ${line.toFixed(2)}</b></div>`;
+        container.innerHTML += `<div class="oitem" style="align-items:center"><span>${name}</span><span style="display:flex;gap:8px;align-items:center"><button onclick="coStep('${window.escapeHtml(item.id)}',-1)" aria-label="Diminuir" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:#0b1128;color:var(--txt);cursor:pointer">−</button><b>×${qty}</b><button onclick="coStep('${window.escapeHtml(item.id)}',1)" aria-label="Aumentar" style="width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:#0b1128;color:var(--txt);cursor:pointer">+</button></span><b>R$ ${line.toFixed(2)}</b></div>`;
     });
     calcularTotal();
+}
+function coStep(id, d) {
+    window.cartStep(id, d);
+    cart = window.cartGet();
+    localStorage.setItem('checkoutCart', JSON.stringify(cart));
+    if (!cart.length) { window.location.href = '/cart.html'; return; }
+    renderOrderItems();
+    cotarFrete();
 }
 function showToast(msg, isError = false) {
     const toast = document.createElement('div');
@@ -424,6 +457,16 @@ async function confirmarPedido() {
         } else showToast(data.message || 'Erro ao processar pedido', true);
     } catch(e) { showToast('Erro ao conectar', true); }
 }
+let provedorSel = 'mercadopago';
+let cfgMpAtivo = true, cfgPgsAtivo = false;
+function selectProvedor(p) {
+    provedorSel = p;
+    const on = 'background:var(--grad);color:#1a1000', off = 'background:none;color:var(--mut)';
+    document.getElementById('provMpBtn').style.cssText += ';' + (p === 'mercadopago' ? on : off);
+    document.getElementById('provPgsBtn').style.cssText += ';' + (p === 'pagseguro' ? on : off);
+    document.getElementById('provMp').style.display = p === 'mercadopago' ? '' : 'none';
+    document.getElementById('provPgs').style.display = p === 'pagseguro' ? '' : 'none';
+}
 function mostrarPagamento(data) {
     const numero = window.escapeHtml(data.pedido.numero);
     const total = `R$ ${Number(data.pedido.total).toFixed(2)}`;
@@ -435,11 +478,19 @@ function mostrarPagamento(data) {
     document.getElementById('payStep').style.display = '';
     document.getElementById('dot2').classList.add('on');
     document.getElementById('payTitle').textContent = `Pedido ${numero} confirmado!`;
+    document.getElementById('payNum').textContent = data.pedido.numero;
+    const payLabel = { pix: 'PIX', card: 'Cartão de crédito', boleto: 'Boleto' }[data.pedido.pagamento] || data.pedido.pagamento;
+    document.getElementById('payMethod').textContent = payLabel;
     document.getElementById('payTotal').textContent = total;
-    const payLabel = { pix: 'PIX', card: 'cartão', boleto: 'boleto' }[data.pedido.pagamento] || data.pedido.pagamento;
     document.getElementById('paySub').textContent = `Pagamento via ${payLabel}. ${zap.enviado ? `Resumo enviado ao seu WhatsApp ${zap.para || ''}!` : 'O resumo chegará no seu WhatsApp.'}`;
+    document.getElementById('mpStatus').textContent = cfgMpAtivo
+        ? 'Mercado Pago ativo: Pix, cartão e boleto.'
+        : 'Mercado Pago em modo demonstração (sem MP_ACCESS_TOKEN no servidor).';
+    document.getElementById('pgsStatus').textContent = cfgPgsAtivo
+        ? 'PagSeguro ativo: PIX com QR Code.'
+        : 'PagSeguro em modo demonstração (sem PGS_TOKEN no servidor).';
+    selectProvedor('mercadopago');
     document.getElementById('payBtns').innerHTML = `
-        <button class="btn btn-fire" onclick="pagarAgora()"><i class="fa-solid fa-bolt"></i> Pagar agora (Mercado Pago)</button>
         ${waUrl ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${waUrl}"><i class="fa-brands fa-whatsapp"></i> Enviar pedido no WhatsApp</a>` : ''}
         ${loja ? `<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/${loja}"><i class="fa-brands fa-whatsapp"></i> Falar com a loja</a>` : ''}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -455,6 +506,42 @@ async function pagarAgora() {
         if (res.ok && data.success && data.initPoint) window.location.href = data.initPoint;
         else showToast(data.message || 'Erro ao iniciar pagamento', true);
     } catch(e) { showToast('Erro ao conectar', true); }
+}
+async function pagarPagSeguro() {
+    if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
+    try {
+        const res = await fetch(API + '/pagamentos/pagseguro/intent', {
+            method: 'POST', headers: window.getAuthHeaders(),
+            body: JSON.stringify({ pedidoId: window.__lastPedidoId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { showToast(data.message || 'Erro ao gerar cobrança', true); return; }
+        if (data.qrText) {
+            document.getElementById('pgsQrBox').style.display = '';
+            document.getElementById('pgsQrText').value = data.qrText;
+            showToast(`Cobrança PagSeguro gerada (${data.modo})!`);
+        } else if (data.initPoint) window.location.href = data.initPoint;
+        else showToast(`Cobrança gerada (${data.modo})!`, false);
+    } catch(e) { showToast('Erro ao conectar', true); }
+}
+function copiarQr() {
+    const t = document.getElementById('pgsQrText');
+    t.select();
+    try { document.execCommand('copy'); showToast('Código PIX copiado!'); }
+    catch { navigator.clipboard?.writeText(t.value).then(() => showToast('Código PIX copiado!')).catch(() => showToast('Copie manualmente', true)); }
+}
+async function verificarPagamento() {
+    if (!window.__lastPedidoId) return;
+    const msg = document.getElementById('payCheckMsg');
+    try {
+        const res = await fetch(API + '/pagamentos/' + window.__lastPedidoId, { headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (!res.ok || !data.success) { msg.style.display = ''; msg.textContent = data.message || 'Não foi possível verificar.'; return; }
+        msg.style.display = '';
+        if (data.pedido.status === 'pago') { msg.textContent = `Pagamento aprovado! Pedido ${data.pedido.numero} confirmado.`; showToast('Pagamento aprovado!'); }
+        else if (data.pagamento) { msg.textContent = `Aguardando pagamento (cobrança ${data.pagamento.modo}, status: ${data.pagamento.status}).`; }
+        else { msg.textContent = 'Cobrança ainda não gerada — clique em pagar acima.'; }
+    } catch { msg.style.display = ''; msg.textContent = 'Erro ao verificar. Tente novamente.'; }
 }
 selectPayment('pix');
 renderOrderItems();
