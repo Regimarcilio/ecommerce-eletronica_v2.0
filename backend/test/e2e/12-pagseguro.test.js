@@ -58,7 +58,24 @@ describe('e2e pagseguro (mock)', () => {
     assert.ok(r.data.orderId);
   });
 
-  it('status do pagamento visivel ao dono', async () => {
+  it('checkout hospedado (cartao/boleto) cria link real ou mock', async () => {
+    const o = await api('POST', '/api/pedidos', {
+      token: utok,
+      body: {
+        cliente: { nome: 'Pgs', telefone: '11999999999', cpf: '12345678909' },
+        endereco: { logradouro: 'R', numero: '1', bairro: 'B', cidade: 'C', estado: 'SP', cep: '01000-000' },
+        pagamento: 'card',
+        items: [{ produtoId: prodId, quantity: 1 }],
+      },
+    });
+    const pid = o.data.pedido._id;
+    const r = await api('POST', '/api/pagamentos/pagseguro/checkout', { token: utok, body: { pedidoId: pid } });
+    assert.equal(r.status, 200);
+    assert.ok(['mock', 'real'].includes(r.data.modo));
+    assert.ok(r.data.payLink);
+    const st = await api('GET', `/api/pagamentos/${pid}`, { token: utok });
+    assert.equal(st.data.pagamento.provedor, 'pagseguro');
+  });
     const r = await api('GET', `/api/pagamentos/${pedidoId}`, { token: utok });
     assert.equal(r.status, 200);
     assert.equal(r.data.pagamento.provedor, 'pagseguro');

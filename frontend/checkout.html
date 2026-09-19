@@ -191,7 +191,8 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 2
       </div>
       <div id="provPgs" style="display:none">
         <p class="cond" id="pgsStatus">PagSeguro: PIX com QR Code e cartão.</p>
-        <div class="paybtns"><button class="btn btn-fire" onclick="pagarPagSeguro()"><i class="fa-solid fa-qrcode"></i> Gerar cobrança PagSeguro</button></div>
+        <div class="paybtns"><button class="btn btn-fire" onclick="pagarPagSeguro()"><i class="fa-solid fa-qrcode"></i> PIX direto (QR Code)</button></div>
+        <div class="paybtns"><button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="pagarPagSeguroCheckout()"><i class="fa-solid fa-credit-card"></i> Cartão ou boleto (checkout PagSeguro)</button></div>
         <div id="pgsQrBox" style="display:none;text-align:center;margin-top:14px">
           <p style="font-size:.85rem;color:var(--mut);margin-bottom:10px">Escaneie o QR ou use o código copia e cola:</p>
           <div class="field"><textarea id="pgsQrText" rows="3" readonly style="width:100%;background:#0b1128;border:1px solid var(--line);border-radius:12px;padding:12px;color:var(--txt);font-size:.8rem"></textarea></div>
@@ -546,6 +547,19 @@ async function pagarPagSeguro() {
             showToast(`Cobrança PagSeguro gerada (${data.modo})!${data.qrExpiracao ? ' Válida até ' + new Date(data.qrExpiracao).toLocaleString('pt-BR') : ''}`);
         } else if (data.initPoint) window.location.href = data.initPoint;
         else showToast(`Cobrança gerada (${data.modo})!`, false);
+    } catch(e) { showToast('Erro ao conectar', true); }
+}
+async function pagarPagSeguroCheckout() {
+    if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
+    try {
+        const res = await fetch(API + '/pagamentos/pagseguro/checkout', {
+            method: 'POST', headers: window.getAuthHeaders(),
+            body: JSON.stringify({ pedidoId: window.__lastPedidoId })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { showToast(data.message || 'Erro ao abrir checkout', true); return; }
+        if (data.payLink) window.location.href = data.payLink;
+        else showToast(`Checkout gerado (${data.modo}) sem link`, true);
     } catch(e) { showToast('Erro ao conectar', true); }
 }
 function copiarQr() {

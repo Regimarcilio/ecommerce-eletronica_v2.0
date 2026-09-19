@@ -850,8 +850,62 @@ async function mpBuscarPagamento(paymentId) {
     } finally { clearTimeout(t); }
 }
 
-// ---- PagSeguro (PagBank Orders API) ----
-// Ref: https://dev.pagseguro.uol.com.br/reference/orders
+// ---- Checkout hospedado PagSeguro (cartão + boleto + PIX, sem PCI na loja) ----
+// Ref: https://developer.pagbank.com.br/reference/checkouts
+async function pgsCriarCheckout(pedido, email) {
+    const token = await pgsTokenAtivo();
+    if (!token) {
+        return { modo: 'mock', checkoutId: `mock-check-${pedido.numero}`, payLink: `${FRONT_URL}/pedidos.html?mock=${pedido.numero}` };
+    }
+    const pubUrl = String(process.env.API_PUBLIC_URL || '');
+    const notifUrls = /^https:\/\//.test(pubUrl) ? [`${pubUrl.replace(/\/$/, '')}/api/pagamentos/pagseguro/webhook`] : undefined;
+    // redirect_url exige URL valida (localhost e rejeitado); sem https publico, omite
+    const redir = /^https:\/\//.test(FRONT_URL) ? `${FRONT_URL.replace(/\/$/, '')}/pedidos.html` : undefined;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    try {
+        const corpo = {
+            reference_id: String(pedido._id).slice(0, 64),
+            expiration_date: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
+            customer_modifiable: true,
+            customer: {
+                name: String(pedido.cliente?.nome || 'Cliente').slice(0, 100),
+                email: String(email || pedido.cliente?.email || '').slice(0, 100)
+            },
+            items: pedido.items.map((i) => ({
+                reference_id: String(i.produtoId || i.nome || '').slice(0, 64),
+                name: String(i.nome || 'Item').slice(0, 100),
+                quantity: Number(i.quantity) || 1,
+                unit_amount: Math.round((Number(i.preco) || 0) * 100)
+            })),
+            payment_methods: [{ type: 'CREDIT_CARD' }, { type: 'BOLETO' }, { type: 'PIX' }],
+            soft_descriptor: 'PLACACERTA',
+            ...(redir ? { redirect_url: redir } : {})
+        };
+        if (notifUrls) corpo.notification_urls = notifUrls;
+        const r = await fetch(`${PGS_API}/checkouts`, {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(corpo)
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const detalhe = data.error_messages?.[0]?.description || data.message || `HTTP ${r.status}`;
+            if (/buyer email/i.test(detalhe)) {
+                throw Object.assign(new Error('E-mail do comprador não pode ser igual ao da loja: finalize com outra conta de teste'), { statusCode: 422, code: 'PGS_BUYER' });
+            }
+            throw Object.assign(new Error(`PagSeguro ${r.status}: ${detalhe}`), { statusCode: 502, code: 'UPSTREAM' });
+        }
+        return {
+            modo: 'real',
+            checkoutId: data.id,
+            payLink: (data.links || []).find((l) => l.rel === 'PAY')?.href || ''
+        };
+    } finally { clearTimeout(t); }
+}
+// ---- PagSeguro (PagBank Orders API: PIX direto) ----
+// Ref: https://developer.pagbank.com.br/reference/orders
 async function pgsTokenAtivo() {
     if (PGS_TOKEN_ENV) return PGS_TOKEN_ENV;
     try {
@@ -1113,6 +1167,34 @@ app.post('/api/pagamentos/pagseguro/intent', auth, asyncHandler(async (req, res)
     pedido.provedorPagamento = 'pagseguro';
     await pedido.save();
     res.json({ success: true, orderId: cob.orderId, qrText: cob.qrText, qrExpiracao: cob.qrExpiracao || '', initPoint: cob.init_point, modo: cob.modo });
+}));
+
+// Checkout hospedado PagSeguro (cartão + boleto + PIX; dono do pedido; apenas se pendente)
+app.post('/api/pagamentos/pagseguro/checkout', auth, asyncHandler(async (req, res) => {
+    const { pedidoId } = req.body || {};
+    if (!isValidId(pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(pedidoId);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId && req.usuarioRole !== 'admin') {
+        return err(res, 403, 'Acesso negado', 'FORBIDDEN');
+    }
+    if (pedido.status !== 'pendente') return err(res, 409, 'Pedido já processado', 'STATE');
+    const user = await Usuario.findById(req.usuarioId).select('email');
+    let co;
+    try {
+        co = await pgsCriarCheckout(pedido, user?.email || '');
+    } catch (error) {
+        if (error.statusCode) return err(res, error.statusCode, error.message, error.code || 'VALIDATION');
+        throw error;
+    }
+    await Pagamento.findOneAndUpdate(
+        { pedidoId: pedido._id },
+        { $set: { provedor: 'pagseguro', pgsOrderId: co.checkoutId || '', initPoint: co.payLink || '', modo: co.modo, status: 'criado' } },
+        { upsert: true }
+    );
+    pedido.provedorPagamento = 'pagseguro';
+    await pedido.save();
+    res.json({ success: true, checkoutId: co.checkoutId, payLink: co.payLink, modo: co.modo });
 }));
 
 // Webhook PagSeguro (publico; valida token; modo teste sem segredo aceita corpo direto)
