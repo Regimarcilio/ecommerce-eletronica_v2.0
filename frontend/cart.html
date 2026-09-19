@@ -117,11 +117,14 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 2
 </main>
 
 <footer class="site">
-  <div class="wrap copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
+  <div class="wrap">
+    <div id="socialFooter" style="margin-bottom:18px"></div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span><a href="/contato.html" style="color:var(--mut)">Contato</a> · Principal · Fonte · T-Con</span></div>
+  </div>
 </footer>
 
 <div id="toast"></div>
-<script src="js/config.js?v=2"></script>
+<script src="js/config.js?v=3"></script>
 <script>
 const API = window.API_BASE;
 const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
@@ -215,13 +218,11 @@ function finalizarCompra(){
   window.location.href = '/checkout.html';
 }
 function updateAuthUI(){
-  const u = JSON.parse(localStorage.getItem('user')||'{}');
-  document.getElementById('authLink').innerHTML = u.nome
-    ? `<span style="font-size:.85rem;color:var(--mut)"><i class="fa-solid fa-user"></i> ${window.escapeHtml(String(u.nome).split(' ')[0])}</span>`
-    : `<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>`;
+  document.getElementById('authLink').innerHTML = window.userLink()
+    || `<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>`;
 }
 function logout(){ window.logoutAll(); window.location.href = '/placas.html'; }
-renderCart(); updateCartCount(); updateAuthUI();
+renderCart(); updateCartCount(); updateAuthUI(); window.renderSocial('socialFooter');
 </script>
 </body>
 </html>

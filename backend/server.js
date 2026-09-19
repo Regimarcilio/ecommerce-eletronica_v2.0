@@ -221,6 +221,12 @@ const SettingsSchema = new mongoose.Schema({
         gratisAcima: { type: Number, min: 0, default: 0 },
         prazoDias: { type: Number, min: 1, max: 60, default: 5 }
     }],
+    redesSociais: {
+        instagram: { type: String, trim: true, maxlength: 300, default: '' },
+        facebook: { type: String, trim: true, maxlength: 300, default: '' },
+        youtube: { type: String, trim: true, maxlength: 300, default: '' },
+        tiktok: { type: String, trim: true, maxlength: 300, default: '' }
+    },
     segredos: { type: Map, of: String, default: {} }
 }, { timestamps: true, minimize: false });
 
@@ -265,6 +271,15 @@ const NotificacaoSchema = new mongoose.Schema({
     erro: { type: String, default: '' }
 }, { timestamps: true });
 
+// Mensagens do formulario de contato (página contato.html)
+const ContatoSchema = new mongoose.Schema({
+    nome: { type: String, required: true, trim: true, maxlength: 120 },
+    email: { type: String, required: true, trim: true, lowercase: true, maxlength: 160 },
+    assunto: { type: String, trim: true, maxlength: 160, default: '' },
+    mensagem: { type: String, required: true, trim: true, maxlength: 5000 },
+    lida: { type: Boolean, default: false }
+}, { timestamps: true });
+
 // Unicidade vale só p/ registros visíveis (soft-delete libera nome/sku/slug)
 ProdutoSchema.index({ sku: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 CategoriaSchema.index({ nome: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
@@ -278,6 +293,7 @@ const PasswordReset = mongoose.model('PasswordReset', PasswordResetSchema);
 const Settings = mongoose.model('Settings', SettingsSchema);
 const Pagamento = mongoose.model('Pagamento', PagamentoSchema);
 const Notificacao = mongoose.model('Notificacao', NotificacaoSchema);
+const Contato = mongoose.model('Contato', ContatoSchema);
 
 // Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
@@ -991,7 +1007,13 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
             mpPublicKey: s.mpPublicKey || '',
-            whatsappNumero: s.whatsappNumero || ''
+            whatsappNumero: s.whatsappNumero || '',
+            redesSociais: {
+                instagram: s.redesSociais?.instagram || '',
+                facebook: s.redesSociais?.facebook || '',
+                youtube: s.redesSociais?.youtube || '',
+                tiktok: s.redesSociais?.tiktok || ''
+            }
         }
     });
 }));
@@ -1009,6 +1031,12 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
             faixasFrete: s.faixasFrete || [],
+            redesSociais: {
+                instagram: s.redesSociais?.instagram || '',
+                facebook: s.redesSociais?.facebook || '',
+                youtube: s.redesSociais?.youtube || '',
+                tiktok: s.redesSociais?.tiktok || ''
+            },
             segredos: maskSegredos(s)
         }
     });
@@ -1053,8 +1081,18 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             gratisAcima: Number(f.gratisAcima ?? 0), prazoDias: Math.min(60, Math.max(1, Number(f.prazoDias ?? 5)))
         }));
     }
-    if (b.segredos !== undefined && typeof b.segredos === 'object') {
-        try {
+    if (b.redesSociais !== undefined && typeof b.redesSociais === 'object') {
+        for (const k of ['instagram', 'facebook', 'youtube', 'tiktok']) {
+            if (b.redesSociais[k] !== undefined) {
+                const v = String(b.redesSociais[k] ?? '').trim().slice(0, 300);
+                if (v && !/^(https?:\/\/[^\s"']+|[a-zA-Z0-9_.-]+(\/[^\s"']*)?)$/.test(v)) {
+                    return err(res, 400, `Rede social inválida (${k})`, 'VALIDATION');
+                }
+                s.redesSociais[k] = v;
+            }
+        }
+    }
+    if (b.segredos !== undefined && typeof b.segredos === 'object') {        try {
             for (const [k, v] of Object.entries(b.segredos)) {
                 if (!/^[a-zA-Z0-9_]{1,40}$/.test(k)) return err(res, 400, 'Nome de segredo invalido', 'VALIDATION');
                 if (v === '***') continue;
@@ -1065,6 +1103,42 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
     }
     await s.save();
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'config_atualizada', por: req.usuarioId }));
+    res.json({ success: true });
+}));
+
+// ========== CONTATO (formulario publico) ==========
+const contatoLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: tetoE2E(20), standardHeaders: true, legacyHeaders: false });
+app.post('/api/contato', contatoLimiter, asyncHandler(async (req, res) => {
+    const b = req.body || {};
+    const nome = String(b.nome ?? '').trim().slice(0, 120);
+    const email = String(b.email ?? '').trim().toLowerCase().slice(0, 160);
+    const assunto = String(b.assunto ?? '').trim().slice(0, 160);
+    const mensagem = String(b.mensagem ?? '').trim().slice(0, 5000);
+    if (!nome) return err(res, 400, 'Informe seu nome', 'VALIDATION');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err(res, 400, 'E-mail inválido', 'VALIDATION');
+    if (!mensagem || mensagem.length < 10) return err(res, 400, 'Mensagem muito curta (mín. 10 caracteres)', 'VALIDATION');
+    const c = await Contato.create({ nome, email, assunto, mensagem });
+    res.json({ success: true, protocolo: String(c._id) });
+}));
+
+// Admin: lista mensagens de contato
+app.get('/api/contato', auth, admin, asyncHandler(async (req, res) => {
+    const { page, limit, skip } = parsePaging(req.query);
+    const query = {};
+    if (req.query.lida === 'true') query.lida = true;
+    if (req.query.lida === 'false') query.lida = false;
+    const [lista, total] = await Promise.all([
+        Contato.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Contato.countDocuments(query)
+    ]);
+    res.json({ success: true, mensagens: lista, page, limit, total, pages: Math.ceil(total / limit) });
+}));
+
+// Admin: marca mensagem como lida
+app.put('/api/contato/:id/lida', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const c = await Contato.findByIdAndUpdate(req.params.id, { lida: true }, { new: true });
+    if (!c) return err(res, 404, 'Mensagem não encontrada', 'NOT_FOUND');
     res.json({ success: true });
 }));
 

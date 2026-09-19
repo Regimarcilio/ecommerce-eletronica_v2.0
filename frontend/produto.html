@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produto | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36; --card2:#182242;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.45rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:36px;height:36px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#1a1000;font-size:1.05rem}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:600;font-size:.9rem;padding:12px 26px;border-radius:999px;transition:.22s;font-family:'Inter'}
+.btn-fire{background:var(--grad);color:#1a1000;box-shadow:0 6px 26px rgba(255,138,0,.4)}
+.btn-fire:hover{transform:translateY(-2px)}
+.btn-fire:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:1rem}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+.crumbs{padding:26px 0 0;font-size:.83rem;color:var(--mut)}
+.crumbs a:hover{color:var(--amber)}
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding:24px 0 60px}
+.gallery{background:var(--card);border:1px solid var(--line);border-radius:24px;min-height:420px;display:grid;place-items:center;font-size:6rem;color:#3d4a7d;overflow:hidden}
+.gallery img{width:100%;height:100%;max-height:520px;object-fit:cover}
+.info .ptype{font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber)}
+.info h1{font-size:2rem;letter-spacing:-.6px;margin:8px 0 4px}
+.info .compat{color:var(--cyan);font-size:.92rem;margin-bottom:14px}
+.info .desc{color:var(--mut);line-height:1.65;margin-bottom:20px}
+.pricebox{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;margin-bottom:20px}
+.pricebox .now{font-family:'Space Grotesk';font-size:2.2rem;font-weight:700;color:var(--amber)}
+.pricebox .parc{color:var(--mut);font-size:.9rem}
+.pricebox .pix{color:#6ee7b7;font-weight:600;margin-top:4px}
+.buyrow{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap}
+.qty{display:flex;align-items:center;gap:12px;background:#0b1128;border:1px solid var(--line);border-radius:999px;padding:8px 14px}
+.qty button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--txt);cursor:pointer}
+.qty button:hover{border-color:var(--amber);color:var(--amber)}
+.qty b{min-width:24px;text-align:center;font-family:'Space Grotesk'}
+.stock{font-size:.88rem;margin-top:12px}
+.ok{color:#6ee7b7}.out{color:#f87171}
+.specs{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px}
+.specs h3{margin-bottom:14px;font-size:1.05rem}
+.specs table{width:100%;border-collapse:collapse;font-size:.88rem}
+.specs td{padding:10px 4px;border-bottom:1px solid var(--line)}
+.specs td:first-child{color:var(--mut);width:40%}
+.rel{padding:0 0 72px}
+.rel h2{margin-bottom:22px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.22s;display:flex;flex-direction:column}
+.pcard:hover{transform:translateY(-5px);border-color:rgba(255,178,36,.45)}
+.pcard .foto{height:150px;display:grid;place-items:center;background:#0b1128;font-size:2.6rem;color:#3d4a7d}
+.pcard .foto img{width:100%;height:150px;object-fit:cover}
+.pcard .body{padding:16px}
+.pcard h3{font-size:.9rem;margin-bottom:6px}
+.pcard .now{font-family:'Space Grotesk';font-weight:700;color:var(--amber);font-size:1.1rem}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 24px}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.toast-msg{background:#0d1330;border:1px solid var(--line);border-left:3px solid var(--amber);padding:13px 20px;border-radius:12px;font-size:.88rem}
+@media(max-width:900px){.detail{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<div class="announce"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 100 &nbsp;·&nbsp; 5% OFF no PIX</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="/placas.html">Início</a>
+      <a href="/placas.html#tipos">Tipos de placa</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
+      <a href="/contato.html">Contato</a>
+      <a href="/index.html">Loja completa</a>
+    </nav>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="crumbs"><a href="/placas.html">Início</a> · <a href="/placas.html#catalogo">Placas</a> · <span id="crumbName">…</span></div>
+  <div class="detail" id="detail"><p style="color:var(--mut)">Carregando…</p></div>
+  <div class="rel" id="relBlock" style="display:none">
+    <h2>Quem viu, levou também</h2>
+    <div class="grid" id="relGrid"></div>
+  </div>
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    <div id="socialFooter" style="margin-bottom:18px"></div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
+  </div>
+</footer>
+
+<div id="toast"></div>
+<script src="js/config.js?v=3"></script>
+<script>
+const API = window.API_BASE;
+const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
+let PROD = null, QTD = 1;
+const money = (v) => 'R$ ' + (Number(v)||0).toFixed(2);
+const esc = (v) => window.escapeHtml(String(v ?? ''));
+function toast(m){const t=document.createElement('div');t.className='toast-msg';t.textContent=String(m??'');document.getElementById('toast').appendChild(t);setTimeout(()=>t.remove(),3000)}
+function updateCart(){try{const c=JSON.parse(localStorage.getItem('cart')||'[]');document.getElementById('cartCount').textContent=c.reduce((s,i)=>s+(Number(i.quantity)||0),0)}catch{}}
+function updateAuth(){document.getElementById('authLink').innerHTML = window.userLink() || '<a href="/auth.html" class="btn btn-ghost" style="padding:9px 18px">Entrar</a>'}
+function setQtd(d){QTD=Math.min(99,Math.max(1,QTD+d));document.getElementById('qtdN').textContent=QTD}
+function buyNow(){
+  if(!PROD||Number(PROD.quantidade)<=0){toast('Produto indisponível');return}
+  for(let i=0;i<QTD;i++) window.cartAdd(PROD._id,PROD.nome,PROD.preco);
+  updateCart();toast('Placa adicionada ao carrinho!');
+}
+function afterBuy(){buyNow();window.location.href='/cart.html'}
+async function load(){
+  const id = new URLSearchParams(location.search).get('id');
+  const box = document.getElementById('detail');
+  if(!id||!/^[a-f0-9]{24}$/i.test(id)){box.innerHTML='<p style="color:var(--mut)">Produto não encontrado. <a href="/placas.html" style="color:var(--amber)">Voltar ao catálogo</a></p>';return}
+  try{
+    const r = await fetch(`${API}/produtos/${id}`);
+    const d = await r.json();
+    if(!r.ok||!d.success){box.innerHTML='<p style="color:var(--mut)">Produto não encontrado ou indisponível.</p>';return}
+    const p = d.produto; PROD = p;
+    document.title = p.nome + ' | PlacaCerta';
+    document.getElementById('crumbName').textContent = p.nome;
+    const url = window.safeImg(p.imagemUrl);
+    const dim = p.dimensoes ? `${p.dimensoes.c||'-'} × ${p.dimensoes.l||'-'} × ${p.dimensoes.a||'-'} cm` : '—';
+    const ok = Number(p.quantidade) > 0;
+    box.innerHTML = `
+      <div class="gallery">${url?`<img src="${url}" alt="${esc(p.nome)}" onerror="this.remove()">`:'<i class="fa-solid fa-tv"></i>'}</div>
+      <div class="info">
+        <div class="ptype">${esc(TIPO_LABEL[p.tipoPlaca]||'Peça')}</div>
+        <h1>${esc(p.nome)}</h1>
+        <div class="compat">${esc([p.marca,p.modeloTV&&('comp. '+p.modeloTV)].filter(Boolean).join(' · ')||'Pronta entrega')}</div>
+        <p class="desc">${esc(p.descricao||'Placa testada em bancada, com 90 dias de garantia.')}</p>
+        <div class="pricebox">
+          <div class="now">${money(p.preco)}</div>
+          <div class="parc">${p.parcela?`${p.parcela.n}x de ${money(p.parcela.valor)} no cartão`:''}</div>
+          <div class="pix">${p.precoPix?money(p.precoPix)+' no PIX (−5%)':''}</div>
+          <div class="buyrow">
+            <div class="qty"><button onclick="setQtd(-1)">−</button><b id="qtdN">1</b><button onclick="setQtd(1)">+</button></div>
+            <button class="btn btn-fire" ${ok?'':'disabled'} onclick="buyNow()"><i class="fa-solid fa-cart-plus"></i> Adicionar</button>
+            <button class="btn btn-ghost" ${ok?'':'disabled'} onclick="afterBuy()">Comprar agora</button>
+          </div>
+          <div class="stock ${ok?'ok':'out'}">${ok?`Em estoque (${p.quantidade} un.)`:'Esgotado'}</div>
+        </div>
+        <div class="specs"><h3>Ficha técnica</h3><table>
+          <tr><td>SKU</td><td>${esc(p.sku||'—')}</td></tr>
+          <tr><td>Tipo</td><td>${esc(TIPO_LABEL[p.tipoPlaca]||'—')}</td></tr>
+          <tr><td>Marca</td><td>${esc(p.marca||'—')}</td></tr>
+          <tr><td>Modelo compatível</td><td>${esc(p.modeloTV||'—')}</td></tr>
+          <tr><td>Peso</td><td>${p.peso??'—'} kg</td></tr>
+          <tr><td>Dimensões (C×L×A)</td><td>${esc(dim)}</td></tr>
+        </table></div>
+      </div>`;
+    loadRelated(p);
+  }catch(e){box.innerHTML='<p style="color:var(--mut)">Erro ao carregar. Tente novamente.</p>'}
+}
+async function loadRelated(p){
+  try{
+    let q = `${API}/produtos?status=ativo&limit=100`;
+    const r = await fetch(q); const d = await r.json();
+    const all = (d.success&&d.produtos||[]).filter(x=>x._id!==p._id);
+    const rel = all.filter(x=>x.tipoPlaca&&x.tipoPlaca===p.tipoPlaca).concat(all.filter(x=>!x.tipoPlaca||x.tipoPlaca!==p.tipoPlaca)).slice(0,4);
+    if(!rel.length) return;
+    document.getElementById('relBlock').style.display='';
+    document.getElementById('relGrid').innerHTML = rel.map(x=>{
+      const u = window.safeImg(x.imagemUrl);
+      return `<a class="pcard" href="/produto.html?id=${x._id}">
+        <div class="foto">${u?`<img src="${u}" alt="${esc(x.nome)}" loading="lazy" onerror="this.remove()">`:'<i class="fa-solid fa-tv"></i>'}</div>
+        <div class="body"><h3>${esc(x.nome)}</h3><div class="now">${money(x.preco)}</div></div></a>`;
+    }).join('');
+  }catch{}
+}
+load();updateCart();updateAuth();window.renderSocial('socialFooter');
+</script>
+</body>
+</html>

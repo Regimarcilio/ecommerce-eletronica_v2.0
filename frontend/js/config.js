@@ -127,4 +127,39 @@
     localStorage.setItem('cart', JSON.stringify(cart));
     return cart;
   };
+  // Destino do nome do usuário: admin -> dashboard, cliente -> minha conta
+  window.roleHome = function () {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return u.role === 'admin' ? '/dashboard.html' : '/minha-conta.html';
+    } catch { return '/minha-conta.html'; }
+  };
+  window.userLink = function () {
+    let nome = '', role = '';
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      nome = String(u.nome || '').split(' ')[0]; role = u.role || '';
+    } catch {}
+    if (!nome) return '';
+    const dest = role === 'admin' ? '/dashboard.html' : '/minha-conta.html';
+    const label = role === 'admin' ? 'Dashboard' : 'Minha conta';
+    return `<a href="${dest}" title="${window.escapeHtml(label)}" style="font-size:.85rem;color:var(--mut,#9aa4c7)"><i class="fa-solid fa-user"></i> ${window.escapeHtml(nome)}</a>`;
+  };
+  // Redes sociais do footer (vindas do painel admin; esconde as vazias)
+  window.renderSocial = async function (elId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const ICONS = { instagram: 'fa-instagram', facebook: 'fa-facebook-f', youtube: 'fa-youtube', tiktok: 'fa-tiktok' };
+    try {
+      const r = await fetch(window.API_BASE + '/config/loja/public');
+      const d = await r.json();
+      const redes = (d.success && d.config && d.config.redesSociais) || {};
+      const links = Object.keys(ICONS).filter((k) => redes[k]).map((k) => {
+        let href = String(redes[k]).trim();
+        if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
+        return `<a href="${window.escapeHtml(href)}" target="_blank" rel="noopener" aria-label="${k}" style="font-size:1.15rem;color:var(--mut,#9aa4c7);margin-right:16px"><i class="fa-brands ${ICONS[k]}"></i></a>`;
+      });
+      if (links.length) el.innerHTML = links.join('');
+    } catch { /* footer sem sociais */ }
+  };
 })();

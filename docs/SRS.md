@@ -33,9 +33,11 @@ Admin bootstrap via `ADMIN_*`; `SETTINGS_KEY` (64 hex) p/ cifrar segredos do das
 
 ### 3.1 Catálogo
 - RF-001: listar categorias ativas com ícone e paginação.
-- RF-002: listar produtos ativos com paginação (`page/limit`, meta `total/pages`), filtro por categoria e busca por nome/SKU.
+- RF-002: listar produtos ativos com paginação (`page/limit`, meta `total/pages`), filtros por categoria, `tipoPlaca` (PRINCIPAL/FONTE/TCOM), `marca`, `modeloTV` e busca `q` (nome/SKU/modelo).
 - RF-003: exibir ficha (título, descrição, foto URL ou ícone, valor, estoque) e badge de disponibilidade.
+- RF-003a: **página de detalhe** (`produto.html?id=`): ficha completa (preço, PIX, parcelas, peso, dimensões, tipo/marca/modelo, SKU, estoque), seletor de quantidade, adicionar/comprar agora e relacionados do mesmo tipo.
 - RF-004: carrossel de `destaque` (máx 5, oculto se vazio) na landing PlacaShop.
+- RF-004a: **carrossel coverflow PlacaCerta**: card central em destaque, autoplay com progresso, arraste, setas/dots/teclado; centralizado com respiro lateral; em mobile exibe só ativo + vizinhos.
 - RF-005: landing separada por ramo sobre a mesma API (prova multi-ramo).
 
 ### 3.2 Carrinho e checkout
@@ -47,6 +49,7 @@ Admin bootstrap via `ADMIN_*`; `SETTINGS_KEY` (64 hex) p/ cifrar segredos do das
 
 ### 3.3 Conta e sessão
 - RF-011: cadastro/login com JWT; senha mín 8 e hash bcrypt.
+- RF-011a: **nome clicável por papel**: admin → `/dashboard.html`; cliente → `/minha-conta.html` (sem dashboard de cliente).
 - RF-012: sessão com access 15min + refresh rotativo de uso único; logout revoga; guards renovam proativamente.
 - RF-013: recuperar senha por token único (anti-enumeração; entrega por e-mail em produção).
 - RF-014: perfil (nome/telefone; e-mail imutável), troca de senha com atual, CRUD de endereços (CEP/UF validados, isolamento por usuário).
@@ -56,9 +59,13 @@ Admin bootstrap via `ADMIN_*`; `SETTINGS_KEY` (64 hex) p/ cifrar segredos do das
 
 ### 3.5 Administração
 - RF-016: CRUD produtos (ficha completa + foto URL + destaque) e categorias (slug, ícone da `ICON_LIB` ~130/12 segmentos, também no cadastro rápido).
+- RF-016a: CRUD produtos inclui `tipoPlaca`, `marca`, `modeloTV` (modal do dashboard); listagem com coluna Tipo + compatibilidade.
 - RF-017: listar pedidos (todos), detalhe e troca de status (whitelist).
 - RF-018: listar clientes (sem senha) e ver indicadores + saúde da API (`/metrics`).
 - RF-019: página Configurações (WhatsApp, condições/pagar, segredos cifrados mascarados) + status de pareamento MP/WhatsApp.
+- RF-019a: **redes sociais configuráveis** (instagram/facebook/youtube/tiktok, URL ou vazio); exibidas no rodapé via `/config/loja/public` (ícone oculto se vazio).
+- RF-019b: **mensagens de contato**: `POST /contato` público (rate-limit 20/15min, nome/e-mail/mensagem≥10), `GET /contato` + `PUT /contato/:id/lida` admin com paginação e filtro `lida`.
+- RF-020: **página contato** (`contato.html`): canais diretos (WhatsApp via config, e-mail, horário), sociais e formulário com protocolo de retorno.
 
 ## 4. Requisitos não-funcionais
 
@@ -67,6 +74,7 @@ Admin bootstrap via `ADMIN_*`; `SETTINGS_KEY` (64 hex) p/ cifrar segredos do das
 - RNF-03 Paginação em todas as listagens com back-step e meta.
 - RNF-04 Observabilidade: logs JSON por request, contadores, `/health` público, `/api/metrics` admin.
 - RNF-05 Portabilidade: compose com healthchecks; CI (unit, E2E c/ Mongo, build, lint anti-`/api` duplicado).
+- RNF-06 Responsividade mobile: grids colapsam (catálogo 4→2→1 col), carrossel exibe só ativo + vizinhos ≤640px, nav-links ocultos com CTA preservado, formulários em coluna única, tabelas admin com scroll horizontal.
 
 ## 5. Regras de negócio (resumo; íntegra no SDS §13)
 
@@ -86,4 +94,7 @@ RN01 e-mail único · RN02 hash · RN03 novo usuário `user` · RN04 admin boots
 | RF-014 | `/auth/me`, `/password`, `/enderecos` | minha-conta | e2e-01/03 |
 | RF-016 | `/produtos`, `/categorias` | dashboard | e2e-02 |
 | RF-019 | `/config/*` | dashboard config, checkout | e2e-06 |
+| RF-019a | `/config/loja` (PUT) + `/config/loja/public` | dashboard config, rodapés | e2e-11 |
+| RF-019b/RF-020 | `POST /contato`, `GET/PUT /contato` | contato.html, dashboard | e2e-11 |
+| RF-003a | `GET /produtos/:id` | produto.html | (manual) |
 | RF-004 | (filtro client) | placas | unit carrossel |

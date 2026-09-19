@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contato | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  background-image:radial-gradient(800px 420px at 85% -10%,rgba(255,138,0,.12),transparent 60%)}
+h1,h2{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.45rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:36px;height:36px;border-radius:11px;background:var(--grad);display:grid;place-items:center;color:#1a1000;font-size:1.05rem}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.95rem;padding:14px 28px;border-radius:999px;background:var(--grad);color:#1a1000;transition:.22s;font-family:'Inter'}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,138,0,.45)}
+.btn:disabled{opacity:.5;cursor:wait;transform:none}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:1rem}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+.hero{text-align:center;padding:64px 0 36px}
+.hero .kicker{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);background:rgba(255,178,36,.1);border:1px solid rgba(255,178,36,.3);padding:7px 16px;border-radius:999px;margin-bottom:18px}
+.hero h1{font-size:clamp(2rem,4.5vw,3rem);letter-spacing:-1px;margin-bottom:12px}
+.hero h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--mut)}
+.grid{display:grid;grid-template-columns:1fr 1.3fr;gap:24px;padding-bottom:72px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:36px}
+.card h2{font-size:1.2rem;margin-bottom:20px}
+.chan{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line)}
+.chan:last-child{border:none}
+.chan .ic{width:44px;height:44px;border-radius:13px;background:rgba(255,178,36,.12);color:var(--amber);display:grid;place-items:center;font-size:1.05rem;flex:none}
+.chan b{display:block;font-size:.92rem}
+.chan span{font-size:.85rem;color:var(--mut)}
+#socialBox{margin-top:18px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.72rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.field input,.field textarea,.field select{width:100%;background:#0b1128;border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--txt);font-size:.95rem;outline:none;font-family:'Inter'}
+.field textarea{min-height:130px;resize:vertical}
+.field input:focus,.field textarea:focus{border-color:var(--amber)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.alertbox{border-radius:12px;padding:12px 15px;margin-bottom:16px;font-size:.87rem;display:none}
+.alertbox.err{display:block;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.4);color:#fca5a5}
+.alertbox.ok{display:block;background:rgba(110,231,183,.1);border:1px solid rgba(110,231,183,.35);color:#6ee7b7}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 24px}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.frow{grid-template-columns:1fr}.nav-links{display:none}}
+</style>
+</head>
+<body>
+<div class="announce"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 100 &nbsp;·&nbsp; 5% OFF no PIX</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="/placas.html">Início</a>
+      <a href="/placas.html#tipos">Tipos de placa</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
+      <a href="/contato.html">Contato</a>
+      <a href="/index.html">Loja completa</a>
+    </nav>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap hero">
+  <span class="kicker"><i class="fa-solid fa-headset"></i> Suporte técnico</span>
+  <h1>Fale com <span>a gente.</span></h1>
+  <p>Dúvida de compatibilidade, garantia ou pedido? Respondemos rápido.</p>
+</div>
+
+<div class="wrap grid">
+  <div class="card">
+    <h2>Canais diretos</h2>
+    <div class="chan"><div class="ic"><i class="fa-brands fa-whatsapp"></i></div><div><b>WhatsApp</b><span id="zapLine">—</span></div></div>
+    <div class="chan"><div class="ic"><i class="fa-solid fa-envelope"></i></div><div><b>E-mail</b><span>contato@placacerta.com.br</span></div></div>
+    <div class="chan"><div class="ic"><i class="fa-solid fa-clock"></i></div><div><b>Horário</b><span>Seg–Sex, 8h às 18h</span></div></div>
+    <div id="socialBox"></div>
+  </div>
+  <div class="card">
+    <h2>Envie sua mensagem</h2>
+    <div id="cAlert" class="alertbox"></div>
+    <div class="frow">
+      <div class="field"><label>Nome *</label><input id="cNome" maxlength="120" placeholder="Seu nome"></div>
+      <div class="field"><label>E-mail *</label><input id="cEmail" type="email" maxlength="160" placeholder="seu@email.com"></div>
+    </div>
+    <div class="field"><label>Assunto</label>
+      <select id="cAssunto">
+        <option value="">Selecione...</option>
+        <option>Compatibilidade de placa</option>
+        <option>Garantia / troca</option>
+        <option>Dúvida sobre pedido</option>
+        <option>Outro assunto</option>
+      </select>
+    </div>
+    <div class="field"><label>Mensagem *</label><textarea id="cMsg" maxlength="5000" placeholder="Descreva o modelo da TV e o defeito..."></textarea></div>
+    <button class="btn" id="cBtn" onclick="enviar()"><i class="fa-solid fa-paper-plane"></i> Enviar mensagem</button>
+  </div>
+</div>
+
+<footer class="site">
+  <div class="wrap">
+    <div id="socialFooter" style="margin-bottom:18px"></div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
+  </div>
+</footer>
+
+<script src="js/config.js?v=3"></script>
+<script>
+const API = window.API_BASE;
+function alertBox(msg, ok){
+  const el = document.getElementById('cAlert');
+  el.className = 'alertbox ' + (ok ? 'ok' : 'err');
+  el.textContent = String(msg ?? '');
+}
+async function enviar(){
+  const btn = document.getElementById('cBtn');
+  const body = {
+    nome: document.getElementById('cNome').value.trim(),
+    email: document.getElementById('cEmail').value.trim(),
+    assunto: document.getElementById('cAssunto').value,
+    mensagem: document.getElementById('cMsg').value.trim()
+  };
+  if (!body.nome) return alertBox('Informe seu nome', false);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return alertBox('E-mail inválido', false);
+  if (!body.mensagem || body.mensagem.length < 10) return alertBox('Mensagem muito curta (mín. 10 caracteres)', false);
+  btn.disabled = true;
+  try {
+    const r = await fetch(API + '/contato', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (r.ok && d.success) {
+      alertBox('Mensagem enviada! Protocolo ' + d.protocolo.slice(-6).toUpperCase() + '. Retornamos em breve.', true);
+      document.getElementById('cMsg').value = '';
+    } else alertBox(d.message || 'Erro ao enviar', false);
+  } catch { alertBox('Erro de conexão. Tente novamente.', false); }
+  btn.disabled = false;
+}
+async function boot(){
+  try{
+    const c = JSON.parse(localStorage.getItem('cart')||'[]');
+    document.getElementById('cartCount').textContent = c.reduce((s,i)=>s+(Number(i.quantity)||0),0);
+  }catch{}
+  document.getElementById('authLink').innerHTML = window.userLink() || '<a href="/auth.html" class="btn" style="padding:9px 18px">Entrar</a>';
+  try{
+    const r = await fetch(API + '/config/loja/public'); const d = await r.json();
+    const zap = d.success && d.config && d.config.whatsappNumero;
+    if (zap) document.getElementById('zapLine').innerHTML = `<a href="https://wa.me/${window.escapeHtml(zap)}" target="_blank" rel="noopener" style="color:var(--amber)">Chamar no WhatsApp</a>`;
+  }catch{}
+  window.renderSocial('socialBox'); window.renderSocial('socialFooter');
+}
+boot();
+</script>
+</body>
+</html>

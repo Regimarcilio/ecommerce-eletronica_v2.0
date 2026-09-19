@@ -97,9 +97,9 @@ section{padding:72px 0}
 .t-tcom .ic{background:rgba(167,139,250,.16);color:#c4b5fd}
 /* ===== coverflow carousel ===== */
 #ofertas{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
-.coverflow{position:relative;max-width:1000px;margin:0 auto;min-height:430px}
+.coverflow{position:relative;max-width:1120px;margin:0 auto;padding:10px 84px 0;min-height:440px}
 .cf-viewport{overflow:visible;display:flex;justify-content:center}
-.cf-card{flex:0 0 300px;margin:0 -42px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:26px 24px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
+.cf-card{flex:0 0 300px;margin:0 -30px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:26px 24px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
 .cf-card .foto{height:150px;display:grid;place-items:center;font-size:4rem;color:var(--amber);margin-bottom:12px}
 .cf-card .foto img{max-height:150px;max-width:100%;object-fit:contain;border-radius:12px}
 .cf-tag{position:absolute;top:16px;left:16px;font-size:.68rem;font-weight:700;letter-spacing:1px;background:var(--grad);color:#1a1000;padding:4px 12px;border-radius:99px}
@@ -191,7 +191,20 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:56px 0 2
   #finderResult{grid-template-columns:1fr}
   .fgrid{grid-template-columns:1fr 1fr}
   .nav-links{display:none}
-  .cf-card{flex-basis:260px;margin:0 -56px}
+  .nav-cta .btn{display:none}
+  .hero-stats{flex-wrap:wrap;gap:16px}
+  .model-search{flex-direction:column}
+  .model-search .btn{justify-content:center}
+  .cf-card{flex-basis:250px;margin:0 -40px}
+  .coverflow{padding:10px 0 0;min-height:410px}
+  .cf-card.off-l2,.cf-card.off-r2{display:none}
+}
+@media(max-width:640px){
+  .cf-card{flex-basis:225px;margin:0 -30px}
+  .cf-card.off-l1,.cf-card.off-r1{opacity:.3}
+  .grid{grid-template-columns:1fr}
+  section{padding:48px 0}
+  .fgrid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -208,6 +221,7 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:56px 0 2
       <a href="#catalogo">Catálogo</a>
       <a href="#finder">Achar minha placa</a>
       <a href="#faq">Dúvidas</a>
+      <a href="/contato.html">Contato</a>
     </nav>
     <div class="nav-cta">
       <a class="cart-fab" href="/cart.html" title="Carrinho"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
@@ -383,15 +397,16 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:56px 0 2
         <p style="color:var(--mut);font-size:.9rem;max-width:280px">A placa exata para a sua TV voltar a ligar. Principal, fonte e T-Con testadas.</p>
       </div>
       <div><h4>Comprar</h4><a href="#tipos">Placa principal</a><a href="#tipos">Placa fonte</a><a href="#tipos">Placa T-Con</a><a href="#catalogo">Catálogo</a></div>
-      <div><h4>Ajuda</h4><a href="#finder">Achar minha placa</a><a href="#faq">Dúvidas</a><a href="/cart.html">Carrinho</a><a href="/index.html">Loja completa</a></div>
+      <div><h4>Ajuda</h4><a href="#finder">Achar minha placa</a><a href="#faq">Dúvidas</a><a href="/contato.html">Contato</a><a href="/cart.html">Carrinho</a><a href="/index.html">Loja completa</a></div>
       <div><h4>Conta</h4><a href="/auth.html">Entrar</a><a href="/pedidos.html">Meus pedidos</a><a href="/minha-conta.html">Minha conta</a></div>
     </div>
+    <div id="socialFooter" style="margin-bottom:18px"></div>
     <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span>Principal · Fonte · T-Con</span></div>
   </div>
 </footer>
 
 <div id="toast"></div>
-<script src="js/config.js?v=2"></script>
+<script src="js/config.js?v=3"></script>
 <script>
 const API = window.API_BASE;
 const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
@@ -412,10 +427,8 @@ function updateCart(){
   document.getElementById('cartCount').textContent=c.reduce((s,i)=>s+(Number(i.quantity)||0),0);}catch{}
 }
 function updateAuth(){
-  const u=JSON.parse(localStorage.getItem('user')||'{}');
-  document.getElementById('authLink').innerHTML=u.nome
-    ? `<span style="font-size:.85rem;color:var(--mut)"><i class="fa-solid fa-user"></i> ${esc(u.nome.split(' ')[0])}</span>`
-    : `<a href="/auth.html" class="btn btn-ghost" style="padding:9px 18px">Entrar</a>`;
+  document.getElementById('authLink').innerHTML = window.userLink()
+    || `<a href="/auth.html" class="btn btn-ghost" style="padding:9px 18px">Entrar</a>`;
 }
 function foto(p,icon){const u=window.safeImg(p.imagemUrl);
   return u?`<img src="${u}" alt="${esc(p.nome)}" loading="lazy" onerror="this.remove()">`:`<i class="fa-solid ${p.tipoPlaca&&TIPO_ICON[p.tipoPlaca]?'fa-solid '+TIPO_ICON[p.tipoPlaca]:'fa-tv'}"></i>`;}
@@ -464,13 +477,14 @@ function cfBuild(items){
   track.innerHTML=items.map((p,i)=>`
     <article class="cf-card" data-i="${i}">
       <span class="cf-tag">OFERTA</span>
-      <div class="foto">${foto(p)}</div>
+      <a href="/produto.html?id=${p._id}" style="display:block"><div class="foto">${foto(p)}</div></a>
       <div class="ptype" style="margin-bottom:6px">${esc(TIPO_LABEL[p.tipoPlaca]||'')}</div>
-      <h3>${esc(p.nome)}</h3>
+      <h3><a href="/produto.html?id=${p._id}">${esc(p.nome)}</a></h3>
       <div class="compat">${compat(p)}</div>
       <div class="now">${money(p.preco)}</div>
       <div class="parc">${p.parcela?`${p.parcela.n}x de ${money(p.parcela.valor)} · `:''}${p.precoPix?money(p.precoPix)+' no PIX':''}</div>
       <button class="btn btn-fire" onclick="buy('${p._id}')"><i class="fa-solid fa-cart-plus"></i> Adicionar</button>
+      <div style="margin-top:10px"><a href="/produto.html?id=${p._id}" style="font-size:.82rem;color:var(--cyan)">Ver detalhes <i class="fa-solid fa-arrow-right"></i></a></div>
     </article>`).join('');
   document.getElementById('cfDots').innerHTML=items.map((_,i)=>
     `<button aria-label="Ir para ${i+1}" onclick="cfGo(${i})"></button>`).join('');
@@ -528,10 +542,10 @@ async function loadGrid(){
     catalog=(d.success&&d.produtos)||[];pages=d.pages||1;
     box.innerHTML=catalog.length?catalog.map(p=>`
       <article class="pcard">
-        <div class="foto">${foto(p)}</div>
+        <a href="/produto.html?id=${p._id}" style="display:block"><div class="foto">${foto(p)}</div></a>
         <div class="body">
           <span class="ptype">${esc(TIPO_LABEL[p.tipoPlaca]||'Peça')}</span>
-          <h3>${esc(p.nome)}</h3>
+          <h3><a href="/produto.html?id=${p._id}">${esc(p.nome)}</a></h3>
           <div class="compat">${compat(p)}</div>
           <div class="price-row"><b>${money(p.preco)}</b></div>
           <div class="pix">${p.precoPix?money(p.precoPix)+' no PIX · ':''}${p.parcela?`${p.parcela.n}x ${money(p.parcela.valor)}`:''}</div>
@@ -574,7 +588,7 @@ function finderBuscar(){
     :'<p style="color:var(--mut);grid-column:1/-1;text-align:center">Nenhuma placa encontrada para essa combinação. Fale com o suporte.</p>';
 }
 
-boot();loadGrid();updateAuth();updateCart();
+boot();loadGrid();updateAuth();updateCart();window.renderSocial('socialFooter');
 </script>
 </body>
 </html>
