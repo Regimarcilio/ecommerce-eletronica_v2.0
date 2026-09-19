@@ -67,6 +67,20 @@ describe('e2e pagamentos + whatsapp', () => {
     assert.equal(r.status, 409);
   });
 
+  it('oauth MP: sem client configurado retorna CONFIG; grant invalido 400', async () => {
+    const url = await api('GET', '/api/pagamentos/mercadopago/oauth/url', { token: atok });
+    assert.ok([200, 400].includes(url.status));
+    if (url.status === 400) assert.match(url.data.message, /MP_CLIENT_ID/);
+    assert.equal((await api('GET', '/api/pagamentos/mercadopago/oauth/url', { token: utok })).status, 403);
+    const bad = await api('POST', '/api/pagamentos/mercadopago/oauth/token', { token: atok, body: { grant_type: 'x' } });
+    assert.equal(bad.status, 400);
+    const semCode = await api('POST', '/api/pagamentos/mercadopago/oauth/token', { token: atok, body: { grant_type: 'authorization_code' } });
+    assert.ok([400].includes(semCode.status));
+    const st = await api('GET', '/api/pagamentos/mercadopago/oauth/status', { token: atok });
+    assert.equal(st.status, 200);
+    assert.equal(typeof st.data.oauth.conectado, 'boolean');
+  });
+
   it('auditoria admin lista intents com filtros; dono recebe 403', async () => {
     assert.equal((await api('GET', '/api/pagamentos', {})).status, 401);
     assert.equal((await api('GET', '/api/pagamentos', { token: utok })).status, 403);

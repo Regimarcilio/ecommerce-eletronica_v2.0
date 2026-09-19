@@ -25,6 +25,10 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || true;
 // Segredos de integracao: SOMENTE .env (nunca via API/respostas)
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || '';
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET || '';
+// Mercado Pago OAuth (docs/Create and refresh token.md): client_id/secret p/ authorization_code
+const MP_CLIENT_ID = process.env.MP_CLIENT_ID || '';
+const MP_CLIENT_SECRET = process.env.MP_CLIENT_SECRET || '';
+const MP_REDIRECT_URI = process.env.MP_REDIRECT_URI || '';
 // PagSeguro (PagBank): token via .env ou segredos cifrados do painel admin
 const PGS_TOKEN_ENV = process.env.PGS_TOKEN || '';
 const PGS_EMAIL_ENV = process.env.PGS_EMAIL || '';
@@ -792,11 +796,27 @@ app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) =>
 // ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
 // Referência oficial da API: https://www.mercadopago.com.br/developers/pt/reference
 // (preferences, payments e webhooks usados abaixo seguem essa referência)
-const mpConfigurado = () => !!MP_ACCESS_TOKEN;
+const mpRedirectUri = () => MP_REDIRECT_URI || `${FRONT_URL}/dashboard.html`;
+async function mpAccessToken() {
+    if (MP_ACCESS_TOKEN) return MP_ACCESS_TOKEN;
+    try {
+        const s = await Settings.findOne({ chave: 'loja' }).select('segredos').lean();
+        const blob = s?.segredos?.get ? s.segredos.get('mp_access_token') : s?.segredos?.['mp_access_token'];
+        if (blob && blob !== '***') {
+            try { return decifraSegredo(blob); } catch { return ''; }
+        }
+    } catch { /* sem token: mock */ }
+    return '';
+}
+async function mpAtivoReal() {
+    if (MP_ACCESS_TOKEN) return true;
+    return !!(await mpAccessToken());
+}
 const evoConfigurado = () => !!(EVO_API_URL && EVO_APIKEY);
 
 async function mpCriarPreferencia(pedido, email) {
-    if (!mpConfigurado()) {
+    const token = await mpAccessToken();
+    if (!token) {
         return { modo: 'mock', id: `mock-pref-${pedido.numero}`, init_point: `${FRONT_URL}/pedidos.html?mock=${pedido.numero}` };
     }
     const ctrl = new AbortController();
@@ -808,7 +828,7 @@ async function mpCriarPreferencia(pedido, email) {
         const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
             method: 'POST',
             signal: ctrl.signal,
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({
                 items: pedido.items.map((i) => ({ title: String(i.nome || 'Item').slice(0, 100), quantity: Number(i.quantity) || 1, unit_price: Number(i.preco) || 0, currency_id: 'BRL' })),
                 payer: { email },
@@ -839,14 +859,35 @@ function verificaAssinaturaMP(req) {
 }
 
 async function mpBuscarPagamento(paymentId) {
+    const token = await mpAccessToken();
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10000);
     try {
         const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
             signal: ctrl.signal,
-            headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` }
+            headers: { Authorization: `Bearer ${token}` }
         });
         return r.json();
+    } finally { clearTimeout(t); }
+}
+
+// ---- Mercado Pago OAuth (docs/Create and refresh token.md) ----
+// Troca code/refresh por access_token e guarda cifrado nos segredos (nunca expõe)
+async function mpTrocarToken(corpo) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try {
+        const r = await fetch('https://api.mercadopago.com/oauth/token', {
+            method: 'POST',
+            signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(corpo)
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            throw Object.assign(new Error(`Mercado Pago ${r.status}: ${data.error_description || data.error || data.message || 'falha OAuth'}`), { statusCode: 502, code: 'UPSTREAM' });
+        }
+        return data;
     } finally { clearTimeout(t); }
 }
 
@@ -1101,6 +1142,74 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
     return res.json({ success: true });
 }));
 
+// Admin: URL de autorização OAuth do Mercado Pago (conecta a conta do lojista)
+app.get('/api/pagamentos/mercadopago/oauth/url', auth, admin, asyncHandler(async (req, res) => {
+    if (!MP_CLIENT_ID) return err(res, 400, 'MP_CLIENT_ID não configurado no .env', 'CONFIG');
+    const state = crypto.randomBytes(16).toString('hex');
+    const url = `https://auth.mercadopago.com.br/authorization?client_id=${encodeURIComponent(MP_CLIENT_ID)}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(mpRedirectUri())}&state=${state}`;
+    res.json({ success: true, url, redirectUri: mpRedirectUri() });
+}));
+
+// Admin: conclui OAuth (authorization_code) ou renova (refresh_token); guarda cifrado
+app.post('/api/pagamentos/mercadopago/oauth/token', auth, admin, asyncHandler(async (req, res) => {
+    const b = req.body || {};
+    const grant = String(b.grant_type || 'authorization_code');
+    if (!['authorization_code', 'refresh_token', 'client_credentials'].includes(grant)) {
+        return err(res, 400, 'grant_type inválido (authorization_code/refresh_token/client_credentials)', 'VALIDATION');
+    }
+    if (!MP_CLIENT_ID || !MP_CLIENT_SECRET) return err(res, 400, 'MP_CLIENT_ID/MP_CLIENT_SECRET não configurados no .env', 'CONFIG');
+    const corpo = { client_id: MP_CLIENT_ID, client_secret: MP_CLIENT_SECRET, grant_type: grant };
+    if (grant === 'authorization_code') {
+        if (!b.code) return err(res, 400, 'code obrigatório (válido por 10 min)', 'VALIDATION');
+        corpo.code = b.code;
+        corpo.redirect_uri = mpRedirectUri();
+    }
+    if (grant === 'refresh_token') {
+        if (!b.refresh_token) return err(res, 400, 'refresh_token obrigatório', 'VALIDATION');
+        corpo.refresh_token = b.refresh_token;
+    }
+    let data;
+    try {
+        data = await mpTrocarToken(corpo);
+    } catch (error) {
+        if (error.statusCode) return err(res, error.statusCode, error.message, error.code);
+        throw error;
+    }
+    if (!data.access_token) return err(res, 502, 'Resposta OAuth sem access_token', 'UPSTREAM');
+    const s = await getSettings();
+    try {
+        s.segredos.set('mp_access_token', cifraSegredo(data.access_token));
+        if (data.refresh_token) s.segredos.set('mp_refresh_token', cifraSegredo(data.refresh_token));
+        if (data.public_key) s.mpPublicKey = String(data.public_key).slice(0, 200);
+        if (data.user_id) s.segredos.set('mp_user_id', cifraSegredo(String(data.user_id)));
+        if (data.expires_in) s.segredos.set('mp_token_expira_em', cifraSegredo(String(Date.now() + Number(data.expires_in) * 1000)));
+        await s.save();
+    } catch (error) { return err(res, error.statusCode || 500, error.message, error.code || 'INTERNAL'); }
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'mp_oauth_conectado', por: req.usuarioId, user_id: data.user_id || '' }));
+    res.json({ success: true, user_id: data.user_id || null, live_mode: data.live_mode ?? null, expires_in: data.expires_in || null });
+}));
+
+// Admin: status da conexão OAuth (sem expor segredos)
+app.get('/api/pagamentos/mercadopago/oauth/status', auth, admin, asyncHandler(async (req, res) => {
+    const s = await getSettings();
+    const keys = [...(s.segredos || new Map()).keys()];
+    let expiraEm = null;
+    try {
+        const blob = s.segredos?.get ? s.segredos.get('mp_token_expira_em') : s.segredos?.['mp_token_expira_em'];
+        if (blob && blob !== '***') expiraEm = Number(decifraSegredo(blob)) || null;
+    } catch { /* ignora */ }
+    res.json({
+        success: true,
+        oauth: {
+            viaEnv: !!MP_ACCESS_TOKEN,
+            conectado: !!MP_ACCESS_TOKEN || keys.includes('mp_access_token'),
+            temRefresh: keys.includes('mp_refresh_token'),
+            userIdConfigurado: keys.includes('mp_user_id'),
+            expiraEm
+        }
+    });
+}));
+
 // Auditoria de pagamentos (admin): lista intents com pedido, provedor, modo e status
 app.get('/api/pagamentos', auth, admin, asyncHandler(async (req, res) => {
     const query = {};
@@ -1303,7 +1412,7 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
             mpPublicKey: s.mpPublicKey || '',
-            mpAtivo: mpConfigurado(),
+            mpAtivo: await mpAtivoReal(),
             pagseguroAtivo: pgsAtivo,
             whatsappNumero: s.whatsappNumero || '',
             emailLoja: s.emailLoja || '',
