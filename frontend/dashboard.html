@@ -100,6 +100,7 @@
         <div class="menu-item" onclick="loadCategorias()"><i class="fas fa-tags"></i> <span>Categorias</span></div>
         <div class="menu-item" onclick="loadPedidos()"><i class="fas fa-shopping-cart"></i> <span>Pedidos</span></div>
         <div class="menu-item" onclick="loadClientes()"><i class="fas fa-users"></i> <span>Clientes</span></div>
+        <div class="menu-item" onclick="loadMensagens()"><i class="fas fa-envelope-open-text"></i> <span>Mensagens</span> <span class="badge rounded-pill ms-1" id="msgBadge" style="background:var(--grad);color:#1a1000;display:none">0</span></div>
         <div class="menu-item" onclick="loadConfiguracoes()"><i class="fas fa-cog"></i> <span>Configurações</span></div>
     </div>
     <div class="main-content">
@@ -219,12 +220,13 @@
         // Paginacao das tabelas admin (a API retorna page/limit/total/pages)
         const PG_LIMIT = 10;
         const pgProd = { page: 1, pages: 1 }, pgCat = { page: 1, pages: 1 },
-              pgPed = { page: 1, pages: 1 }, pgCli = { page: 1, pages: 1 };
+              pgPed = { page: 1, pages: 1 }, pgCli = { page: 1, pages: 1 }, pgMsg = { page: 1, pages: 1 };
+        let msgFiltro = '';
         function pagerNav(prefix, st) {
             return `<nav class="d-flex justify-content-center align-items-center gap-3 mt-3"><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',-1)" ${st.page <= 1 ? 'disabled' : ''}>← Anterior</button><span class="text-muted small">Página ${st.page} de ${st.pages}</span><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',1)" ${st.page >= st.pages ? 'disabled' : ''}>Próxima →</button></nav>`;
         }
         window.mudarPaginaTab = function(prefix, delta) {
-            const map = { prod: [pgProd, loadProdutos], cat: [pgCat, loadCategorias], ped: [pgPed, loadPedidos], cli: [pgCli, loadClientes] };
+            const map = { prod: [pgProd, loadProdutos], cat: [pgCat, loadCategorias], ped: [pgPed, loadPedidos], cli: [pgCli, loadClientes], msg: [pgMsg, loadMensagens] };
             const entry = map[prefix];
             if (!entry) return;
             const next = entry[0].page + delta;
@@ -703,6 +705,67 @@
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar clientes</div>'; }
         }
         
+        // ==================== MENSAGENS (contato do site) ====================
+        async function loadMensagens() {
+            document.getElementById('pageTitle').innerHTML = 'Mensagens';
+            document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+            try {
+                const q = `${API}/contato?page=${pgMsg.page}&limit=${PG_LIMIT}${msgFiltro ? `&lida=${msgFiltro}` : ''}`;
+                const res = await fetch(q, { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success) { showToast(data.message || 'Erro ao carregar', true); return; }
+                const list = data.mensagens || [];
+                if (list.length === 0 && pgMsg.page > 1) { pgMsg.page--; loadMensagens(); return; }
+                pgMsg.pages = data.pages || 1;
+                let html = `<div class="data-card"><div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"><h4>Mensagens (${data.total ?? list.length})</h4>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn ${msgFiltro === '' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('')">Todas</button>
+                        <button class="btn ${msgFiltro === 'false' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('false')">Não lidas</button>
+                        <button class="btn ${msgFiltro === 'true' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('true')">Lidas</button>
+                    </div></div>`;
+                if (!list.length) {
+                    html += '<p class="text-muted">Nenhuma mensagem.</p>';
+                } else {
+                    html += '<div class="table-responsive"><table class="table table-dark"><thead><tr><th>Data</th><th>Nome</th><th>E-mail</th><th>Assunto</th><th>Mensagem</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    for (const m of list) {
+                        html += `<tr>
+                            <td class="small">${m.createdAt ? new Date(m.createdAt).toLocaleString('pt-BR') : '-'}</td>
+                            <td>${window.escapeHtml(m.nome || '-')}</td>
+                            <td class="small">${window.escapeHtml(m.email || '-')}</td>
+                            <td>${window.escapeHtml(m.assunto || '—')}</td>
+                            <td class="small" style="max-width:280px">${window.escapeHtml(window.truncate(m.mensagem || '', 140))}</td>
+                            <td>${m.lida ? '<span class="badge-success">lida</span>' : '<span class="badge-warning">nova</span>'}</td>
+                            <td>${m.lida ? '' : `<button class="btn-view" onclick="marcarLida('${m._id}')">Marcar lida</button>`}</td>
+                        </tr>`;
+                    }
+                    html += '</tbody></table></div>' + pagerNav('msg', pgMsg);
+                }
+                html += '</div>';
+                document.getElementById('content').innerHTML = html;
+            } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar mensagens</div>'; }
+        }
+
+        function filtrarMsg(v) { msgFiltro = v; pgMsg.page = 1; loadMensagens(); }
+
+        async function marcarLida(id) {
+            try {
+                const res = await fetch(`${API}/contato/${id}/lida`, { method: 'PUT', headers: getHeaders() });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Mensagem marcada como lida'); loadMensagens(); atualizaMsgBadge(); }
+                else showToast(data.message || 'Erro', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+
+        async function atualizaMsgBadge() {
+            try {
+                const res = await fetch(`${API}/contato?lida=false&limit=1`, { headers: getHeaders() });
+                const data = await res.json();
+                const n = (data.success && data.total) || 0;
+                const b = document.getElementById('msgBadge');
+                if (b) { b.style.display = n ? '' : 'none'; b.textContent = n; }
+            } catch { /* best-effort */ }
+        }
+
         // ==================== CONFIGURACOES ====================
         async function loadConfiguracoes() {
             document.getElementById('pageTitle').innerHTML = 'Configurações';
@@ -831,6 +894,7 @@
         }
 
         loadDashboard();
+        atualizaMsgBadge();
     </script>
 </body>
 </html>
