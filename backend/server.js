@@ -860,29 +860,62 @@ async function pgsCriarCobranca(pedido, email) {
     if (!token) {
         return { modo: 'mock', orderId: `mock-pgs-${pedido.numero}`, qrText: '', init_point: `${FRONT_URL}/pedidos.html?mock=${pedido.numero}` };
     }
-    // Orders API: cobra o total em centavos via PIX QR (sem expor dados do cliente)
+    // Orders API oficial (PagBank): https://developer.pagbank.com.br/reference/orders
+    // Cobra o total em centavos via PIX QR; CPF/telefone aumentam a aprovação
+    const soDigitos = (v) => String(v || '').replace(/\D/g, '');
+    const cpf = soDigitos(pedido.cliente?.cpf);
+    if (!/^\d{11}$/.test(cpf) && !/^\d{14}$/.test(cpf)) {
+        throw Object.assign(new Error('Informe o CPF/CNPJ para pagar com PagSeguro'), { statusCode: 400, code: 'VALIDATION' });
+    }
+    const fone = soDigitos(pedido.cliente?.telefone);
+    const customer = {
+        name: String(pedido.cliente?.nome || 'Cliente').slice(0, 100),
+        email: String(email || pedido.cliente?.email || '').slice(0, 100),
+        tax_id: cpf
+    };
+    if (fone.length >= 10) {
+        customer.phones = [{
+            country: '55',
+            area: fone.length === 11 || fone.length === 10 ? fone.slice(0, 2) : fone.slice(0, 2),
+            number: fone.slice(2),
+            type: 'MOBILE'
+        }];
+    }
+    // PagSeguro exige URL publica https p/ webhook; local/mock: omite (polling cobre)
+    const pubUrl = String(process.env.API_PUBLIC_URL || '');
+    const notifUrls = /^https:\/\//.test(pubUrl) ? [`${pubUrl.replace(/\/$/, '')}/api/pagamentos/pagseguro/webhook`] : undefined;
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 12000);
     try {
+        const corpo = {
+            reference_id: String(pedido._id).slice(0, 64),
+            customer,
+            items: pedido.items.map((i) => ({
+                reference_id: String(i.produtoId || i.nome || '').slice(0, 64),
+                name: String(i.nome || 'Item').slice(0, 100),
+                quantity: Number(i.quantity) || 1,
+                unit_amount: Math.round((Number(i.preco) || 0) * 100)
+            })),
+            qr_codes: [{ amount: { value: Math.round(Number(pedido.total) * 100) }, expiration_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString() }]
+        };
+        if (notifUrls) corpo.notification_urls = notifUrls;
         const r = await fetch(`${PGS_API}/orders`, {
             method: 'POST',
             signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-                reference_id: String(pedido._id),
-                customer: { name: String(pedido.cliente?.nome || 'Cliente').slice(0, 100), email: String(email || pedido.cliente?.email || '').slice(0, 100) },
-                items: pedido.items.map((i) => ({ name: String(i.nome || 'Item').slice(0, 100), quantity: Number(i.quantity) || 1, unit_amount: Math.round((Number(i.preco) || 0) * 100) })),
-                qr_codes: [{ amount: { value: Math.round(Number(pedido.total) * 100) }, expiration_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString() }],
-                notification_urls: [`${process.env.API_PUBLIC_URL || `http://localhost:${PORT}`}/api/pagamentos/pagseguro/webhook`]
-            })
+            body: JSON.stringify(corpo)
         });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.message || data.error_messages?.[0]?.description || 'PagSeguro erro');
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const detalhe = data.error_messages?.[0]?.description || data.message || `HTTP ${r.status}`;
+            throw new Error(`PagSeguro ${r.status}: ${detalhe}`);
+        }
         const qr = (data.qr_codes || [])[0] || {};
         return {
             modo: 'real',
             orderId: data.id,
             qrText: qr.text || '',
+            qrExpiracao: qr.expiration_date || '',
             init_point: (data.links || []).find((l) => l.rel === 'PAY')?.href || ''
         };
     } finally { clearTimeout(t); }
@@ -1051,7 +1084,13 @@ app.post('/api/pagamentos/pagseguro/intent', auth, asyncHandler(async (req, res)
     }
     if (pedido.status !== 'pendente') return err(res, 409, 'Pedido já processado', 'STATE');
     const user = await Usuario.findById(req.usuarioId).select('email');
-    const cob = await pgsCriarCobranca(pedido, user?.email || '');
+    let cob;
+    try {
+        cob = await pgsCriarCobranca(pedido, user?.email || '');
+    } catch (error) {
+        if (error.statusCode) return err(res, error.statusCode, error.message, error.code || 'VALIDATION');
+        throw error;
+    }
     await Pagamento.findOneAndUpdate(
         { pedidoId: pedido._id },
         { $set: { provedor: 'pagseguro', pgsOrderId: cob.orderId || '', pgsQrText: cob.qrText || '', initPoint: cob.init_point || '', modo: cob.modo, status: 'criado' } },
@@ -1059,7 +1098,7 @@ app.post('/api/pagamentos/pagseguro/intent', auth, asyncHandler(async (req, res)
     );
     pedido.provedorPagamento = 'pagseguro';
     await pedido.save();
-    res.json({ success: true, orderId: cob.orderId, qrText: cob.qrText, initPoint: cob.init_point, modo: cob.modo });
+    res.json({ success: true, orderId: cob.orderId, qrText: cob.qrText, qrExpiracao: cob.qrExpiracao || '', initPoint: cob.init_point, modo: cob.modo });
 }));
 
 // Webhook PagSeguro (publico; valida token; modo teste sem segredo aceita corpo direto)

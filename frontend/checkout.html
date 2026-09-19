@@ -453,6 +453,7 @@ async function confirmarPedido() {
             localStorage.removeItem('cart');
             localStorage.removeItem('checkoutCart');
             window.__lastPedidoId = data.pedido._id || data.pedido.id;
+            window.__lastCpf = document.getElementById('cpf').value.trim();
             mostrarPagamento(data);
         } else showToast(data.message || 'Erro ao processar pedido', true);
     } catch(e) { showToast('Erro ao conectar', true); }
@@ -509,6 +510,14 @@ async function pagarAgora() {
 }
 async function pagarPagSeguro() {
     if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
+    const cpf = String(window.__lastCpf || '').replace(/\D/g, '');
+    if (cpf.length !== 11 && cpf.length !== 14) {
+        showToast('PagSeguro exige CPF/CNPJ: volte e preencha o campo CPF', true);
+        document.getElementById('formStep').style.display = '';
+        document.getElementById('payStep').style.display = 'none';
+        document.getElementById('cpf').focus();
+        return;
+    }
     try {
         const res = await fetch(API + '/pagamentos/pagseguro/intent', {
             method: 'POST', headers: window.getAuthHeaders(),
@@ -519,7 +528,7 @@ async function pagarPagSeguro() {
         if (data.qrText) {
             document.getElementById('pgsQrBox').style.display = '';
             document.getElementById('pgsQrText').value = data.qrText;
-            showToast(`Cobrança PagSeguro gerada (${data.modo})!`);
+            showToast(`Cobrança PagSeguro gerada (${data.modo})!${data.qrExpiracao ? ' Válida até ' + new Date(data.qrExpiracao).toLocaleString('pt-BR') : ''}`);
         } else if (data.initPoint) window.location.href = data.initPoint;
         else showToast(`Cobrança gerada (${data.modo})!`, false);
     } catch(e) { showToast('Erro ao conectar', true); }

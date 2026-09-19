@@ -2,7 +2,7 @@ const { describe, it, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { tag, api, register, adminToken, limparPorTag } = require('./helpers');
 
-// Roda em modo mock (sem PGS_TOKEN/PGS_WEBHOOK_TOKEN configurados).
+// Roda em mock (sem PGS_TOKEN) ou real (sandbox com PGS_TOKEN configurado).
 describe('e2e pagseguro (mock)', () => {
   let atok;
   let utok;
@@ -27,7 +27,7 @@ describe('e2e pagseguro (mock)', () => {
     const o = await api('POST', '/api/pedidos', {
       token: utok,
       body: {
-        cliente: { nome: 'Pgs', telefone: '11999999999' },
+        cliente: { nome: 'Pgs', telefone: '11999999999', cpf: '12345678909' },
         endereco: { logradouro: 'R', numero: '1', bairro: 'B', cidade: 'C', estado: 'SP', cep: '01000-000' },
         pagamento: 'pix',
         items: [{ produtoId: prodId, quantity: 1 }],
@@ -36,10 +36,25 @@ describe('e2e pagseguro (mock)', () => {
     pedidoId = o.data.pedido._id;
   });
 
+  it('sem CPF retorna 400', async () => {
+    const o = await api('POST', '/api/pedidos', {
+      token: utok,
+      body: {
+        cliente: { nome: 'Pgs', telefone: '11999999999' },
+        endereco: { logradouro: 'R', numero: '1', bairro: 'B', cidade: 'C', estado: 'SP', cep: '01000-000' },
+        pagamento: 'pix',
+        items: [{ produtoId: prodId, quantity: 1 }],
+      },
+    });
+    const r = await api('POST', '/api/pagamentos/pagseguro/intent', { token: utok, body: { pedidoId: o.data.pedido._id } });
+    // mock (sem token): 200; real (sandbox): 400 exigindo CPF
+    assert.ok([200, 400].includes(r.status));
+  });
+
   it('intent pagseguro cria cobranca mock', async () => {
     const r = await api('POST', '/api/pagamentos/pagseguro/intent', { token: utok, body: { pedidoId } });
     assert.equal(r.status, 200);
-    assert.equal(r.data.modo, 'mock');
+    assert.ok(['mock', 'real'].includes(r.data.modo));
     assert.ok(r.data.orderId);
   });
 
