@@ -2,7 +2,19 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.4.0 — 2026-09-18 — Detalhe ubíquo, carrossel vivo, mensagens, checkout e conta
+- Links p/ `produto.html` em categoria, finder e detalhe de pedidos
+- Carrossel: 5 visíveis (bordas removidas) + sorteio aleatório a cada 5 min entre cadastrados
+- Admin: aba Mensagens (filtros todas/não lidas/lidas, marcar lida, badge de pendentes)
+- `checkout.html` no padrão PlacaCerta + etapa de pagamento dedicada (MP, WhatsApp, pedidos)
+- `minha-conta.html` no padrão (tabs e modal próprios, sem Bootstrap)
+
 ## v1.3.0 — 2026-09-18 — Detalhe, contato, sociais + mobile
+- Links p/ `produto.html` em categoria, finder e detalhe de pedidos
+- Carrossel: 5 visíveis (bordas removidas) + sorteio aleatório a cada 5 min entre cadastrados
+- Admin: aba Mensagens (filtros todas/não lidas/lidas, marcar lida, badge de pendentes)
+- `checkout.html` no padrão PlacaCerta + etapa de pagamento dedicada (MP, WhatsApp, pedidos)
+- `minha-conta.html` no padrão (tabs e modal próprios, sem Bootstrap)
 - `produto.html` (nova): ficha completa, qtd, adicionar/comprar agora, relacionados; cards da landing/loja linkam para ela
 - Nome do usuário clicável por papel (`roleHome/userLink` no config.js): admin → dashboard, cliente → minha conta
 - Carrossel coverflow centralizado com respiro lateral + modo mobile (só ativo + vizinhos ≤640px); **limitado a 5 itens, bordas ocultas**
