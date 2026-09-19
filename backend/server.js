@@ -918,7 +918,11 @@ async function pgsCriarCobranca(pedido, email) {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) {
             const detalhe = data.error_messages?.[0]?.description || data.message || `HTTP ${r.status}`;
-            throw new Error(`PagSeguro ${r.status}: ${detalhe}`);
+            // Conta de teste: comprador não pode ser o próprio lojista
+            if (/buyer email/i.test(detalhe)) {
+                throw Object.assign(new Error('E-mail do comprador não pode ser igual ao da loja: finalize com outra conta de teste'), { statusCode: 422, code: 'PGS_BUYER' });
+            }
+            throw Object.assign(new Error(`PagSeguro ${r.status}: ${detalhe}`), { statusCode: 502, code: 'UPSTREAM' });
         }
         const qr = (data.qr_codes || [])[0] || {};
         return {

@@ -511,8 +511,16 @@ async function pagarAgora() {
             body: JSON.stringify({ pedidoId: window.__lastPedidoId })
         });
         const data = await res.json();
-        if (res.ok && data.success && data.initPoint) window.location.href = data.initPoint;
-        else showToast(data.message || 'Erro ao iniciar pagamento', true);
+        if (!res.ok || !data.success) { showToast(data.message || 'Erro ao iniciar pagamento', true); return; }
+        if (data.modo === 'mock') {
+            const msg = document.getElementById('payCheckMsg');
+            msg.style.display = '';
+            msg.textContent = 'Mercado Pago em demonstração (loja sem MP_ACCESS_TOKEN). Pedido registrado — acompanhe em Meus pedidos.';
+            showToast('Modo demonstração: sem token do Mercado Pago', true);
+            return;
+        }
+        if (data.initPoint) window.location.href = data.initPoint;
+        else showToast('Resposta sem link de pagamento', true);
     } catch(e) { showToast('Erro ao conectar', true); }
 }
 async function pagarPagSeguro() {
