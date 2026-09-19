@@ -1,205 +1,248 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meus Pedidos | TechStore</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .order-card { background: #1a1a2e; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #4361ee33; transition: all 0.3s; }
-        .order-card:hover { transform: translateY(-3px); border-color: #4361ee; }
-        .status-pendente { background: #f59e0b20; color: #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-pago { background: #10b98120; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-enviado { background: #06b6d420; color: #06b6d4; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-entregue { background: #20c99720; color: #20c997; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-cancelado { background: #ef444420; color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 10px 25px; border-radius: 30px; }
-        .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
-        .modal-content { background: #0d1117; color: #fff; border: 1px solid #1f2937; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meus Pedidos | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;
+  background-image:radial-gradient(800px 400px at 85% -10%,rgba(255,138,0,.1),transparent 60%)}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px;width:100%}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.4rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#1a1000}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.88rem;padding:11px 22px;border-radius:999px;transition:.22s;font-family:'Inter'}
+.btn-fire{background:var(--grad);color:#1a1000}
+.btn-fire:hover{transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.btn-sm{padding:8px 16px;font-size:.8rem}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:1rem}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+main{flex:1;padding:44px 0 72px}
+.page-title{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.page-title i{color:var(--amber)}
+.page-title h1{font-size:1.9rem;letter-spacing:-.5px}
+.sub{color:var(--mut);font-size:.9rem;margin-bottom:28px}
+.order-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;margin-bottom:16px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start;transition:.22s}
+.order-card:hover{border-color:rgba(255,178,36,.4)}
+.order-card h3{font-size:1.05rem;margin-bottom:6px}
+.order-card .meta{font-size:.85rem;color:var(--mut);margin-bottom:4px}
+.order-card .total{font-family:'Space Grotesk';font-weight:700;font-size:1.2rem;color:var(--amber);margin-top:8px}
+.badge{display:inline-block;padding:5px 14px;border-radius:999px;font-size:.72rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.st-pendente{background:rgba(245,158,11,.14);color:#fbbf24}
+.st-pago{background:rgba(110,231,183,.12);color:#6ee7b7}
+.st-enviado{background:rgba(56,225,255,.1);color:var(--cyan)}
+.st-entregue{background:rgba(32,201,151,.12);color:#34d399}
+.st-cancelado{background:rgba(248,113,113,.12);color:#f87171}
+.pager{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:26px;font-size:.85rem;color:var(--mut)}
+.empty{text-align:center;padding:80px 20px;background:var(--card);border:1px dashed var(--line);border-radius:22px}
+.empty i{font-size:4rem;color:#3d4a7d;margin-bottom:18px}
+.empty h3{margin-bottom:8px}
+.empty p{color:var(--mut);margin-bottom:22px}
+.modal-bg{position:fixed;inset:0;background:rgba(4,6,14,.7);backdrop-filter:blur(4px);display:none;place-items:center;z-index:100;padding:20px}
+.modal-bg.open{display:grid}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px;width:100%;max-width:640px;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:18px;display:flex;gap:10px;align-items:center}
+.modal h3 i{color:var(--amber)}
+.kv{font-size:.88rem;margin-bottom:8px}
+.kv strong{color:var(--mut);font-weight:600}
+table.det{width:100%;border-collapse:collapse;font-size:.86rem;margin:14px 0}
+table.det th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--mut);padding:8px 6px;border-bottom:1px solid var(--line)}
+table.det td{padding:9px 6px;border-bottom:1px solid var(--line)}
+table.det a:hover{color:var(--amber)}
+.totals{text-align:right;font-size:.88rem;color:var(--mut)}
+.totals .grand{font-family:'Space Grotesk';font-size:1.3rem;color:var(--amber);font-weight:700;margin-top:6px}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 22px;margin-top:auto}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+@media(max-width:900px){.nav-links{display:none}}
+</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="logo" href="/placas.html"><i class="fas fa-microchip"></i> TechStore</a>
-            <a href="/minha-conta.html" class="btn btn-outline-light"><i class="fas fa-arrow-left"></i> Voltar</a>
-        </div>
+<div class="announce"><i class="fa-solid fa-box"></i>&nbsp; Acompanhe seus pedidos PlacaCerta em tempo real</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="/placas.html">Início</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
+      <a href="/contato.html">Contato</a>
     </nav>
-
-    <div class="container py-5" style="margin-top: 60px;">
-        <h2 class="mb-4"><i class="fas fa-box text-primary"></i> Meus Pedidos</h2>
-        <div id="pedidosContainer"></div>
-        <nav class="d-flex justify-content-center align-items-center gap-3 mt-4" id="pedPager" style="display:none;">
-            <button class="btn btn-outline-light btn-sm" id="pedPrev" onclick="mudarPaginaPed(-1)">← Anterior</button>
-            <span class="text-muted small" id="pedPageInfo">Página 1</span>
-            <button class="btn btn-outline-light btn-sm" id="pedNext" onclick="mudarPaginaPed(1)">Próxima →</button>
-        </nav>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
     </div>
+  </div>
+</header>
 
-    <footer class="footer">
-        <div class="container text-center"><p>&copy; 2024 TechStore - Todos os direitos reservados.</p></div>
-    </footer>
+<main class="wrap">
+  <div class="page-title"><i class="fa-solid fa-box fa-lg"></i><h1>Meus Pedidos</h1></div>
+  <p class="sub">Histórico completo: status, pagamento, entrega e valores.</p>
+  <div id="pedidosContainer"></div>
+  <nav class="pager" id="pedPager" style="display:none">
+    <button class="btn btn-ghost btn-sm" id="pedPrev" onclick="mudarPaginaPed(-1)">← Anterior</button>
+    <span id="pedPageInfo">Página 1</span>
+    <button class="btn btn-ghost btn-sm" id="pedNext" onclick="mudarPaginaPed(1)">Próxima →</button>
+  </nav>
+</main>
 
-    <div class="modal fade" id="pedidoModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-box"></i> Detalhes do Pedido</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="pedidoDetalhesBody"></div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                </div>
-            </div>
-        </div>
+<div class="modal-bg" id="pedidoModalBg" onclick="if(event.target===this)fecharDetalhes()">
+  <div class="modal">
+    <h3><i class="fa-solid fa-box"></i> Detalhes do Pedido</h3>
+    <div id="pedidoDetalhesBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="fecharDetalhes()">Fechar</button>
     </div>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js?v=2"></script>
-    <script>
-        const API = window.API_BASE;
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        let pedidoModal;
-        
-        if (!token) window.location.href = '/auth.html';
-        
-        let pedPage = 1;
-        const PED_LIMIT = 10;
-        let pedPages = 1;
+<footer class="site">
+  <div class="wrap">
+    <div id="socialFooter" style="margin-bottom:18px"></div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span><a href="/contato.html" style="color:var(--mut)">Contato</a></span></div>
+  </div>
+</footer>
 
-        function renderPedPager() {
-            const nav = document.getElementById('pedPager');
-            if (!nav) return;
-            nav.style.display = pedPages > 1 ? 'flex' : 'none';
-            document.getElementById('pedPageInfo').textContent = `Página ${pedPage} de ${pedPages}`;
-            document.getElementById('pedPrev').disabled = pedPage <= 1;
-            document.getElementById('pedNext').disabled = pedPage >= pedPages;
+<script src="js/config.js?v=3"></script>
+<script>
+const API = window.API_BASE;
+const token = localStorage.getItem('token');
+if (!token) window.location.href = '/auth.html';
+
+let pedPage = 1;
+const PED_LIMIT = 10;
+let pedPages = 1;
+
+function renderPedPager() {
+    const nav = document.getElementById('pedPager');
+    if (!nav) return;
+    nav.style.display = pedPages > 1 ? 'flex' : 'none';
+    document.getElementById('pedPageInfo').textContent = `Página ${pedPage} de ${pedPages}`;
+    document.getElementById('pedPrev').disabled = pedPage <= 1;
+    document.getElementById('pedNext').disabled = pedPage >= pedPages;
+}
+function mudarPaginaPed(delta) {
+    const next = pedPage + delta;
+    if (next < 1 || next > pedPages) return;
+    pedPage = next;
+    loadPedidos();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+async function loadPedidos() {
+    try {
+        const res = await fetch(`${API}/pedidos?page=${pedPage}&limit=${PED_LIMIT}`, { headers: window.getAuthHeaders() });
+        if (res.status === 401) {
+            const ok = await window.refreshSession();
+            if (ok) { loadPedidos(); return; }
+            window.logoutAll();
+            window.location.href = '/auth.html';
+            return;
         }
-
-        function mudarPaginaPed(delta) {
-            const next = pedPage + delta;
-            if (next < 1 || next > pedPages) return;
-            pedPage = next;
+        const data = await res.json();
+        const container = document.getElementById('pedidosContainer');
+        if (data.success && data.pedidos && data.pedidos.length > 0) {
+            pedPages = data.pages || 1;
+            container.innerHTML = data.pedidos.map(p => {
+                const numero = window.escapeHtml(p.numero);
+                const total = (Number(p.total) || 0).toFixed(2);
+                const qtd = Array.isArray(p.items) ? p.items.reduce((s, i) => s + (Number(i.quantity) || 0), 0) : 0;
+                const status = window.escapeHtml((p.status || '').toUpperCase());
+                const dataFmt = p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '-';
+                const st = window.escapeHtml(p.status || 'pendente');
+                return `
+                    <div class="order-card">
+                        <div>
+                            <h3>Pedido ${numero}</h3>
+                            <div class="meta"><i class="fa-solid fa-calendar"></i> ${dataFmt} · ${qtd} item(ns) · ${window.escapeHtml(getPaymentLabel(p.pagamento))}${p.provedorPagamento ? ' via ' + window.escapeHtml(provLabel(p.provedorPagamento)) : ''}</div>
+                            <div class="total">R$ ${total}</div>
+                        </div>
+                        <div style="text-align:right;display:flex;flex-direction:column;gap:10px;align-items:flex-end">
+                            <span class="badge st-${st}">${status}</span>
+                            <button class="btn btn-fire btn-sm" onclick="verDetalhes('${p._id}')"><i class="fa-solid fa-eye"></i> Ver Detalhes</button>
+                        </div>
+                    </div>`;
+            }).join('');
+            renderPedPager();
+        } else if (data.success && pedPage > 1) {
+            pedPage--;
             loadPedidos();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        } else {
+            document.getElementById('pedPager').style.display = 'none';
+            container.innerHTML = '<div class="empty"><i class="fa-solid fa-box-open"></i><h3>Nenhum pedido encontrado</h3><p>Que tal achar a placa exata para a sua TV?</p><a href="/placas.html" class="btn btn-fire">Começar a comprar</a></div>';
         }
-
-        async function loadPedidos() {
-            try {
-                const res = await fetch(`${API}/pedidos?page=${pedPage}&limit=${PED_LIMIT}`, { headers: window.getAuthHeaders() });
-                if (res.status === 401) {
-                    const ok = await window.refreshSession();
-                    if (ok) { loadPedidos(); return; }
-                    window.logoutAll();
-                    window.location.href = '/auth.html';
-                    return;
-                }
-                const data = await res.json();
-                const container = document.getElementById('pedidosContainer');
-
-                if (data.success && data.pedidos && data.pedidos.length > 0) {
-                    pedPages = data.pages || 1;
-                    container.innerHTML = data.pedidos.map(p => {
-                        const statusClass = getStatusClass(p.status);
-                        const numero = window.escapeHtml(p.numero);
-                        const total = (Number(p.total) || 0).toFixed(2);
-                        const qtd = Array.isArray(p.items) ? p.items.length : 0;
-                        const status = window.escapeHtml((p.status || '').toUpperCase());
-                        const dataFmt = p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '-';
-                        return `
-                            <div class="order-card">
-                                <div class="d-flex justify-content-between align-items-start flex-wrap">
-                                    <div>
-                                        <h5>Pedido: ${numero}</h5>
-                                        <p class="text-muted mb-1">Data: ${dataFmt}</p>
-                                        <p class="mb-1"><strong>Total:</strong> R$ ${total}</p>
-                                        <p><strong>Itens:</strong> ${qtd} produtos</p>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="${statusClass}">${status}</span>
-                                        <button class="btn btn-primary-custom btn-sm ms-3" onclick="verDetalhes('${p._id}')">
-                                            <i class="fas fa-eye"></i> Ver Detalhes
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                    renderPedPager();
-                } else if (data.success && pedPage > 1) {
-                    pedPage--;
-                    loadPedidos();
-                    return;
-                } else {
-                    document.getElementById('pedPager').style.display = 'none';
-                    container.innerHTML = '<div class="text-center py-5"><i class="fas fa-box-open fa-3x text-muted mb-3"></i><h4>Nenhum pedido encontrado</h4><a href="/placas.html" class="btn btn-primary-custom mt-3">Começar a comprar</a></div>';
-                }
-            } catch(e) { console.error(e); }
-        }
-
-        function getStatusClass(status) {
-            const classes = {
-                pendente: 'status-pendente',
-                pago: 'status-pago',
-                enviado: 'status-enviado',
-                entregue: 'status-entregue',
-                cancelado: 'status-cancelado'
-            };
-            return classes[status] || 'status-pendente';
-        }
-
-        function getPaymentLabel(pagamento) {
-            if (pagamento === 'pix') return 'PIX';
-            if (pagamento === 'card') return 'Cartão de Crédito';
-            if (pagamento === 'boleto') return 'Boleto Bancário';
-            return pagamento || '-';
-        }
-        
-        async function verDetalhes(id) {
-            try {
-                const res = await fetch(API + '/pedidos/' + id, { headers: window.getAuthHeaders() });
-                const data = await res.json();
-                if (!data.success || !data.pedido) return;
-                const p = data.pedido;
-                const itensHtml = (p.items || []).map(item => `
-                    <tr>
-                        <td>${item.produtoId ? `<a href="/produto.html?id=${item.produtoId}" class="text-white">${window.escapeHtml(item.nome ?? item.name ?? '-')}</a>` : window.escapeHtml(item.nome ?? item.name ?? '-')}</td>
-                        <td>${item.quantity}</td>
-                        <td>R$ ${(item.price || 0).toFixed(2)}</td>
-                        <td>R$ ${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>
-                    </tr>
-                `).join('');
-
-                document.getElementById('pedidoDetalhesBody').innerHTML = `
-                    <p><strong>Número:</strong> ${window.escapeHtml(p.numero)}</p>
-                    <p><strong>Status:</strong> <span class="${getStatusClass(p.status)}">${window.escapeHtml((p.status || '').toUpperCase())}</span></p>
-                    <p><strong>Pagamento:</strong> ${window.escapeHtml(getPaymentLabel(p.pagamento))}</p>
-                    <p><strong>Entrega:</strong> ${window.escapeHtml(p.endereco?.logradouro || '-')}, ${window.escapeHtml(p.endereco?.numero || '-')} - ${window.escapeHtml(p.endereco?.bairro || '-')}, ${window.escapeHtml(p.endereco?.cidade || '-')}/${window.escapeHtml(p.endereco?.estado || '-')}</p>
-                    <div class="table-responsive">
-                        <table class="table table-dark table-sm">
-                            <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead>
-                            <tbody>${itensHtml}</tbody>
-                        </table>
-                    </div>
-                    <div class="text-end">
-                        <p>Subtotal: R$ ${(p.subtotal || 0).toFixed(2)}</p>
-                        <p>Frete: ${p.frete === 0 ? 'Grátis' : 'R$ ' + (p.frete || 0).toFixed(2)}</p>
-                        <p>Desconto: R$ ${(p.desconto || 0).toFixed(2)}</p>
-                        <h5>Total: R$ ${(p.total || 0).toFixed(2)}</h5>
-                    </div>
-                `;
-                if (!pedidoModal) pedidoModal = new bootstrap.Modal(document.getElementById('pedidoModal'));
-                pedidoModal.show();
-            } catch(e) { console.error(e); }
-        }
-        
-        loadPedidos();
-    </script>
+    } catch(e) { console.error(e); }
+}
+function provLabel(v) {
+    if (v === 'pagseguro') return 'PagSeguro';
+    if (v === 'mercadopago') return 'Mercado Pago';
+    return v || '-';
+}
+function getPaymentLabel(pagamento) {
+    if (pagamento === 'pix') return 'PIX';
+    if (pagamento === 'card') return 'Cartão de Crédito';
+    if (pagamento === 'boleto') return 'Boleto Bancário';
+    return pagamento || '-';
+}
+function fecharDetalhes() { document.getElementById('pedidoModalBg').classList.remove('open'); }
+async function verDetalhes(id) {
+    try {
+        const res = await fetch(API + '/pedidos/' + id, { headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (!data.success || !data.pedido) return;
+        const p = data.pedido;
+        const itensHtml = (p.items || []).map(item => `
+            <tr>
+                <td>${item.produtoId ? `<a href="/produto.html?id=${item.produtoId}">${window.escapeHtml(item.nome ?? item.name ?? '-')}</a>` : window.escapeHtml(item.nome ?? item.name ?? '-')}</td>
+                <td>${item.quantity}</td>
+                <td>R$ ${(Number(item.preco ?? item.price) || 0).toFixed(2)}</td>
+                <td>R$ ${((Number(item.preco ?? item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}</td>
+            </tr>`).join('');
+        document.getElementById('pedidoDetalhesBody').innerHTML = `
+            <p class="kv"><strong>Número:</strong> ${window.escapeHtml(p.numero)}</p>
+            <p class="kv"><strong>Status:</strong> <span class="badge st-${window.escapeHtml(p.status || 'pendente')}">${window.escapeHtml((p.status || '').toUpperCase())}</span></p>
+            <p class="kv"><strong>Pagamento:</strong> ${window.escapeHtml(getPaymentLabel(p.pagamento))}${p.provedorPagamento ? ' via ' + window.escapeHtml(provLabel(p.provedorPagamento)) : ''}</p>
+            <p class="kv"><strong>Entrega:</strong> ${window.escapeHtml(p.endereco?.logradouro || '-')}, ${window.escapeHtml(p.endereco?.numero || '-')} - ${window.escapeHtml(p.endereco?.bairro || '-')}, ${window.escapeHtml(p.endereco?.cidade || '-')}/${window.escapeHtml(p.endereco?.estado || '-')} · CEP ${window.escapeHtml(p.endereco?.cep || '-')}</p>
+            <table class="det"><thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead><tbody>${itensHtml}</tbody></table>
+            <div class="totals">
+                <div>Subtotal: R$ ${(Number(p.subtotal) || 0).toFixed(2)}</div>
+                <div>Frete: ${Number(p.frete) === 0 ? 'Grátis' : 'R$ ' + (Number(p.frete) || 0).toFixed(2)}</div>
+                <div>Desconto: R$ ${(Number(p.desconto) || 0).toFixed(2)}</div>
+                <div class="grand">Total: R$ ${(Number(p.total) || 0).toFixed(2)}</div>
+            </div>`;
+        document.getElementById('pedidoModalBg').classList.add('open');
+    } catch(e) { console.error(e); }
+}
+function updateCartCount() {
+    try {
+        const cart = window.cartGet();
+        document.getElementById('cartCount').textContent = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    } catch {}
+}
+document.getElementById('authLink').innerHTML = window.userLink() || '<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>';
+loadPedidos();
+updateCartCount();
+window.renderSocial('socialFooter');
+window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
+</script>
 </body>
 </html>
