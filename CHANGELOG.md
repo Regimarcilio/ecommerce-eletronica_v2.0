@@ -2,6 +2,12 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.5.0 — 2026-09-19 — Carrinho +/-, checkout com cadastro e PagSeguro
+- Carrinho: botões −/+ funcionais via lib compartilhada (`cartStep/cartSetQty`) + delegação; mesmos controles no resumo do checkout
+- Checkout busca perfil fresco em `/auth/me` (nome, e-mail, telefone) e lista endereços do cadastro; opção "Enviar para outro endereço" + "Salvar como endereço secundário" (campo `rotulo`)
+- PagSeguro (PagBank Orders API): `POST /api/pagamentos/pagseguro/intent` (QR PIX), webhook com token, modo mock sem credenciais; tela de pagamento com abas MP/PagSeguro, copia-e-cola e "Já paguei — verificar status" (`GET /api/pagamentos/:pedidoId`)
+- 49 unit + 70 E2E verdes (novo `12-pagseguro.test.js`)
+
 ## v1.4.0 — 2026-09-18 — Detalhe ubíquo, carrossel vivo, mensagens, checkout e conta
 - Links p/ `produto.html` em categoria, finder e detalhe de pedidos
 - Carrossel: 5 visíveis (bordas removidas) + sorteio aleatório a cada 5 min entre cadastrados
