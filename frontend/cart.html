@@ -130,30 +130,37 @@ const API = window.API_BASE;
 const TIPO_LABEL = { PRINCIPAL:'Principal', FONTE:'Fonte', TCOM:'T-Con' };
 const detailCache = {};
 
-function getCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
-function saveCart(c){ localStorage.setItem('cart', JSON.stringify(c)); renderCart(); updateCartCount(); }
+function getCart(){ return window.cartGet(); }
+function saveCart(c){ window.cartSave(c); renderCart(); updateCartCount(); }
 function updateCartCount(){
-  const n = getCart().reduce((s,i)=>s+(Number(i.quantity)||0),0);
+  const n = window.cartGet().reduce((s,i)=>s+(Number(i.quantity)||0),0);
   const el = document.getElementById('cartCount'); if (el) el.textContent = n;
 }
 function updateQuantity(id, qtd){
-  qtd = parseInt(qtd, 10);
-  if (!Number.isInteger(qtd) || qtd < 1 || qtd > 99) { renderCart(); return; }
-  const cart = getCart(); const it = cart.find(i=>i.id===id);
-  if (it) { it.quantity = qtd; saveCart(cart); }
+  const before = JSON.stringify(getCart());
+  window.cartSetQty(id, qtd);
+  if (JSON.stringify(getCart()) !== before) { renderCart(); updateCartCount(); }
+  else renderCart();
 }
 function stepQty(id, d){
-  const cart = getCart(); const it = cart.find(i=>i.id===id);
-  if (!it) return;
-  const n = (Number(it.quantity)||1) + d;
-  if (n < 1) { removeFromCart(id); return; }
-  if (n > 99) return;
-  it.quantity = n; saveCart(cart);
+  window.cartStep(id, d);
+  renderCart(); updateCartCount();
 }
 function removeFromCart(id){
-  saveCart(getCart().filter(i=>i.id!==id));
+  window.cartRemove(id);
+  renderCart(); updateCartCount();
   toast('Placa removida do carrinho');
 }
+// Delegacao: botoes +/- e remover funcionam mesmo apos re-render
+document.getElementById('cartItemsList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  const act = btn.getAttribute('data-action');
+  if (act === 'inc') stepQty(id, 1);
+  else if (act === 'dec') stepQty(id, -1);
+  else if (act === 'rm') removeFromCart(id);
+});
 async function enrich(item){
   if (detailCache[item.id]) return detailCache[item.id];
   try {
@@ -193,11 +200,11 @@ async function renderCart(){
       <div>${tipo}<div class="cname">${window.escapeHtml(item.name)}</div>${comp}
         <div class="cprice">R$ ${price.toFixed(2)}</div>
         <div class="qty" style="margin-top:10px">
-          <button onclick="stepQty(${JSON.stringify(item.id)},-1)" aria-label="Diminuir">−</button>
+          <button data-action="dec" data-id="${window.escapeHtml(item.id)}" aria-label="Diminuir quantidade">−</button>
           <b>${qty}</b>
-          <button onclick="stepQty(${JSON.stringify(item.id)},1)" aria-label="Aumentar">+</button>
+          <button data-action="inc" data-id="${window.escapeHtml(item.id)}" aria-label="Aumentar quantidade">+</button>
         </div>
-        <button class="rm" onclick="removeFromCart(${JSON.stringify(item.id)})"><i class="fa-solid fa-trash"></i> Remover</button>
+        <button class="rm" data-action="rm" data-id="${window.escapeHtml(item.id)}"><i class="fa-solid fa-trash"></i> Remover</button>
       </div>
       <div class="line-total">R$ ${(price*qty).toFixed(2)}</div>
     </div>`;

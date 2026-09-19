@@ -118,14 +118,43 @@
     const s = String(v ?? '').trim();
     return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
   };
-  window.cartAdd = function (id, name, price) {
-    let cart = [];
-    try { cart = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { cart = []; }
-    const found = cart.find((i) => i.id === id);
-    if (found) found.quantity = Number(found.quantity || 0) + 1;
-    else cart.push({ id, name, price: Number(price) || 0, quantity: 1 });
+  window.cartGet = function () {
+    try { const c = JSON.parse(localStorage.getItem('cart') || '[]'); return Array.isArray(c) ? c : []; } catch { return []; }
+  };
+  window.cartSave = function (cart) {
     localStorage.setItem('cart', JSON.stringify(cart));
+    try { window.dispatchEvent(new CustomEvent('cart:change', { detail: cart })); } catch {}
     return cart;
+  };
+  window.cartAdd = function (id, name, price) {
+    const cart = window.cartGet();
+    const found = cart.find((i) => String(i.id) === String(id));
+    if (found) found.quantity = Math.min(99, Number(found.quantity || 0) + 1);
+    else cart.push({ id, name, price: Number(price) || 0, quantity: 1 });
+    return window.cartSave(cart);
+  };
+  // Passo +/- com trava 1..99; zerar remove o item. Retorna o carrinho.
+  window.cartStep = function (id, delta) {
+    const cart = window.cartGet();
+    const it = cart.find((i) => String(i.id) === String(id));
+    if (!it) return cart;
+    const n = (Number(it.quantity) || 1) + Number(delta || 0);
+    if (n < 1) return window.cartSave(cart.filter((i) => String(i.id) !== String(id)));
+    if (n > 99) return cart;
+    it.quantity = n;
+    return window.cartSave(cart);
+  };
+  window.cartSetQty = function (id, qty) {
+    const q = parseInt(qty, 10);
+    const cart = window.cartGet();
+    if (!Number.isInteger(q) || q < 1 || q > 99) return cart;
+    const it = cart.find((i) => String(i.id) === String(id));
+    if (!it) return cart;
+    it.quantity = q;
+    return window.cartSave(cart);
+  };
+  window.cartRemove = function (id) {
+    return window.cartSave(window.cartGet().filter((i) => String(i.id) !== String(id)));
   };
   // Destino do nome do usuário: admin -> dashboard, cliente -> minha conta
   window.roleHome = function () {
