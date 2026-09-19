@@ -2,6 +2,12 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.7.1 — 2026-09-19 — PagSeguro real (sandbox)
+- Credenciais reais ativadas (só `backend/.env` local, ignorado pelo git): token válido no **sandbox** (`PGS_SANDBOX=true`), 401 na produção
+- Payload alinhado à Orders API oficial: `tax_id` (CPF/CNPJ obrigatório, erro 400 claro), `phones`, `reference_id` por item, `notification_urls` só com `API_PUBLIC_URL` https (localhost é rejeitado pela API)
+- Checkout exige CPF antes de gerar cobrança PagSeguro (volta ao formulário com foco)
+- E2E `12-pagseguro` cobre modo real + caso sem CPF; **49 unit + 78 E2E verdes em modo real**
+
 ## v1.7.0 — 2026-09-19 — Mensagens com status, clientes bloqueáveis, pedidos enxutos
 - Mensagens: modal Visualizar (texto completo, auto-marca lida, responder por e-mail) + status nova/lida/respondida (`PUT /contato/:id/status`, filtro `?status=`) + filtros Todas/Não lidas/Lidas/Respondidas
 - Clientes: status ativo/inativo/bloqueado (`PUT /api/clientes/:id/status` admin, bloqueado derruba sessões e impede login) + botões Ativar/Bloquear + badges
