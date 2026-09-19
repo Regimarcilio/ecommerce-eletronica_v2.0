@@ -1,367 +1,418 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout | TechStore</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .form-card, .summary-card { background: #1a1a2e; border: 1px solid #4361ee33; border-radius: 16px; padding: 25px; margin-bottom: 20px; }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 12px 30px; border-radius: 30px; transition: all 0.3s; }
-        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 20px #4361ee66; }
-        .form-control, .form-select { background: #0a0a0f; border: 1px solid #4361ee; color: #fff; padding: 12px; }
-        .form-control:focus, .form-select:focus { background: #0a0a0f; border-color: #4cc9f0; box-shadow: none; }
-        .payment-option { padding: 15px; border: 1px solid #4361ee33; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
-        .payment-option:hover, .payment-option.selected { background: #4361ee20; border-color: #4361ee; }
-        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  background-image:radial-gradient(800px 400px at 85% -10%,rgba(255,138,0,.1),transparent 60%)}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.4rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#1a1000}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.9rem;padding:13px 24px;border-radius:999px;transition:.22s;font-family:'Inter'}
+.btn-fire{background:var(--grad);color:#1a1000;box-shadow:0 6px 26px rgba(255,138,0,.4)}
+.btn-fire:hover{transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.btn-wa{background:#22c55e;color:#06240f}
+.btn-wa:hover{filter:brightness(1.08)}
+main{padding:44px 0 72px}
+.steps{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:30px;font-size:.82rem;color:var(--mut)}
+.steps b{color:var(--amber)}
+.steps .dot{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:.75rem}
+.steps .dot.on{background:var(--grad);color:#1a1000;border-color:transparent;font-weight:700}
+.layout{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px;margin-bottom:20px}
+.card h2{font-size:1.15rem;margin-bottom:20px;display:flex;gap:10px;align-items:center}
+.card h2 i{color:var(--amber)}
+.card h3{font-size:.95rem;margin:22px 0 14px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;font-size:.78rem}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.72rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.field input,.field select,.field textarea{width:100%;background:#0b1128;border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--txt);font-size:.93rem;outline:none;font-family:'Inter'}
+.field input:focus,.field select:focus{border-color:var(--amber)}
+.f3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px}
+.payopt{display:flex;gap:14px;align-items:center;background:#0b1128;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:12px;cursor:pointer;transition:.2s}
+.payopt:hover{border-color:rgba(255,178,36,.5)}
+.payopt.sel{border-color:var(--amber);background:rgba(255,178,36,.07);box-shadow:0 0 0 3px rgba(255,178,36,.12)}
+.payopt .ic{width:46px;height:46px;border-radius:13px;background:rgba(255,178,36,.12);color:var(--amber);display:grid;place-items:center;font-size:1.2rem;flex:none}
+.payopt b{display:block;font-size:.93rem}
+.payopt small{color:var(--mut);font-size:.8rem}
+.cond{font-size:.82rem;color:var(--mut);background:rgba(56,225,255,.06);border:1px solid rgba(56,225,255,.2);border-radius:12px;padding:12px 15px;margin-top:4px}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;position:sticky;top:96px}
+.summary h2{font-size:1.1rem;margin-bottom:18px}
+.oitem{display:flex;justify-content:space-between;gap:10px;font-size:.87rem;margin-bottom:10px}
+.oitem span:first-child{color:var(--mut)}
+.srow{display:flex;justify-content:space-between;font-size:.9rem;color:var(--mut);margin-bottom:10px}
+.srow b{color:var(--txt)}
+.srow.total{border-top:1px solid var(--line);padding-top:14px;margin-top:12px}
+.srow.total b{font-family:'Space Grotesk';font-size:1.5rem;color:var(--amber)}
+.summary .btn{width:100%;justify-content:center;margin-top:10px}
+.secure{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.78rem;color:var(--mut);margin-top:12px}
+/* pagamento */
+#payStep{display:none}
+.payhero{text-align:center;padding:10px 0 20px}
+.payhero .okic{width:76px;height:76px;border-radius:50%;background:rgba(110,231,183,.12);border:1px solid rgba(110,231,183,.4);color:#6ee7b7;display:grid;place-items:center;font-size:2rem;margin:0 auto 16px}
+.payhero h2{font-size:1.5rem;margin-bottom:6px}
+.payhero p{color:var(--mut);font-size:.9rem}
+.paybtns{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.paybtns .btn{width:100%;justify-content:center}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 22px}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;display:flex;flex-direction:column;gap:10px}
+.toast-msg{background:#0d1330;border:1px solid var(--line);border-left:3px solid var(--amber);padding:13px 20px;border-radius:12px;font-size:.88rem}
+@media(max-width:960px){.layout{grid-template-columns:1fr}.summary{position:static}.frow,.f3{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="logo" href="/placas.html"><i class="fas fa-microchip"></i> TechStore</a>
-            <a href="/cart.html" class="btn btn-outline-light"><i class="fas fa-arrow-left"></i> Voltar</a>
-        </div>
-    </nav>
+<div class="announce"><i class="fa-solid fa-lock"></i>&nbsp; Checkout seguro &nbsp;·&nbsp; Pix −5% &nbsp;·&nbsp; 12x no cartão</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <a href="/cart.html" class="btn btn-ghost" style="margin-left:auto;padding:9px 20px"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+  </div>
+</header>
 
-    <div class="container py-5" style="margin-top: 60px;">
-        <h2 class="mb-4"><i class="fas fa-credit-card text-primary"></i> Finalizar Pedido</h2>
-        
-        <div class="row">
-            <div class="col-lg-7">
-                <div class="form-card">
-                    <h4 class="mb-3">Dados do Cliente</h4>
-                    <form id="checkoutForm">
-                        <div class="row">
-                            <div class="col-md-6 mb-3"><label>Nome completo</label><input type="text" id="nome" class="form-control" required></div>
-                            <div class="col-md-6 mb-3"><label>Email</label><input type="email" id="email" class="form-control" required></div>
-                            <div class="col-md-6 mb-3"><label>Telefone (WhatsApp c/ DDD)</label><input type="tel" id="telefone" class="form-control" required placeholder="(11) 99999-9999" oninput="maskTelefone(this)"></div>
-                            <div class="col-md-6 mb-3"><label>CPF</label><input type="text" id="cpf" class="form-control"></div>
-                        </div>
-                        
-                        <h5 class="mt-3 mb-3">Endereço de Entrega</h5>
-                        <div class="mb-3" id="savedAddrWrap" style="display:none;"><label>Usar endereço salvo</label><select id="savedAddr" class="form-select" onchange="preencherEnderecoSalvo()"><option value="">Preencher manualmente</option></select></div>
-                        <div class="row">
-                            <div class="col-md-8 mb-3"><label>Logradouro</label><input type="text" id="endereco" class="form-control" required></div>
-                            <div class="col-md-4 mb-3"><label>Número</label><input type="text" id="numero" class="form-control" required></div>
-                            <div class="col-md-6 mb-3"><label>Complemento</label><input type="text" id="complemento" class="form-control"></div>
-                            <div class="col-md-6 mb-3"><label>Bairro</label><input type="text" id="bairro" class="form-control" required></div>
-                            <div class="col-md-6 mb-3"><label>Cidade</label><input type="text" id="cidade" class="form-control" required></div>
-                            <div class="col-md-4 mb-3"><label>Estado</label><select id="estado" class="form-select" required onchange="cotarFrete()"><option value="">Selecione</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
-                            <div class="col-md-2 mb-3"><label>CEP</label><input type="text" id="cep" class="form-control" required></div>
-                        </div>
-                        
-                        <h5 class="mt-3 mb-3">Forma de Pagamento</h5>
-                        <div class="payment-option" onclick="selectPayment('pix')" id="paymentPix">
-                            <i class="fab fa-pix fa-2x me-2"></i> <strong>PIX</strong> (5% de desconto)
-                        </div>
-                        <div class="payment-option" onclick="selectPayment('card')" id="paymentCard">
-                            <i class="fas fa-credit-card fa-2x me-2"></i> <strong>Cartão de Crédito</strong> (<span id="cardParcLabel">Até 12x</span>)
-                        </div>
-                        <p class="text-muted small mt-2" id="condText" style="display:none;"></p>
-                        <div class="payment-option" onclick="selectPayment('boleto')" id="paymentBoleto">
-                            <i class="fas fa-barcode fa-2x me-2"></i> <strong>Boleto Bancário</strong>
-                        </div>
-                        <input type="hidden" id="paymentMethod" value="pix">
-                    </form>
-                </div>
-            </div>
-            
-            <div class="col-lg-5">
-                <div class="summary-card">
-                    <h4 class="mb-3">Resumo do Pedido</h4>
-                    <div id="orderItems"></div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-2"><span>Subtotal:</span><span id="orderSubtotal">R$ 0,00</span></div>
-                    <div class="d-flex justify-content-between mb-2"><span>Frete:</span><span id="orderFrete">Grátis acima de R$ 100</span></div>
-                    <div class="d-flex justify-content-between mb-2" id="discountRow" style="display:none;"><span>Desconto PIX (5%):</span><span id="discountAmount" class="text-success">R$ 0,00</span></div>
-                    <hr>
-                    <div class="d-flex justify-content-between mb-3"><strong>TOTAL:</strong><strong id="orderTotal" style="color:#4361ee;font-size:1.5rem;">R$ 0,00</strong></div>
-                    <button class="btn btn-primary-custom w-100" onclick="confirmarPedido()"><i class="fas fa-check-circle"></i> Confirmar Pedido</button>
-                    <div id="payNowWrap" style="display:none;" class="mt-2">
-                        <button class="btn btn-success w-100" onclick="pagarAgora()"><i class="fas fa-bolt"></i> Pagar agora (Mercado Pago)</button>
-                        <p class="text-muted small mt-1">Você será redirecionado ao checkout seguro.</p>
-                    </div>
-                </div>
-            </div>
+<main class="wrap">
+  <div class="steps" id="stepBar">
+    <span class="dot on">1</span> Dados e entrega <span style="margin:0 6px">→</span>
+    <span class="dot" id="dot2">2</span> Pagamento
+  </div>
+
+  <div id="formStep" class="layout">
+    <div>
+      <div class="card">
+        <h2><i class="fa-solid fa-user"></i> Seus dados</h2>
+        <form id="checkoutForm" onsubmit="return false">
+          <div class="frow">
+            <div class="field"><label>Nome completo *</label><input id="nome" required></div>
+            <div class="field"><label>E-mail *</label><input id="email" type="email" required></div>
+          </div>
+          <div class="frow">
+            <div class="field"><label>WhatsApp com DDD *</label><input id="telefone" required placeholder="(11) 99999-9999" oninput="maskTelefone(this)"></div>
+            <div class="field"><label>CPF</label><input id="cpf"></div>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-truck-fast"></i> Entrega</h2>
+        <div class="field" id="savedAddrWrap" style="display:none"><label>Usar endereço salvo</label><select id="savedAddr" onchange="preencherEnderecoSalvo()"><option value="">Preencher manualmente</option></select></div>
+        <div class="frow">
+          <div class="field"><label>Logradouro *</label><input id="endereco" required></div>
+          <div class="field"><label>Número *</label><input id="numero" required></div>
         </div>
+        <div class="frow">
+          <div class="field"><label>Complemento</label><input id="complemento"></div>
+          <div class="field"><label>Bairro *</label><input id="bairro" required></div>
+        </div>
+        <div class="f3">
+          <div class="field"><label>Cidade *</label><input id="cidade" required></div>
+          <div class="field"><label>UF *</label><select id="estado" required onchange="cotarFrete()"><option value="">—</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
+          <div class="field"><label>CEP *</label><input id="cep" required></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2><i class="fa-solid fa-wallet"></i> Pagamento</h2>
+        <div class="payopt" onclick="selectPayment('pix')" id="paymentPix">
+          <div class="ic"><i class="fa-brands fa-pix"></i></div>
+          <div><b>PIX</b><small id="pixDesc">Aprovação imediata com desconto</small></div>
+        </div>
+        <div class="payopt" onclick="selectPayment('card')" id="paymentCard">
+          <div class="ic"><i class="fa-solid fa-credit-card"></i></div>
+          <div><b>Cartão de crédito</b><small id="cardParcLabel">Em até 12x via Mercado Pago</small></div>
+        </div>
+        <div class="payopt" onclick="selectPayment('boleto')" id="paymentBoleto">
+          <div class="ic"><i class="fa-solid fa-barcode"></i></div>
+          <div><b>Boleto bancário</b><small>Compensação em 1–2 dias úteis</small></div>
+        </div>
+        <p class="cond" id="condText" style="display:none"></p>
+        <input type="hidden" id="paymentMethod" value="pix">
+      </div>
     </div>
+    <aside class="summary">
+      <h2>Resumo</h2>
+      <div id="orderItems"></div>
+      <div class="srow" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px"><span>Subtotal</span><b id="orderSubtotal">R$ 0,00</b></div>
+      <div class="srow"><span>Frete</span><b id="orderFrete">—</b></div>
+      <div class="srow" id="discountRow" style="display:none"><span id="discountLabel">Desconto PIX</span><b id="discountAmount" style="color:#6ee7b7">R$ 0,00</b></div>
+      <div class="srow total"><span>TOTAL</span><b id="orderTotal">R$ 0,00</b></div>
+      <button class="btn btn-fire" onclick="confirmarPedido()"><i class="fa-solid fa-circle-check"></i> Confirmar pedido</button>
+      <div class="secure"><i class="fa-solid fa-shield-halved"></i> Seus dados protegidos</div>
+    </aside>
+  </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js?v=2"></script>
-    <script>
-        const API = window.API_BASE;
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        if (!token) window.location.href = '/auth.html';
-        
-        let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
-        let selectedPayment = 'pix';
-        let cfgPix = 5, cfgParc = 12;
+  <div id="payStep" class="layout" style="grid-template-columns:1fr;max-width:640px;margin:0 auto">
+    <div class="card">
+      <div class="payhero">
+        <div class="okic"><i class="fa-solid fa-check"></i></div>
+        <h2 id="payTitle">Pedido confirmado!</h2>
+        <p id="paySub">Agora finalize o pagamento para enviarmos sua placa.</p>
+      </div>
+      <div class="srow total" style="border:none;padding:0;margin-bottom:6px"><span>TOTAL</span><b id="payTotal">R$ 0,00</b></div>
+      <div class="paybtns" id="payBtns"></div>
+      <div class="paybtns">
+        <a class="btn btn-ghost" href="/pedidos.html"><i class="fa-solid fa-list"></i> Meus pedidos</a>
+        <a class="btn btn-ghost" href="/placas.html"><i class="fa-solid fa-store"></i> Voltar à loja</a>
+      </div>
+    </div>
+  </div>
+</main>
 
-        async function loadCondicoes() {
-            try {
-                const res = await fetch(API + '/config/loja/public');
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    cfgPix = Number(data.config.descontoPix ?? 5);
-                    cfgParc = Number(data.config.parcelasMax ?? 12);
-                    document.getElementById('cardParcLabel').textContent = `Até ${cfgParc}x`;
-                    if (data.config.condicoesPagamento) {
-                        const el = document.getElementById('condText');
-                        el.textContent = data.config.condicoesPagamento;
-                        el.style.display = '';
-                    }
-                    calcularTotal();
-                }
-            } catch { /* mantem padrao */ }
-        }
-        let subtotal = 0;
-        let savedAddrs = [];
+<footer class="site">
+  <div class="wrap copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span><a href="/contato.html" style="color:var(--mut)">Contato</a></span></div>
+</footer>
 
-        // Mascara (00) 00000-0000 e valida DDD brasileiro (11–99)
-        function maskTelefone(el) {
-            const d = el.value.replace(/\D/g, '').slice(0, 11);
-            el.value = d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
-                : d.length > 2 ? `(${d.slice(0, 2)}) ${d.slice(2)}` : d;
-        }
-        function telefoneValido(v) {
-            const d = String(v || '').replace(/\D/g, '');
-            if (d.length !== 11) return false;
-            const ddd = Number(d.slice(0, 2));
-            return ddd >= 11 && ddd <= 99;
-        }
+<div id="toast"></div>
+<script src="js/config.js?v=3"></script>
+<script>
+const API = window.API_BASE;
+const token = localStorage.getItem('token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token) window.location.href = '/auth.html';
+let cart = JSON.parse(localStorage.getItem('checkoutCart') || localStorage.getItem('cart') || '[]');
+let selectedPayment = 'pix';
+let cfgPix = 5, cfgParc = 12;
 
-        // Resumo p/ WhatsApp da loja (itens + valores + pagamento)
-        function buildWaText(pedido) {
-            const linhas = (pedido.items || []).slice(0, 12).map((i) =>
-                `- ${i.quantity}x ${i.nome} (R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)})`);
-            return [
-                `*NOVO PEDIDO ${pedido.numero}*`,
-                ...linhas,
-                `Subtotal: R$ ${Number(pedido.subtotal).toFixed(2)}`,
-                `Frete: ${Number(pedido.frete) === 0 ? 'Grátis' : 'R$ ' + Number(pedido.frete).toFixed(2)}`,
-                `Desconto: R$ ${Number(pedido.desconto).toFixed(2)}`,
-                `*TOTAL: R$ ${Number(pedido.total).toFixed(2)}*`,
-                `Pagamento: ${pedido.pagamento}`,
-                `Cliente: ${pedido.cliente?.nome || ''}`
-            ].join('\n');
-        }
-
-        function waSendUrl(loja, pedido) {
-            return `https://api.whatsapp.com/send/?phone=${loja}&text=${encodeURIComponent(buildWaText(pedido))}&type=phone_number&app_absent=0`;
-        }
-
-        async function loadEnderecosSalvos() {
-            try {
-                const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
-                const data = await res.json();
-                if (res.ok && data.success && (data.enderecos || []).length > 0) {
-                    savedAddrs = data.enderecos;
-                    const sel = document.getElementById('savedAddr');
-                    savedAddrs.forEach((e, i) => {
-                        const opt = document.createElement('option');
-                        opt.value = String(i);
-                        opt.textContent = `${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}/${e.estado || '-'}`;
-                        sel.appendChild(opt);
-                    });
-                    document.getElementById('savedAddrWrap').style.display = '';
-                }
-            } catch { /* sem enderecos: manual */ }
-        }
-
-        function preencherEnderecoSalvo() {
-            const idx = document.getElementById('savedAddr').value;
-            if (idx === '') return;
-            const e = savedAddrs[Number(idx)] || {};
-            document.getElementById('endereco').value = e.logradouro || '';
-            document.getElementById('numero').value = e.numero || '';
-            document.getElementById('complemento').value = e.complemento || '';
-            document.getElementById('bairro').value = e.bairro || '';
-            document.getElementById('cidade').value = e.cidade || '';
-            window.setSelectValue(document.getElementById('estado'), e.estado || '');
-            document.getElementById('cep').value = e.cep || '';
-            cotarFrete();
-        }
-        
-        if (cart.length === 0) window.location.href = '/cart.html';
-        
-        function selectPayment(method) {
-            selectedPayment = method;
-            document.getElementById('paymentMethod').value = method;
-            ['pix', 'card', 'boleto'].forEach(m => {
-                document.getElementById(`payment${m.charAt(0).toUpperCase() + m.slice(1)}`).classList.remove('selected');
-            });
-            document.getElementById(`payment${method.charAt(0).toUpperCase() + method.slice(1)}`).classList.add('selected');
-            calcularTotal();
-        }
-        
-        function calcularTotal() {
-            subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const frete = cotFrete != null ? cotFrete : (subtotal > 100 ? 0 : 20);
-            let desconto = 0;
-            if (selectedPayment === 'pix') { desconto = subtotal * (cfgPix / 100); document.getElementById('discountRow').style.display = 'flex'; document.getElementById('discountRow').firstElementChild.textContent = `Desconto PIX (${cfgPix}%):`; }
-            else { document.getElementById('discountRow').style.display = 'none'; }
-            const total = subtotal + frete - desconto;
-            document.getElementById('orderSubtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
-            document.getElementById('orderFrete').innerHTML = frete === 0 ? '<span class="text-success">Grátis</span>' : `R$ ${frete.toFixed(2)}` + (cotPrazo ? ` <small class="text-muted">(${cotPrazo} dias)</small>` : '');
-            document.getElementById('discountAmount').innerText = `R$ ${desconto.toFixed(2)}`;
-            document.getElementById('orderTotal').innerText = `R$ ${total.toFixed(2)}`;
-        }
-
-        let cotFrete = null, cotPrazo = null, cotTimer = null;
-        async function cotarFrete() {
-            const uf = document.getElementById('estado').value;
-            if (!uf || !cart.length) { cotFrete = null; cotPrazo = null; calcularTotal(); return; }
-            clearTimeout(cotTimer);
-            cotTimer = setTimeout(async () => {
-                try {
-                    const res = await fetch(API + '/frete/cotacao', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uf, items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 })) })
-                    });
-                    const data = await res.json();
-                    if (res.ok && data.success) {
-                        cotFrete = Number(data.valor);
-                        cotPrazo = Number(data.prazoDias) || null;
-                    } else { cotFrete = null; cotPrazo = null; }
-                } catch { cotFrete = null; cotPrazo = null; }
-                calcularTotal();
-            }, 400);
-        }
-        
-        function renderOrderItems() {
-            const container = document.getElementById('orderItems');
-            container.innerHTML = '';
-            cart.forEach(item => {
-                const name = window.escapeHtml(item.name);
-                const qty = Number(item.quantity) || 0;
-                const line = (Number(item.price) || 0) * qty;
-                container.innerHTML += `<div class="d-flex justify-content-between mb-2"><span>${name} x${qty}</span><span>R$ ${line.toFixed(2)}</span></div>`;
-            });
-            calcularTotal();
-        }
-        
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast-custom';
-            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            const icon = isError ? 'fa-exclamation-triangle' : 'fa-check-circle';
-            toast.innerHTML = `<i class="fas ${icon}"></i> `;
-            toast.appendChild(document.createTextNode(String(msg ?? '')));
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        async function confirmarPedido() {
-            const nome = document.getElementById('nome').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const telefone = document.getElementById('telefone').value.trim();
-            const endereco = document.getElementById('endereco').value.trim();
-            const numero = document.getElementById('numero').value.trim();
-            const bairro = document.getElementById('bairro').value.trim();
-            const cidade = document.getElementById('cidade').value.trim();
-            const estado = document.getElementById('estado').value;
-            const cep = document.getElementById('cep').value.trim();
-            
-            if (!nome || !email || !telefone || !endereco || !numero || !bairro || !cidade || !estado || !cep) {
-                showToast('Preencha todos os campos obrigatórios!', true);
-                return;
+async function loadCondicoes() {
+    try {
+        const res = await fetch(API + '/config/loja/public');
+        const data = await res.json();
+        if (res.ok && data.success) {
+            cfgPix = Number(data.config.descontoPix ?? 5);
+            cfgParc = Number(data.config.parcelasMax ?? 12);
+            document.getElementById('cardParcLabel').textContent = `Em até ${cfgParc}x via Mercado Pago`;
+            document.getElementById('pixDesc').textContent = `Aprovação imediata com ${cfgPix}% de desconto`;
+            if (data.config.condicoesPagamento) {
+                const el = document.getElementById('condText');
+                el.textContent = data.config.condicoesPagamento;
+                el.style.display = '';
             }
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
-            if (!telefoneValido(telefone)) { showToast('Informe um WhatsApp válido com DDD (11 dígitos)', true); return; }
-            if (!['pix', 'card', 'boleto'].includes(selectedPayment)) { showToast('Pagamento inválido', true); return; }
-            
-            // Backend recalcula subtotal/frete/desconto/total — envia apenas o essencial
-            const pedido = {
-                cliente: { nome, email, telefone, cpf: document.getElementById('cpf').value.trim() },
-                endereco: {
-                    logradouro: endereco, numero, complemento: document.getElementById('complemento').value.trim(),
-                    bairro, cidade, estado, cep
-                },
-                pagamento: selectedPayment,
-                items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 }))
-            };
-            
-            try {
-                const send = () => fetch(API + '/pedidos', {
-                    method: 'POST',
-                    headers: window.getAuthHeaders(),
-                    body: JSON.stringify(pedido)
-                });
-                let res = await send();
-                if (res.status === 401 && await window.refreshSession()) res = await send();
-                const data = await res.json();
-                if (res.status === 401) { window.logoutAll(); window.location.href = '/auth.html'; return; }
-                if (res.ok && data.success) {
-                    localStorage.removeItem('cart');
-                    localStorage.removeItem('checkoutCart');
-                    window.__lastPedidoId = data.pedido._id || data.pedido.id;
-                    mostrarConfirmacao(data);
-                } else showToast(data.message || 'Erro ao processar pedido', true);
-            } catch(e) { showToast('Erro ao conectar', true); }
+            calcularTotal();
         }
-
-        function mostrarConfirmacao(data) {
-            const numero = window.escapeHtml(data.pedido.numero);
-            const total = `R$ ${Number(data.pedido.total).toFixed(2)}`;
-            const zap = data.whatsapp || {};
-            const loja = String(data.lojaWhatsapp || '').replace(/\D/g, '');
-            const zapMsg = zap.enviado
-                ? `Resumo com itens e valores enviado ao seu WhatsApp ${window.escapeHtml(zap.para || '')}!`
-                : 'Assim que possível, o resumo chegará no seu WhatsApp.';
-            const waUrl = loja ? waSendUrl(loja, data.pedido) : '';
-            if (waUrl) { try { window.open(waUrl, '_blank'); } catch { /* popup bloqueado: usa o botão */ } }
-            document.getElementById('orderItems').innerHTML = `
-                <div class="text-center py-3">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h4>Pedido ${numero} confirmado!</h4>
-                    <p class="fs-5">Total: <strong>${total}</strong></p>
-                    <p><i class="fab fa-whatsapp text-success"></i> ${zapMsg}</p>
-                    ${waUrl ? `<a class="btn btn-success w-100 mb-2" target="_blank" rel="noopener" href="${waUrl}"><i class="fab fa-whatsapp"></i> Enviar pedido no WhatsApp da loja</a>` : ''}
-                    ${loja ? `<a class="btn btn-outline-success w-100 mb-2" target="_blank" rel="noopener" href="https://wa.me/${loja}"><i class="fab fa-whatsapp"></i> Falar com a loja</a>` : ''}
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary-custom flex-fill" onclick="pagarAgora()"><i class="fas fa-bolt"></i> Pagar agora</button>
-                        <a class="btn btn-outline-light flex-fill" href="/pedidos.html">Meus pedidos</a>
-                    </div>
-                </div>`;
-            document.getElementById('payNowWrap').style.display = 'none';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch { /* mantem padrao */ }
+}
+let subtotal = 0;
+let savedAddrs = [];
+function maskTelefone(el) {
+    const d = el.value.replace(/\D/g, '').slice(0, 11);
+    el.value = d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+        : d.length > 2 ? `(${d.slice(0, 2)}) ${d.slice(2)}` : d;
+}
+function telefoneValido(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length !== 11) return false;
+    const ddd = Number(d.slice(0, 2));
+    return ddd >= 11 && ddd <= 99;
+}
+function buildWaText(pedido) {
+    const linhas = (pedido.items || []).slice(0, 12).map((i) =>
+        `- ${i.quantity}x ${i.nome} (R$ ${(Number(i.preco) * Number(i.quantity)).toFixed(2)})`);
+    return [
+        `*NOVO PEDIDO ${pedido.numero}*`,
+        ...linhas,
+        `Subtotal: R$ ${Number(pedido.subtotal).toFixed(2)}`,
+        `Frete: ${Number(pedido.frete) === 0 ? 'Grátis' : 'R$ ' + Number(pedido.frete).toFixed(2)}`,
+        `Desconto: R$ ${Number(pedido.desconto).toFixed(2)}`,
+        `*TOTAL: R$ ${Number(pedido.total).toFixed(2)}*`,
+        `Pagamento: ${pedido.pagamento}`,
+        `Cliente: ${pedido.cliente?.nome || ''}`
+    ].join('\n');
+}
+function waSendUrl(loja, pedido) {
+    return `https://api.whatsapp.com/send/?phone=${loja}&text=${encodeURIComponent(buildWaText(pedido))}&type=phone_number&app_absent=0`;
+}
+async function loadEnderecosSalvos() {
+    try {
+        const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data.success && (data.enderecos || []).length > 0) {
+            savedAddrs = data.enderecos;
+            const sel = document.getElementById('savedAddr');
+            savedAddrs.forEach((e, i) => {
+                const opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = `${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}/${e.estado || '-'}`;
+                sel.appendChild(opt);
+            });
+            document.getElementById('savedAddrWrap').style.display = '';
         }
-
-        async function pagarAgora() {
-            if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
-            try {
-                const res = await fetch(API + '/pagamentos/intent', {
-                    method: 'POST',
-                    headers: window.getAuthHeaders(),
-                    body: JSON.stringify({ pedidoId: window.__lastPedidoId })
-                });
-                const data = await res.json();
-                if (res.ok && data.success && data.initPoint) {
-                    window.location.href = data.initPoint;
-                } else showToast(data.message || 'Erro ao iniciar pagamento', true);
-            } catch(e) { showToast('Erro ao conectar', true); }
-        }
-        
-        if (user.nome) {
-            document.getElementById('nome').value = user.nome;
-            document.getElementById('email').value = user.email;
-            document.getElementById('telefone').value = user.telefone || '';
-            maskTelefone(document.getElementById('telefone'));
-        }
-        
-        selectPayment('pix');
-        renderOrderItems();
-        loadEnderecosSalvos();
-        loadCondicoes();
-        window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
-    </script>
+    } catch { /* sem enderecos: manual */ }
+}
+function preencherEnderecoSalvo() {
+    const idx = document.getElementById('savedAddr').value;
+    if (idx === '') return;
+    const e = savedAddrs[Number(idx)] || {};
+    document.getElementById('endereco').value = e.logradouro || '';
+    document.getElementById('numero').value = e.numero || '';
+    document.getElementById('complemento').value = e.complemento || '';
+    document.getElementById('bairro').value = e.bairro || '';
+    document.getElementById('cidade').value = e.cidade || '';
+    window.setSelectValue(document.getElementById('estado'), e.estado || '');
+    document.getElementById('cep').value = e.cep || '';
+    cotarFrete();
+}
+if (cart.length === 0) window.location.href = '/cart.html';
+function selectPayment(method) {
+    selectedPayment = method;
+    document.getElementById('paymentMethod').value = method;
+    ['pix', 'card', 'boleto'].forEach(m => {
+        document.getElementById(`payment${m.charAt(0).toUpperCase() + m.slice(1)}`).classList.remove('sel');
+    });
+    document.getElementById(`payment${method.charAt(0).toUpperCase() + method.slice(1)}`).classList.add('sel');
+    calcularTotal();
+}
+function calcularTotal() {
+    subtotal = cart.reduce((sum, item) => sum + ((Number(item.price)||0) * (Number(item.quantity)||0)), 0);
+    const frete = cotFrete != null ? cotFrete : (subtotal > 100 ? 0 : 20);
+    let desconto = 0;
+    if (selectedPayment === 'pix') { desconto = subtotal * (cfgPix / 100); document.getElementById('discountRow').style.display = 'flex'; document.getElementById('discountLabel').textContent = `Desconto PIX (${cfgPix}%)`; }
+    else { document.getElementById('discountRow').style.display = 'none'; }
+    const total = subtotal + frete - desconto;
+    document.getElementById('orderSubtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
+    document.getElementById('orderFrete').innerHTML = frete === 0 ? '<span style="color:#6ee7b7">Grátis</span>' : `R$ ${frete.toFixed(2)}` + (cotPrazo ? ` <small style="color:var(--mut)">(${cotPrazo} dias)</small>` : '');
+    document.getElementById('discountAmount').innerText = `R$ ${desconto.toFixed(2)}`;
+    document.getElementById('orderTotal').innerText = `R$ ${total.toFixed(2)}`;
+}
+let cotFrete = null, cotPrazo = null, cotTimer = null;
+async function cotarFrete() {
+    const uf = document.getElementById('estado').value;
+    if (!uf || !cart.length) { cotFrete = null; cotPrazo = null; calcularTotal(); return; }
+    clearTimeout(cotTimer);
+    cotTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(API + '/frete/cotacao', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uf, items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 })) })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                cotFrete = Number(data.valor);
+                cotPrazo = Number(data.prazoDias) || null;
+            } else { cotFrete = null; cotPrazo = null; }
+        } catch { cotFrete = null; cotPrazo = null; }
+        calcularTotal();
+    }, 400);
+}
+function renderOrderItems() {
+    const container = document.getElementById('orderItems');
+    container.innerHTML = '';
+    cart.forEach(item => {
+        const name = window.escapeHtml(item.name);
+        const qty = Number(item.quantity) || 0;
+        const line = (Number(item.price) || 0) * qty;
+        container.innerHTML += `<div class="oitem"><span>${name} ×${qty}</span><b>R$ ${line.toFixed(2)}</b></div>`;
+    });
+    calcularTotal();
+}
+function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.style.borderLeftColor = isError ? '#f87171' : '#ffb224';
+    toast.textContent = String(msg ?? '');
+    document.getElementById('toast').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+async function confirmarPedido() {
+    const nome = document.getElementById('nome').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const telefone = document.getElementById('telefone').value.trim();
+    const endereco = document.getElementById('endereco').value.trim();
+    const numero = document.getElementById('numero').value.trim();
+    const bairro = document.getElementById('bairro').value.trim();
+    const cidade = document.getElementById('cidade').value.trim();
+    const estado = document.getElementById('estado').value;
+    const cep = document.getElementById('cep').value.trim();
+    if (!nome || !email || !telefone || !endereco || !numero || !bairro || !cidade || !estado || !cep) {
+        showToast('Preencha todos os campos obrigatórios!', true); return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
+    if (!telefoneValido(telefone)) { showToast('Informe um WhatsApp válido com DDD (11 dígitos)', true); return; }
+    if (!['pix', 'card', 'boleto'].includes(selectedPayment)) { showToast('Pagamento inválido', true); return; }
+    const pedido = {
+        cliente: { nome, email, telefone, cpf: document.getElementById('cpf').value.trim() },
+        endereco: { logradouro: endereco, numero, complemento: document.getElementById('complemento').value.trim(), bairro, cidade, estado, cep },
+        pagamento: selectedPayment,
+        items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 }))
+    };
+    try {
+        const send = () => fetch(API + '/pedidos', {
+            method: 'POST', headers: window.getAuthHeaders(), body: JSON.stringify(pedido)
+        });
+        let res = await send();
+        if (res.status === 401 && await window.refreshSession()) res = await send();
+        const data = await res.json();
+        if (res.status === 401) { window.logoutAll(); window.location.href = '/auth.html'; return; }
+        if (res.ok && data.success) {
+            localStorage.removeItem('cart');
+            localStorage.removeItem('checkoutCart');
+            window.__lastPedidoId = data.pedido._id || data.pedido.id;
+            mostrarPagamento(data);
+        } else showToast(data.message || 'Erro ao processar pedido', true);
+    } catch(e) { showToast('Erro ao conectar', true); }
+}
+function mostrarPagamento(data) {
+    const numero = window.escapeHtml(data.pedido.numero);
+    const total = `R$ ${Number(data.pedido.total).toFixed(2)}`;
+    const zap = data.whatsapp || {};
+    const loja = String(data.lojaWhatsapp || '').replace(/\D/g, '');
+    const waUrl = loja ? waSendUrl(loja, data.pedido) : '';
+    if (waUrl) { try { window.open(waUrl, '_blank'); } catch { /* popup bloqueado: usa o botão */ } }
+    document.getElementById('formStep').style.display = 'none';
+    document.getElementById('payStep').style.display = '';
+    document.getElementById('dot2').classList.add('on');
+    document.getElementById('payTitle').textContent = `Pedido ${numero} confirmado!`;
+    document.getElementById('payTotal').textContent = total;
+    const payLabel = { pix: 'PIX', card: 'cartão', boleto: 'boleto' }[data.pedido.pagamento] || data.pedido.pagamento;
+    document.getElementById('paySub').textContent = `Pagamento via ${payLabel}. ${zap.enviado ? `Resumo enviado ao seu WhatsApp ${zap.para || ''}!` : 'O resumo chegará no seu WhatsApp.'}`;
+    document.getElementById('payBtns').innerHTML = `
+        <button class="btn btn-fire" onclick="pagarAgora()"><i class="fa-solid fa-bolt"></i> Pagar agora (Mercado Pago)</button>
+        ${waUrl ? `<a class="btn btn-wa" target="_blank" rel="noopener" href="${waUrl}"><i class="fa-brands fa-whatsapp"></i> Enviar pedido no WhatsApp</a>` : ''}
+        ${loja ? `<a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/${loja}"><i class="fa-brands fa-whatsapp"></i> Falar com a loja</a>` : ''}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+async function pagarAgora() {
+    if (!window.__lastPedidoId) { showToast('Confirme o pedido primeiro', true); return; }
+    try {
+        const res = await fetch(API + '/pagamentos/intent', {
+            method: 'POST', headers: window.getAuthHeaders(),
+            body: JSON.stringify({ pedidoId: window.__lastPedidoId })
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.initPoint) window.location.href = data.initPoint;
+        else showToast(data.message || 'Erro ao iniciar pagamento', true);
+    } catch(e) { showToast('Erro ao conectar', true); }
+}
+if (user.nome) {
+    document.getElementById('nome').value = user.nome;
+    document.getElementById('email').value = user.email;
+    document.getElementById('telefone').value = user.telefone || '';
+    maskTelefone(document.getElementById('telefone'));
+}
+selectPayment('pix');
+renderOrderItems();
+loadEnderecosSalvos();
+loadCondicoes();
+window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
+</script>
 </body>
 </html>
