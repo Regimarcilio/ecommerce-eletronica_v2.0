@@ -180,10 +180,10 @@
                 <div class="col-md-3 col-6">
                     <div class="product-card h-100">
                         <div class="product-image p-4 text-center">
-                            ${window.safeImg(p.imagemUrl) ? `<img src="${window.safeImg(p.imagemUrl)}" alt="${window.escapeHtml(p.nome)}" loading="lazy" style="max-height:120px;max-width:100%;object-fit:contain;" onerror="this.remove()">` : `<i class="fas fa-microchip fa-4x text-primary"></i>`}
+                            <a href="/produto.html?id=${p._id}">${window.safeImg(p.imagemUrl) ? `<img src="${window.safeImg(p.imagemUrl)}" alt="${window.escapeHtml(p.nome)}" loading="lazy" style="max-height:120px;max-width:100%;object-fit:contain;" onerror="this.remove()">` : `<i class="fas fa-microchip fa-4x text-primary"></i>`}</a>
                         </div>
                         <div class="product-info p-3">
-                            <h6 class="fw-bold">${window.escapeHtml(p.nome)}</h6>
+                            <h6 class="fw-bold"><a href="/produto.html?id=${p._id}" class="text-white text-decoration-none">${window.escapeHtml(p.nome)}</a></h6>
                             <p class="small text-muted">SKU: ${window.escapeHtml(p.sku || '---')}</p>
                             <p class="small text-muted desc" title="${window.escapeHtml(p.descricao || '')}">${window.escapeHtml(window.truncate(p.descricao || '', 120))}</p>
                             <p class="text-primary fw-bold fs-5 mb-0">R$ ${(Number(p.preco) || 0).toFixed(2)}</p>

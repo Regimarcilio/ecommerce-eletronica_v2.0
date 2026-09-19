@@ -169,7 +169,7 @@
                 const p = data.pedido;
                 const itensHtml = (p.items || []).map(item => `
                     <tr>
-                        <td>${window.escapeHtml(item.nome ?? item.name ?? '-')}</td>
+                        <td>${item.produtoId ? `<a href="/produto.html?id=${item.produtoId}" class="text-white">${window.escapeHtml(item.nome ?? item.name ?? '-')}</a>` : window.escapeHtml(item.nome ?? item.name ?? '-')}</td>
                         <td>${item.quantity}</td>
                         <td>R$ ${(item.price || 0).toFixed(2)}</td>
                         <td>R$ ${((item.price || 0) * (item.quantity || 0)).toFixed(2)}</td>

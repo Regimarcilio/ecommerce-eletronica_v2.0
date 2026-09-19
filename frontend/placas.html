@@ -584,7 +584,7 @@ function finderBuscar(){
   if(!m){toast('Escolha a marca primeiro',true);return}
   const res=finderAll.filter(p=>p.marca===m&&(!mo||p.modeloTV===mo)&&(!t||p.tipoPlaca===t)).slice(0,3);
   box.innerHTML=res.length?res.map(p=>`
-    <div class="fres"><b>${esc(p.nome)}</b><span>${esc(TIPO_LABEL[p.tipoPlaca]||'')} · ${money(p.preco)}</span>
+    <div class="fres"><b><a href="/produto.html?id=${p._id}" style="color:var(--txt)">${esc(p.nome)}</a></b><span>${esc(TIPO_LABEL[p.tipoPlaca]||'')} · ${money(p.preco)}</span>
     <button class="btn btn-fire" onclick="buy('${p._id}')">Adicionar</button></div>`).join('')
     :'<p style="color:var(--mut);grid-column:1/-1;text-align:center">Nenhuma placa encontrada para essa combinação. Fale com o suporte.</p>';
 }
