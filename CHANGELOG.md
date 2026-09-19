@@ -2,6 +2,12 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.6.0 — 2026-09-19 — Pedidos no padrão, mensagens CRUD, auditoria de pagamentos
+- `pedidos.html` no padrão PlacaCerta (sem Bootstrap, modal próprio, provedor do pagamento, links p/ `produto.html`)
+- Mensagens CRUD completo: `DELETE /api/contato/:id` (admin) + botão Excluir no dashboard + E2E
+- Auditoria de pagamentos: `GET /api/pagamentos` (admin, filtros provedor/status/modo, com dados do pedido) + E2E
+- 49 unit + 72 E2E verdes
+
 ## v1.5.0 — 2026-09-19 — Carrinho +/-, checkout com cadastro e PagSeguro
 - Carrinho: botões −/+ funcionais via lib compartilhada (`cartStep/cartSetQty`) + delegação; mesmos controles no resumo do checkout
 - Checkout busca perfil fresco em `/auth/me` (nome, e-mail, telefone) e lista endereços do cadastro; opção "Enviar para outro endereço" + "Salvar como endereço secundário" (campo `rotulo`)
