@@ -802,6 +802,9 @@ async function mpCriarPreferencia(pedido, email) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 10000);
     try {
+        // MP exige URL publica https p/ notification_url; local: omite (polling cobre)
+        const pubUrl = String(process.env.API_PUBLIC_URL || '');
+        const notificacao = /^https:\/\//.test(pubUrl) ? { notification_url: `${pubUrl.replace(/\/$/, '')}/api/pagamentos/webhook` } : {};
         const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
             method: 'POST',
             signal: ctrl.signal,
@@ -811,7 +814,7 @@ async function mpCriarPreferencia(pedido, email) {
                 payer: { email },
                 back_urls: { success: `${FRONT_URL}/pedidos.html`, pending: `${FRONT_URL}/pedidos.html`, failure: `${FRONT_URL}/checkout.html` },
                 auto_return: 'approved',
-                notification_url: `${process.env.API_PUBLIC_URL || `http://localhost:${PORT}`}/api/pagamentos/webhook`,
+                ...notificacao,
                 external_reference: String(pedido._id)
             })
         });
