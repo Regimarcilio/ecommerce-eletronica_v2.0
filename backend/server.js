@@ -104,6 +104,7 @@ function pesoDosItens(itemsCalc) {
 
 // Schemas com validacao basica server-side
 const EnderecoSchema = new mongoose.Schema({
+    rotulo: { type: String, trim: true, maxlength: 40, default: '' },
     logradouro: { type: String, required: true, trim: true, maxlength: 160 },
     numero: { type: String, required: true, trim: true, maxlength: 20 },
     complemento: { type: String, trim: true, maxlength: 80, default: '' },
@@ -455,6 +456,7 @@ app.put('/api/auth/password', auth, asyncHandler(async (req, res) => {
 
 // ========== ENDERECOS DO USUARIO ==========
 const pickEndereco = (b) => ({
+    rotulo: String(b.rotulo || '').trim().slice(0, 40),
     logradouro: b.logradouro, numero: b.numero, complemento: b.complemento || '',
     bairro: b.bairro, cidade: b.cidade,
     estado: String(b.estado || '').toUpperCase(), cep: b.cep

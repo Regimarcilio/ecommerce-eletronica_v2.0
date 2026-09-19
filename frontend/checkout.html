@@ -115,7 +115,13 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 2
       </div>
       <div class="card">
         <h2><i class="fa-solid fa-truck-fast"></i> Entrega</h2>
-        <div class="field" id="savedAddrWrap" style="display:none"><label>Usar endereço salvo</label><select id="savedAddr" onchange="preencherEnderecoSalvo()"><option value="">Preencher manualmente</option></select></div>
+        <div id="addrSavedList"></div>
+        <label class="payopt" id="addrOtherOpt" style="cursor:pointer">
+          <input type="radio" name="addrChoice" value="outro" onchange="escolherEndereco('outro')" style="accent-color:#ffb224;width:18px;height:18px">
+          <div class="ic"><i class="fa-solid fa-location-crosshairs"></i></div>
+          <div><b>Enviar para outro endereço</b><small>Preencha abaixo os dados de entrega</small></div>
+        </label>
+        <div id="addrForm">
         <div class="frow">
           <div class="field"><label>Logradouro *</label><input id="endereco" required></div>
           <div class="field"><label>Número *</label><input id="numero" required></div>
@@ -128,6 +134,11 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 2
           <div class="field"><label>Cidade *</label><input id="cidade" required></div>
           <div class="field"><label>UF *</label><select id="estado" required onchange="cotarFrete()"><option value="">—</option><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
           <div class="field"><label>CEP *</label><input id="cep" required></div>
+        </div>
+        <div class="frow">
+          <div class="field"><label>Apelido do endereço</label><input id="endRotulo" placeholder="Ex: Casa, Trabalho"></div>
+          <div class="field" style="display:flex;align-items:flex-end;padding-bottom:14px"><label style="display:flex;gap:10px;align-items:center;cursor:pointer;text-transform:none;letter-spacing:0;font-size:.88rem;color:var(--txt)"><input type="checkbox" id="saveAddr" checked style="accent-color:#ffb224;width:18px;height:18px"> Salvar como endereço secundário</label></div>
+        </div>
         </div>
       </div>
       <div class="card">
@@ -212,6 +223,29 @@ async function loadCondicoes() {
 }
 let subtotal = 0;
 let savedAddrs = [];
+let addrChoice = 'outro'; // 'outro' | indice salvo
+// Perfil fresco do cadastro: nome, e-mail e telefone vêm do servidor
+async function loadPerfil() {
+    try {
+        const res = await fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data.success && data.user) {
+            const u = data.user;
+            localStorage.setItem('user', JSON.stringify({ id: u._id, nome: u.nome, email: u.email, telefone: u.telefone, role: u.role }));
+            document.getElementById('nome').value = u.nome || '';
+            document.getElementById('email').value = u.email || '';
+            document.getElementById('telefone').value = u.telefone || '';
+            maskTelefone(document.getElementById('telefone'));
+            return;
+        }
+    } catch { /* cai para o cache local */ }
+    if (user.nome) {
+        document.getElementById('nome').value = user.nome || '';
+        document.getElementById('email').value = user.email || '';
+        document.getElementById('telefone').value = user.telefone || '';
+        maskTelefone(document.getElementById('telefone'));
+    }
+}
 function maskTelefone(el) {
     const d = el.value.replace(/\D/g, '').slice(0, 11);
     el.value = d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
@@ -246,20 +280,24 @@ async function loadEnderecosSalvos() {
         const data = await res.json();
         if (res.ok && data.success && (data.enderecos || []).length > 0) {
             savedAddrs = data.enderecos;
-            const sel = document.getElementById('savedAddr');
-            savedAddrs.forEach((e, i) => {
-                const opt = document.createElement('option');
-                opt.value = String(i);
-                opt.textContent = `${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}/${e.estado || '-'}`;
-                sel.appendChild(opt);
-            });
-            document.getElementById('savedAddrWrap').style.display = '';
+            const list = document.getElementById('addrSavedList');
+            list.innerHTML = savedAddrs.map((e, i) => {
+                const rot = e.rotulo ? ` · ${window.escapeHtml(e.rotulo)}` : '';
+                const txt = `${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}${window.escapeHtml(e.complemento ? ' - ' + e.complemento : '')} — ${window.escapeHtml(e.bairro || '-')}, ${window.escapeHtml(e.cidade || '-')}/${window.escapeHtml(e.estado || '-')} · CEP ${window.escapeHtml(e.cep || '-')}${rot}`;
+                return `<label class="payopt" style="cursor:pointer"><input type="radio" name="addrChoice" value="${i}" onchange="escolherEndereco(${i})" style="accent-color:#ffb224;width:18px;height:18px"><div class="ic"><i class="fa-solid fa-house"></i></div><div><b>Endereço ${i + 1}</b><small>${txt}</small></div></label>`;
+            }).join('');
+            escolherEndereco(0); // padrao: primeiro endereco do cadastro
+            return;
         }
     } catch { /* sem enderecos: manual */ }
+    escolherEndereco('outro');
 }
-function preencherEnderecoSalvo() {
-    const idx = document.getElementById('savedAddr').value;
-    if (idx === '') return;
+function escolherEndereco(idx) {
+    addrChoice = idx;
+    document.querySelectorAll('input[name="addrChoice"]').forEach(r => { r.checked = String(r.value) === String(idx); });
+    const form = document.getElementById('addrForm');
+    if (idx === 'outro') { form.style.display = ''; return; }
+    form.style.display = 'none';
     const e = savedAddrs[Number(idx)] || {};
     document.getElementById('endereco').value = e.logradouro || '';
     document.getElementById('numero').value = e.numero || '';
@@ -269,6 +307,17 @@ function preencherEnderecoSalvo() {
     window.setSelectValue(document.getElementById('estado'), e.estado || '');
     document.getElementById('cep').value = e.cep || '';
     cotarFrete();
+}
+function enderecoDeEnvio() {
+    return {
+        logradouro: document.getElementById('endereco').value.trim(),
+        numero: document.getElementById('numero').value.trim(),
+        complemento: document.getElementById('complemento').value.trim(),
+        bairro: document.getElementById('bairro').value.trim(),
+        cidade: document.getElementById('cidade').value.trim(),
+        estado: document.getElementById('estado').value,
+        cep: document.getElementById('cep').value.trim()
+    };
 }
 if (cart.length === 0) window.location.href = '/cart.html';
 function selectPayment(method) {
@@ -336,21 +385,26 @@ async function confirmarPedido() {
     const nome = document.getElementById('nome').value.trim();
     const email = document.getElementById('email').value.trim();
     const telefone = document.getElementById('telefone').value.trim();
-    const endereco = document.getElementById('endereco').value.trim();
-    const numero = document.getElementById('numero').value.trim();
-    const bairro = document.getElementById('bairro').value.trim();
-    const cidade = document.getElementById('cidade').value.trim();
-    const estado = document.getElementById('estado').value;
-    const cep = document.getElementById('cep').value.trim();
-    if (!nome || !email || !telefone || !endereco || !numero || !bairro || !cidade || !estado || !cep) {
+    const env = enderecoDeEnvio();
+    if (!nome || !email || !telefone || !env.logradouro || !env.numero || !env.bairro || !env.cidade || !env.estado || !env.cep) {
         showToast('Preencha todos os campos obrigatórios!', true); return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
     if (!telefoneValido(telefone)) { showToast('Informe um WhatsApp válido com DDD (11 dígitos)', true); return; }
     if (!['pix', 'card', 'boleto'].includes(selectedPayment)) { showToast('Pagamento inválido', true); return; }
+    // Outro endereço + salvar como secundário no cadastro
+    if (addrChoice === 'outro' && document.getElementById('saveAddr').checked) {
+        try {
+            const rot = document.getElementById('endRotulo').value.trim() || 'Secundário';
+            await fetch(API + '/auth/enderecos', {
+                method: 'POST', headers: window.getAuthHeaders(),
+                body: JSON.stringify({ ...env, rotulo: rot })
+            });
+        } catch { /* nao bloqueia o pedido */ }
+    }
     const pedido = {
         cliente: { nome, email, telefone, cpf: document.getElementById('cpf').value.trim() },
-        endereco: { logradouro: endereco, numero, complemento: document.getElementById('complemento').value.trim(), bairro, cidade, estado, cep },
+        endereco: env,
         pagamento: selectedPayment,
         items: cart.map(i => ({ produtoId: i.id, quantity: Number(i.quantity) || 1 }))
     };
@@ -402,14 +456,9 @@ async function pagarAgora() {
         else showToast(data.message || 'Erro ao iniciar pagamento', true);
     } catch(e) { showToast('Erro ao conectar', true); }
 }
-if (user.nome) {
-    document.getElementById('nome').value = user.nome;
-    document.getElementById('email').value = user.email;
-    document.getElementById('telefone').value = user.telefone || '';
-    maskTelefone(document.getElementById('telefone'));
-}
 selectPayment('pix');
 renderOrderItems();
+loadPerfil();
 loadEnderecosSalvos();
 loadCondicoes();
 window.ensureSession().then((ok) => { if (!ok) window.location.href = '/auth.html'; });
