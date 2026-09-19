@@ -999,6 +999,34 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
     return res.json({ success: true });
 }));
 
+// Auditoria de pagamentos (admin): lista intents com pedido, provedor, modo e status
+app.get('/api/pagamentos', auth, admin, asyncHandler(async (req, res) => {
+    const query = {};
+    if (['mercadopago', 'pagseguro'].includes(req.query.provedor)) query.provedor = req.query.provedor;
+    if (['criado', 'aprovado', 'recusado'].includes(req.query.status)) query.status = req.query.status;
+    if (['real', 'mock'].includes(req.query.modo)) query.modo = req.query.modo;
+    const { page, limit, skip } = parsePaging(req.query);
+    const [pagamentos, total] = await Promise.all([
+        Pagamento.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Pagamento.countDocuments(query)
+    ]);
+    const ids = pagamentos.map((p) => p.pedidoId);
+    const pedidos = await Pedido.find({ _id: { $in: ids } }).select('numero total status pagamento provedorPagamento createdAt').lean();
+    const porId = Object.fromEntries(pedidos.map((p) => [String(p._id), p]));
+    res.json({
+        success: true,
+        pagamentos: pagamentos.map((p) => ({
+            _id: p._id, pedidoId: p.pedidoId,
+            pedido: porId[String(p.pedidoId)] || null,
+            provedor: p.provedor, modo: p.modo, status: p.status,
+            referencia: p.provedor === 'pagseguro' ? (p.pgsOrderId || '') : (p.mpPreferenceId || ''),
+            temQr: !!p.pgsQrText,
+            createdAt: p.createdAt, updatedAt: p.updatedAt
+        })),
+        page, limit, total, pages: Math.ceil(total / limit)
+    });
+}));
+
 // Status do pagamento de um pedido (dono ou admin; polling da tela de pagamento)
 app.get('/api/pagamentos/:pedidoId', auth, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.pedidoId)) return err(res, 400, 'Pedido inválido', 'VALIDATION');

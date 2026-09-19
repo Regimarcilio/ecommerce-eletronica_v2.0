@@ -67,6 +67,18 @@ describe('e2e pagamentos + whatsapp', () => {
     assert.equal(r.status, 409);
   });
 
+  it('auditoria admin lista intents com filtros; dono recebe 403', async () => {
+    assert.equal((await api('GET', '/api/pagamentos', {})).status, 401);
+    assert.equal((await api('GET', '/api/pagamentos', { token: utok })).status, 403);
+    const all = await api('GET', '/api/pagamentos', { token: atok });
+    assert.equal(all.status, 200);
+    assert.ok(all.data.pagamentos.some((p) => String(p.pedidoId) === String(pedidoId)));
+    const f = await api('GET', '/api/pagamentos?provedor=mercadopago&status=aprovado', { token: atok });
+    assert.equal(f.status, 200);
+    assert.ok(f.data.pagamentos.every((p) => p.provedor === 'mercadopago' && p.status === 'aprovado'));
+    assert.ok(f.data.pagamentos[0].pedido && f.data.pagamentos[0].pedido.numero);
+  });
+
   after(async () => {
     if (prodId) await api('DELETE', `/api/produtos/${prodId}`, { token: atok });
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });
