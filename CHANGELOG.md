@@ -2,6 +2,11 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.8.0 — 2026-09-19 — PagSeguro cartão/boleto + MP OAuth
+- PagSeguro checkout hospedado: `POST /api/pagamentos/pagseguro/checkout` (`CHEC_*`, CREDIT_CARD/BOLETO/PIX, `payLink` sandbox validado) + botão "Cartão ou boleto" no checkout
+- Mercado Pago OAuth: `GET .../oauth/url`, `POST .../oauth/token` (authorization_code/refresh_token/client_credentials, segredos cifrados), `GET .../oauth/status`; token via `.env` ou OAuth; `docs/MERCADOPAGO.md` + `MP_CLIENT_*` no `.env.example`
+- 49 unit + 80 E2E verdes
+
 ## v1.7.2 — 2026-09-19 — Docs PagSeguro + .env.example
 - `docs/PAGSEGURO.md`: ambientes (produção/sandbox), envs, fluxo PIX, regras da API, rotas, testes, frontend
 - `.env.example`: `PGS_EMAIL`, `API_PUBLIC_URL`, URLs base + link da ref oficial (sem segredos)

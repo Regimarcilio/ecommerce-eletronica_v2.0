@@ -30,11 +30,18 @@ Prioridade: `PGS_TOKEN` do `.env` primeiro, depois segredo do painel, senão **m
 
 ```
 checkout.html → POST /pedidos → payStep (aba PagSeguro)
-  → POST /api/pagamentos/pagseguro/intent { pedidoId }
-  → POST {PGS_API}/orders { reference_id, customer{tax_id}, items[], qr_codes[], notification_urls? }
-  → QR + copia-e-cola na tela (com validade)
+  → PIX direto: POST /api/pagamentos/pagseguro/intent → QR + copia-e-cola
+  → Cartão/boleto: POST /api/pagamentos/pagseguro/checkout → redirect p/ checkout hospedado
   → cliente paga → webhook (ou polling) → pedido `pendente` → `pago` + WhatsApp
 ```
+
+## Checkout hospedado (cartão + boleto + PIX)
+
+Sem PCI na loja: `POST /api/pagamentos/pagseguro/checkout` cria `CHEC_*`
+(`payment_methods: CREDIT_CARD, BOLETO, PIX`, validade 2h) e devolve `payLink`
+(`https://pagamento.[sandbox.]pagbank.com.br/pagamento?code=...`).
+Regras: `redirect_url` só com `FRONT_URL` https (localhost é rejeitado);
+`notification_urls` idem (`API_PUBLIC_URL`).
 
 ## Regras da API (validadas em produção/sandbox)
 
@@ -51,7 +58,8 @@ checkout.html → POST /pedidos → payStep (aba PagSeguro)
 
 | Rota | Acesso | Descrição |
 |---|---|---|
-| `POST /api/pagamentos/pagseguro/intent` | dono/admin, pedido `pendente` | Cria cobrança; `409` se já processado; `400` sem CPF |
+| `POST /api/pagamentos/pagseguro/intent` | dono/admin, pedido `pendente` | PIX direto (QR); `409` se já processado; `422` sem CPF ou buyer=lojista |
+| `POST /api/pagamentos/pagseguro/checkout` | dono/admin, pedido `pendente` | Checkout hospedado cartão/boleto/PIX (`payLink`); mesmas validações |
 | `POST /api/pagamentos/pagseguro/webhook` | público | Sem `PGS_WEBHOOK_TOKEN`: modo teste `{pedidoId,status}`. Com token: valida Bearer/`?token=`, confirma `PAID/APPROVED/AUTHORIZED` |
 | `GET /api/pagamentos/:pedidoId` | dono/admin | Polling ("Já paguei — verificar status") |
 | `GET /api/pagamentos?provedor=&status=&modo=` | admin | Auditoria de intents com dados do pedido |

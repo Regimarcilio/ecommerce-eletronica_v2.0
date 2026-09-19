@@ -76,6 +76,8 @@ describe('e2e pagseguro (mock)', () => {
     const st = await api('GET', `/api/pagamentos/${pid}`, { token: utok });
     assert.equal(st.data.pagamento.provedor, 'pagseguro');
   });
+
+  it('status do pagamento visivel ao dono', async () => {
     const r = await api('GET', `/api/pagamentos/${pedidoId}`, { token: utok });
     assert.equal(r.status, 200);
     assert.equal(r.data.pagamento.provedor, 'pagseguro');
