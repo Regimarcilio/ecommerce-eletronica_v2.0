@@ -41,9 +41,16 @@ if (!process.env.JWT_SECRET || !process.env.ADMIN_PASSWORD || !process.env.MONGO
 }
 
 const app = express();
+app.disable('etag'); // sem 304: APIs sempre respondem 200 fresco (dados por usuário)
 app.use(helmet());
 app.use(cors(CORS_ORIGIN === true ? undefined : { origin: CORS_ORIGIN }));
 app.use(express.json({ limit: '100kb' }));
+
+// APIs nunca cacheadas: evita 304/stale em /auth/me, /auth/enderecos, /config (dados por usuário)
+app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
 
 // Limites por rota sensivel (E2E usa: login ~7, register ~8, refresh ~3, forgot+reset ~5 por run)
 // E2E_NO_LIMIT=true afrouxa p/ 10000 (CI/teste local; NUNCA em prod). Headers sempre presentes.
