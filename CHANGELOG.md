@@ -2,6 +2,12 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.7.0 — 2026-09-19 — Mensagens com status, clientes bloqueáveis, pedidos enxutos
+- Mensagens: modal Visualizar (texto completo, auto-marca lida, responder por e-mail) + status nova/lida/respondida (`PUT /contato/:id/status`, filtro `?status=`) + filtros Todas/Não lidas/Lidas/Respondidas
+- Clientes: status ativo/inativo/bloqueado (`PUT /api/clientes/:id/status` admin, bloqueado derruba sessões e impede login) + botões Ativar/Bloquear + badges
+- Pedidos (dashboard): tabela enxuta — Número, Cliente, Status, Ações (Ver + Status mantidos; detalhe completo no modal)
+- 49 unit + 77 E2E verdes (novos `13-clientes-status.test.js`, fluxo de status em `11-contato-sociais.test.js`)
+
 ## v1.6.0 — 2026-09-19 — Pedidos no padrão, mensagens CRUD, auditoria de pagamentos
 - `pedidos.html` no padrão PlacaCerta (sem Bootstrap, modal próprio, provedor do pagamento, links p/ `produto.html`)
 - Mensagens CRUD completo: `DELETE /api/contato/:id` (admin) + botão Excluir no dashboard + E2E
