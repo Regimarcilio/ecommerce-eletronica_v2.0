@@ -32,6 +32,23 @@ describe('e2e contato + redes sociais', () => {
     assert.ok(!filtrada.data.mensagens.some((m) => String(m._id) === String(id)));
   });
 
+  it('contato status nova->lida->respondida com filtro', async () => {
+    const c = await api('POST', '/api/contato', {
+      body: { nome: 'E2E Status', email: 'st@t.t', mensagem: 'mensagem para testar fluxo de status' },
+    });
+    const id = c.data.protocolo;
+    assert.equal((await api('PUT', `/api/contato/${id}/status`, { token: atok, body: { status: 'invalido' } })).status, 400);
+    assert.equal((await api('PUT', `/api/contato/${id}/status`, { token: atok, body: { status: 'lida' } })).status, 200);
+    const lidas = await api('GET', '/api/contato?status=lida', { token: atok });
+    assert.ok(lidas.data.mensagens.some((m) => String(m._id) === String(id)));
+    assert.equal((await api('PUT', `/api/contato/${id}/status`, { token: atok, body: { status: 'respondida' } })).status, 200);
+    const resp = await api('GET', '/api/contato?status=respondida', { token: atok });
+    assert.ok(resp.data.mensagens.some((m) => String(m._id) === String(id)));
+    const novas = await api('GET', '/api/contato?status=nova', { token: atok });
+    assert.ok(!novas.data.mensagens.some((m) => String(m._id) === String(id)));
+    assert.equal((await api('DELETE', `/api/contato/${id}`, { token: atok })).status, 200);
+  });
+
   it('contato CRUD completo: excluir (admin) + 404 + 401', async () => {
     const c = await api('POST', '/api/contato', {
       body: { nome: 'E2E Del', email: 'del@t.t', mensagem: 'mensagem para excluir com certeza' },

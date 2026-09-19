@@ -177,6 +177,12 @@
         <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" onclick="atualizarStatusPedido()">Atualizar Status</button></div></div></div>
     </div>
 
+    <!-- Modal Visualizar Mensagem -->
+    <div class="modal fade" id="msgModal" tabindex="-1">
+        <div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title"><i class="fas fa-envelope"></i> Mensagem</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body" id="msgDetalhesBody"></div><div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div></div></div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js?v=2"></script>
     <script>
@@ -710,7 +716,8 @@
             document.getElementById('pageTitle').innerHTML = 'Mensagens';
             document.getElementById('content').innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
             try {
-                const q = `${API}/contato?page=${pgMsg.page}&limit=${PG_LIMIT}${msgFiltro ? `&lida=${msgFiltro}` : ''}`;
+                const filtroQ = ['nova', 'lida', 'respondida'].includes(msgFiltro) ? `&status=${msgFiltro}` : (msgFiltro ? `&lida=${msgFiltro}` : '');
+                const q = `${API}/contato?page=${pgMsg.page}&limit=${PG_LIMIT}${filtroQ}`;
                 const res = await fetch(q, { headers: getHeaders() });
                 const data = await res.json();
                 if (!data.success) { showToast(data.message || 'Erro ao carregar', true); return; }
@@ -720,22 +727,25 @@
                 let html = `<div class="data-card"><div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2"><h4>Mensagens (${data.total ?? list.length})</h4>
                     <div class="btn-group btn-group-sm" role="group">
                         <button class="btn ${msgFiltro === '' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('')">Todas</button>
-                        <button class="btn ${msgFiltro === 'false' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('false')">Não lidas</button>
-                        <button class="btn ${msgFiltro === 'true' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('true')">Lidas</button>
+                        <button class="btn ${msgFiltro === 'nova' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('nova')">Não lidas</button>
+                        <button class="btn ${msgFiltro === 'lida' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('lida')">Lidas</button>
+                        <button class="btn ${msgFiltro === 'respondida' ? 'btn-primary-custom' : 'btn-outline-light'}" onclick="filtrarMsg('respondida')">Respondidas</button>
                     </div></div>`;
                 if (!list.length) {
                     html += '<p class="text-muted">Nenhuma mensagem.</p>';
                 } else {
                     html += '<div class="table-responsive"><table class="table table-dark"><thead><tr><th>Data</th><th>Nome</th><th>E-mail</th><th>Assunto</th><th>Mensagem</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const m of list) {
+                        const st = m.status || (m.lida ? 'lida' : 'nova');
+                        const badge = st === 'respondida' ? '<span class="badge-success">respondida</span>' : st === 'lida' ? '<span class="badge-success">lida</span>' : '<span class="badge-warning">nova</span>';
                         html += `<tr>
                             <td class="small">${m.createdAt ? new Date(m.createdAt).toLocaleString('pt-BR') : '-'}</td>
                             <td>${window.escapeHtml(m.nome || '-')}</td>
                             <td class="small">${window.escapeHtml(m.email || '-')}</td>
                             <td>${window.escapeHtml(m.assunto || '—')}</td>
                             <td class="small" style="max-width:280px">${window.escapeHtml(window.truncate(m.mensagem || '', 140))}</td>
-                            <td>${m.lida ? '<span class="badge-success">lida</span>' : '<span class="badge-warning">nova</span>'}</td>
-                            <td>${m.lida ? '' : `<button class="btn-view" onclick="marcarLida('${m._id}')">Marcar lida</button>`} <button class="btn-view" style="color:#f87171" onclick="excluirMsg('${m._id}')">Excluir</button></td>
+                            <td>${badge}</td>
+                            <td><button class="btn-view" onclick="verMsg('${m._id}')">Ver</button>${st === 'nova' ? ` <button class="btn-view" onclick="statusMsg('${m._id}','lida')">Marcar lida</button>` : ''}${st !== 'respondida' ? ` <button class="btn-view" onclick="statusMsg('${m._id}','respondida')">Respondida</button>` : ''} <button class="btn-view" style="color:#f87171" onclick="excluirMsg('${m._id}')">Excluir</button></td>
                         </tr>`;
                     }
                     html += '</tbody></table></div>' + pagerNav('msg', pgMsg);
@@ -747,13 +757,40 @@
 
         function filtrarMsg(v) { msgFiltro = v; pgMsg.page = 1; loadMensagens(); }
 
-        async function marcarLida(id) {
+        async function marcarLida(id) { return statusMsg(id, 'lida'); }
+
+        async function statusMsg(id, st) {
             try {
-                const res = await fetch(`${API}/contato/${id}/lida`, { method: 'PUT', headers: getHeaders() });
+                const res = await fetch(`${API}/contato/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: st }) });
                 const data = await res.json();
-                if (res.ok && data.success) { showToast('Mensagem marcada como lida'); loadMensagens(); atualizaMsgBadge(); }
+                if (res.ok && data.success) { showToast(st === 'respondida' ? 'Mensagem marcada como respondida' : 'Mensagem marcada como lida'); loadMensagens(); atualizaMsgBadge(); }
                 else showToast(data.message || 'Erro', true);
             } catch { showToast('Erro ao conectar', true); }
+        }
+
+        let msgModal;
+        async function verMsg(id) {
+            try {
+                const res = await fetch(`${API}/contato?page=1&limit=100`, { headers: getHeaders() });
+                const data = await res.json();
+                const m = (data.success && (data.mensagens || []).find((x) => String(x._id) === String(id))) || null;
+                if (!m) { showToast('Mensagem não encontrada', true); return; }
+                const st = m.status || (m.lida ? 'lida' : 'nova');
+                document.getElementById('msgDetalhesBody').innerHTML = `
+                    <p><strong>De:</strong> ${window.escapeHtml(m.nome || '-')} &lt;${window.escapeHtml(m.email || '-')}&gt;</p>
+                    <p><strong>Data:</strong> ${m.createdAt ? new Date(m.createdAt).toLocaleString('pt-BR') : '-'}</p>
+                    <p><strong>Assunto:</strong> ${window.escapeHtml(m.assunto || '—')}</p>
+                    <p><strong>Status:</strong> ${window.escapeHtml(st)}</p>
+                    <hr><p style="white-space:pre-wrap">${window.escapeHtml(m.mensagem || '')}</p>
+                    <hr><div class="d-flex gap-2 flex-wrap">
+                        ${st === 'nova' ? `<button class="btn btn-sm btn-primary-custom" onclick="statusMsg('${m._id}','lida');msgModal.hide()">Marcar lida</button>` : ''}
+                        ${st !== 'respondida' ? `<button class="btn btn-sm btn-primary-custom" onclick="statusMsg('${m._id}','respondida');msgModal.hide()">Marcar respondida</button>` : ''}
+                        <a class="btn btn-sm btn-outline-light" href="mailto:${window.escapeHtml(m.email || '')}?subject=${encodeURIComponent('Re: ' + (m.assunto || 'contato'))}">Responder por e-mail</a>
+                    </div>`;
+                if (!msgModal) msgModal = new bootstrap.Modal(document.getElementById('msgModal'));
+                msgModal.show();
+                if (st === 'nova') statusMsg(id, 'lida');
+            } catch { showToast('Erro ao carregar mensagem', true); }
         }
 
         async function excluirMsg(id) {

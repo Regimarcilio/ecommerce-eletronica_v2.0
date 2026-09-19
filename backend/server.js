@@ -289,7 +289,8 @@ const ContatoSchema = new mongoose.Schema({
     email: { type: String, required: true, trim: true, lowercase: true, maxlength: 160 },
     assunto: { type: String, trim: true, maxlength: 160, default: '' },
     mensagem: { type: String, required: true, trim: true, maxlength: 5000 },
-    lida: { type: Boolean, default: false }
+    lida: { type: Boolean, default: false },
+    status: { type: String, enum: ['nova', 'lida', 'respondida'], default: 'nova' }
 }, { timestamps: true });
 
 // Unicidade vale só p/ registros visíveis (soft-delete libera nome/sku/slug)
@@ -1285,6 +1286,7 @@ app.get('/api/contato', auth, admin, asyncHandler(async (req, res) => {
     const query = {};
     if (req.query.lida === 'true') query.lida = true;
     if (req.query.lida === 'false') query.lida = false;
+    if (['nova', 'lida', 'respondida'].includes(req.query.status)) query.status = req.query.status;
     const [lista, total] = await Promise.all([
         Contato.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
         Contato.countDocuments(query)
@@ -1292,12 +1294,23 @@ app.get('/api/contato', auth, admin, asyncHandler(async (req, res) => {
     res.json({ success: true, mensagens: lista, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
-// Admin: marca mensagem como lida
+// Admin: marca mensagem como lida (atalho; sincroniza status)
 app.put('/api/contato/:id/lida', auth, admin, asyncHandler(async (req, res) => {
     if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
-    const c = await Contato.findByIdAndUpdate(req.params.id, { lida: true }, { new: true });
+    const c = await Contato.findByIdAndUpdate(req.params.id, { lida: true, status: 'lida' }, { new: true });
     if (!c) return err(res, 404, 'Mensagem não encontrada', 'NOT_FOUND');
     res.json({ success: true });
+}));
+
+// Admin: muda status da mensagem (nova → lida → respondida)
+app.put('/api/contato/:id/status', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const st = String(req.body?.status || '');
+    if (!['nova', 'lida', 'respondida'].includes(st)) return err(res, 400, 'Status inválido (nova/lida/respondida)', 'VALIDATION');
+    const c = await Contato.findByIdAndUpdate(req.params.id, { status: st, lida: st !== 'nova' }, { new: true });
+    if (!c) return err(res, 404, 'Mensagem não encontrada', 'NOT_FOUND');
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'mensagem_status', por: req.usuarioId, id: req.params.id, status: st }));
+    res.json({ success: true, mensagem: c });
 }));
 
 // Admin: exclui mensagem (CRUD completo)
