@@ -1,435 +1,368 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minha Conta | TechStore</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background: #0a0a0f; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: rgba(10,10,15,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #4361ee33; }
-        .logo { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, #4361ee, #4cc9f0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; }
-        .profile-sidebar { background: #1a1a2e; border-radius: 16px; padding: 25px; text-align: center; border: 1px solid #4361ee33; }
-        .profile-avatar { width: 100px; height: 100px; background: linear-gradient(135deg, #4361ee, #3a0ca3); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
-        .profile-avatar i { font-size: 3rem; color: #fff; }
-        .profile-card { background: #1a1a2e; border-radius: 16px; padding: 25px; border: 1px solid #4361ee33; margin-bottom: 20px; }
-        .btn-primary-custom { background: linear-gradient(135deg, #4361ee, #3a0ca3); border: none; color: #fff; padding: 10px 25px; border-radius: 30px; transition: all 0.3s; }
-        .btn-primary-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 20px #4361ee66; }
-        .btn-outline-custom { background: transparent; border: 2px solid #4361ee; color: #4361ee; padding: 8px 20px; border-radius: 30px; transition: all 0.3s; }
-        .btn-outline-custom:hover { background: #4361ee; color: #fff; }
-        .form-control, .form-select { background: #0a0a0f; border: 1px solid #4361ee; color: #fff; padding: 12px; }
-        .form-control:focus, .form-select:focus { background: #0a0a0f; border-color: #4cc9f0; box-shadow: none; }
-        .order-card { background: #1a1a2e; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 3px solid #4361ee; transition: all 0.3s; }
-        .order-card:hover { transform: translateX(5px); }
-        .status-pendente { background: #f59e0b20; color: #f59e0b; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-pago { background: #10b98120; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-enviado { background: #06b6d420; color: #06b6d4; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .status-entregue { background: #20c99720; color: #20c997; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
-        .toast-custom { position: fixed; bottom: 20px; right: 20px; background: #0d1117; border-left: 3px solid #10b981; padding: 12px 20px; border-radius: 8px; z-index: 9999; }
-        .footer { background: #0a0a0f; border-top: 1px solid #1f2937; padding: 50px 0 20px; margin-top: 50px; }
-        .nav-tabs .nav-link { color: #9ca3af; border: none; padding: 12px 20px; }
-        .nav-tabs .nav-link.active { color: #4361ee; background: transparent; border-bottom: 2px solid #4361ee; }
-        .address-card { background: #1a1a2e; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #4361ee33; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minha Conta | PlacaCerta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#0e1428; --card:#131b36;
+  --line:rgba(255,255,255,.09);
+  --amber:#ffb224; --amber2:#ff8a00; --cyan:#38e1ff;
+  --txt:#f2f5ff; --mut:#9aa4c7;
+  --grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);
+  --r:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;
+  background-image:radial-gradient(800px 400px at 85% -10%,rgba(255,138,0,.1),transparent 60%)}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px;width:100%}
+.announce{background:var(--grad);color:#1a1000;font-size:.82rem;font-weight:600;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:28px;height:70px}
+.brand{font-family:'Space Grotesk';font-weight:700;font-size:1.4rem;display:flex;align-items:center;gap:10px}
+.brand .bolt{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#1a1000}
+.brand em{font-style:normal;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:22px;margin-left:auto;font-size:.92rem;color:var(--mut)}
+.nav-links a:hover{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.88rem;padding:11px 22px;border-radius:999px;transition:.22s;font-family:'Inter'}
+.btn-fire{background:var(--grad);color:#1a1000}
+.btn-fire:hover{transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--amber)}
+.btn-danger-ghost{background:transparent;color:#f87171;border:1px solid rgba(248,113,113,.5)}
+.btn-danger-ghost:hover{background:#ef4444;color:#fff}
+.cart-fab{position:relative;width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;font-size:1rem}
+.cart-fab b{position:absolute;top:-4px;right:-4px;background:var(--grad);color:#1a1000;font-size:.68rem;min-width:20px;height:20px;border-radius:999px;display:grid;place-items:center;padding:0 5px}
+main{flex:1;padding:44px 0 72px}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start}
+.side{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px 24px;text-align:center;position:sticky;top:96px}
+.avatar{width:96px;height:96px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-size:2.4rem;color:#1a1000;margin:0 auto 16px}
+.side h2{font-size:1.2rem;margin-bottom:4px;word-break:break-word}
+.side p{font-size:.83rem;color:var(--mut);margin-bottom:20px;word-break:break-word}
+.side .btn{width:100%;justify-content:center;margin-bottom:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px}
+.tabs{display:flex;background:#0b1128;border:1px solid var(--line);border-radius:999px;padding:5px;margin-bottom:26px}
+.tabs button{flex:1;background:none;border:none;color:var(--mut);font-weight:600;font-size:.85rem;padding:10px;border-radius:999px;cursor:pointer;font-family:'Inter';display:flex;gap:8px;align-items:center;justify-content:center}
+.tabs button.on{background:var(--grad);color:#1a1000}
+.tabpane{display:none}
+.tabpane.on{display:block}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.72rem;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+.field input,.field select{width:100%;background:#0b1128;border:1px solid var(--line);border-radius:12px;padding:13px 15px;color:var(--txt);font-size:.93rem;outline:none;font-family:'Inter'}
+.field input:focus,.field select:focus{border-color:var(--amber)}
+.field input[readonly]{opacity:.6}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.addr{background:#0b1128;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.addr strong{display:block;margin-bottom:4px}
+.addr span{font-size:.85rem;color:var(--mut)}
+.addr .acts{display:flex;gap:8px;flex:none}
+.iconbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--mut);cursor:pointer}
+.iconbtn:hover{border-color:var(--amber);color:var(--amber)}
+.iconbtn.del:hover{border-color:#f87171;color:#f87171}
+.empty{color:var(--mut);text-align:center;padding:30px 10px;font-size:.9rem}
+.modal-bg{position:fixed;inset:0;background:rgba(4,6,14,.7);backdrop-filter:blur(4px);display:none;place-items:center;z-index:100;padding:20px}
+.modal-bg.open{display:grid}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:20px;display:flex;gap:10px;align-items:center}
+.modal h3 i{color:var(--amber)}
+.modal .macts{display:flex;gap:10px;margin-top:20px}
+.modal .macts .btn{flex:1;justify-content:center}
+footer.site{border-top:1px solid var(--line);background:#070b16;padding:36px 0 22px;margin-top:auto}
+.copy{display:flex;justify-content:space-between;color:var(--mut);font-size:.82rem;flex-wrap:wrap;gap:10px}
+#toast{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px}
+.toast-msg{background:#0d1330;border:1px solid var(--line);border-left:3px solid var(--amber);padding:13px 20px;border-radius:12px;font-size:.88rem}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.nav-links{display:none}.frow{grid-template-columns:1fr}.tabs button span{display:none}}
+</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
-        <div class="container">
-            <a class="logo" href="/placas.html"><i class="fas fa-microchip"></i> TechStore</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon bg-white"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link text-white" href="/placas.html"><i class="fas fa-home"></i> Início</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/#produtos"><i class="fas fa-box"></i> Produtos</a></li>
-                    <li class="nav-item"><a class="nav-link text-white position-relative" href="/cart.html">
-                        <i class="fas fa-shopping-cart"></i> Carrinho
-                        <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
-                    </a></li>
-                    <li class="nav-item" id="authLink"></li>
-                </ul>
-            </div>
-        </div>
+<div class="announce"><i class="fa-solid fa-user"></i>&nbsp; Sua conta PlacaCerta — pedidos, endereços e segurança</div>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
+    <nav class="nav-links">
+      <a href="/placas.html">Início</a>
+      <a href="/placas.html#catalogo">Catálogo</a>
+      <a href="/contato.html">Contato</a>
     </nav>
-
-    <div class="container py-5" style="margin-top: 60px;">
-        <div class="row">
-            <div class="col-lg-4 mb-4">
-                <div class="profile-sidebar">
-                    <div class="profile-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <h4 id="userName">Usuário</h4>
-                    <p id="userEmail" class="text-muted">email@exemplo.com</p>
-                    <hr>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-outline-custom" onclick="location.href='/pedidos.html'">
-                            <i class="fas fa-box"></i> Meus Pedidos
-                        </button>
-                        <button class="btn btn-outline-custom" onclick="showTab('enderecosTab')">
-                            <i class="fas fa-map-marker-alt"></i> Endereços
-                        </button>
-                        <button class="btn btn-outline-custom" onclick="showTab('dadosTab')">
-                            <i class="fas fa-edit"></i> Editar Perfil
-                        </button>
-                        <button class="btn btn-outline-danger" onclick="logout()">
-                            <i class="fas fa-sign-out-alt"></i> Sair
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-8">
-                <div class="profile-card">
-                    <ul class="nav nav-tabs" id="accountTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="dadosTab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
-                                <i class="fas fa-user"></i> Dados Pessoais
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="enderecosTab" data-bs-toggle="tab" data-bs-target="#enderecos" type="button" role="tab">
-                                <i class="fas fa-map-marker-alt"></i> Endereços
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="segurancaTab" data-bs-toggle="tab" data-bs-target="#seguranca" type="button" role="tab">
-                                <i class="fas fa-lock"></i> Segurança
-                            </button>
-                        </li>
-                    </ul>
-                    
-                    <div class="tab-content mt-4">
-                        <!-- Dados Pessoais -->
-                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
-                            <h5 class="mb-3"><i class="fas fa-user-edit"></i> Editar Perfil</h5>
-                            <form id="updateProfileForm">
-                                <div class="row">
-                                    <div class="col-md-12 mb-3">
-                                        <label class="form-label">Nome completo</label>
-                                        <input type="text" id="updateNome" class="form-control" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email</label>
-                                        <input type="email" id="updateEmail" class="form-control" readonly title="E-mail não pode ser alterado">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Telefone</label>
-                                        <input type="tel" id="updateTelefone" class="form-control">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary-custom">
-                                    <i class="fas fa-save"></i> Atualizar Cadastro
-                                </button>
-                            </form>
-                        </div>
-                        
-                        <!-- Endereços -->
-                        <div class="tab-pane fade" id="enderecos" role="tabpanel">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Meus Endereços</h5>
-                                <button class="btn btn-primary-custom btn-sm" onclick="abrirModalEndereco()">
-                                    <i class="fas fa-plus"></i> Novo Endereço
-                                </button>
-                            </div>
-                            <div id="enderecosList"></div>
-                        </div>
-                        
-                        <!-- Segurança -->
-                        <div class="tab-pane fade" id="seguranca" role="tabpanel">
-                            <h5 class="mb-3"><i class="fas fa-key"></i> Alterar Senha</h5>
-                            <form id="changePasswordForm">
-                                <div class="mb-3">
-                                    <label class="form-label">Senha atual</label>
-                                    <input type="password" id="currentPassword" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Nova senha</label>
-                                    <input type="password" id="newPassword" class="form-control" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Confirmar nova senha</label>
-                                    <input type="password" id="confirmPassword" class="form-control" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary-custom">
-                                    <i class="fas fa-sync-alt"></i> Alterar Senha
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <a class="cart-fab" href="/cart.html"><i class="fa-solid fa-cart-shopping"></i><b id="cartCount">0</b></a>
+      <span id="authLink"></span>
     </div>
+  </div>
+</header>
 
-    <!-- Modal Endereço -->
-    <div class="modal fade" id="enderecoModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-map-marker-alt"></i> Novo Endereço</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="enderecoForm">
-                        <input type="hidden" id="enderecoId">
-                        <div class="mb-3"><label>CEP</label><input type="text" id="endCep" class="form-control"></div>
-                        <div class="mb-3"><label>Logradouro</label><input type="text" id="endLogradouro" class="form-control"></div>
-                        <div class="row"><div class="col-md-6 mb-3"><label>Número</label><input type="text" id="endNumero" class="form-control"></div>
-                        <div class="col-md-6 mb-3"><label>Complemento</label><input type="text" id="endComplemento" class="form-control"></div></div>
-                        <div class="mb-3"><label>Bairro</label><input type="text" id="endBairro" class="form-control"></div>
-                        <div class="row"><div class="col-md-8 mb-3"><label>Cidade</label><input type="text" id="endCidade" class="form-control"></div>
-                        <div class="col-md-4 mb-3"><label>UF</label><select id="endUf" class="form-select"><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div></div>
-                    </form>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary-custom" onclick="salvarEndereco()">Salvar</button>
-                </div>
-            </div>
+<main class="wrap">
+  <div class="layout">
+    <aside class="side">
+      <div class="avatar"><i class="fa-solid fa-user"></i></div>
+      <h2 id="userName">Usuário</h2>
+      <p id="userEmail">email@exemplo.com</p>
+      <a class="btn btn-ghost" href="/pedidos.html"><i class="fa-solid fa-box"></i> Meus pedidos</a>
+      <button class="btn btn-ghost" onclick="showTabPane('enderecos')"><i class="fa-solid fa-location-dot"></i> Endereços</button>
+      <button class="btn btn-ghost" onclick="showTabPane('dados')"><i class="fa-solid fa-pen"></i> Editar perfil</button>
+      <button class="btn btn-danger-ghost" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+    </aside>
+    <div class="panel">
+      <div class="tabs">
+        <button id="tabBtn-dados" class="on" onclick="showTabPane('dados')"><i class="fa-solid fa-user"></i> <span>Dados</span></button>
+        <button id="tabBtn-enderecos" onclick="showTabPane('enderecos')"><i class="fa-solid fa-location-dot"></i> <span>Endereços</span></button>
+        <button id="tabBtn-seguranca" onclick="showTabPane('seguranca')"><i class="fa-solid fa-lock"></i> <span>Segurança</span></button>
+      </div>
+
+      <div class="tabpane on" id="pane-dados">
+        <form id="updateProfileForm">
+          <div class="field"><label>Nome completo</label><input id="updateNome" required></div>
+          <div class="frow">
+            <div class="field"><label>E-mail (não alterável)</label><input id="updateEmail" type="email" readonly></div>
+            <div class="field"><label>Telefone</label><input id="updateTelefone" type="tel"></div>
+          </div>
+          <button class="btn btn-fire" type="submit"><i class="fa-solid fa-floppy-disk"></i> Atualizar cadastro</button>
+        </form>
+      </div>
+
+      <div class="tabpane" id="pane-enderecos">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <h3 style="font-size:1.05rem">Meus endereços</h3>
+          <button class="btn btn-fire" style="padding:9px 18px" onclick="abrirModalEndereco()"><i class="fa-solid fa-plus"></i> Novo</button>
         </div>
+        <div id="enderecosList"></div>
+      </div>
+
+      <div class="tabpane" id="pane-seguranca">
+        <form id="changePasswordForm">
+          <div class="field"><label>Senha atual</label><input id="currentPassword" type="password" required></div>
+          <div class="frow">
+            <div class="field"><label>Nova senha (mín. 8)</label><input id="newPassword" type="password" required></div>
+            <div class="field"><label>Confirmar nova senha</label><input id="confirmPassword" type="password" required></div>
+          </div>
+          <button class="btn btn-fire" type="submit"><i class="fa-solid fa-key"></i> Alterar senha</button>
+        </form>
+      </div>
     </div>
+  </div>
+</main>
 
-    <footer class="footer">
-        <div class="container text-center">
-            <p>&copy; 2024 TechStore - Todos os direitos reservados.</p>
-        </div>
-    </footer>
+<div class="modal-bg" id="enderecoModalBg">
+  <div class="modal">
+    <h3><i class="fa-solid fa-location-dot"></i> Endereço</h3>
+    <form id="enderecoForm" onsubmit="return false">
+      <input type="hidden" id="enderecoId">
+      <div class="frow">
+        <div class="field"><label>CEP</label><input id="endCep"></div>
+        <div class="field"><label>UF</label><select id="endUf"><option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option></select></div>
+      </div>
+      <div class="field"><label>Logradouro</label><input id="endLogradouro"></div>
+      <div class="frow">
+        <div class="field"><label>Número</label><input id="endNumero"></div>
+        <div class="field"><label>Complemento</label><input id="endComplemento"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Bairro</label><input id="endBairro"></div>
+        <div class="field"><label>Cidade</label><input id="endCidade"></div>
+      </div>
+      <div class="macts">
+        <button class="btn btn-ghost" type="button" onclick="fecharModalEndereco()">Cancelar</button>
+        <button class="btn btn-fire" type="button" onclick="salvarEndereco()">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/config.js?v=2"></script>
-    <script>
-        const API = window.API_BASE;
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        if (!token) window.location.href = '/auth.html';
+<footer class="site">
+  <div class="wrap">
+    <div id="socialFooter" style="margin-bottom:18px"></div>
+    <div class="copy"><span>© 2026 PlacaCerta — Todos os direitos reservados.</span><span><a href="/contato.html" style="color:var(--mut)">Contato</a></span></div>
+  </div>
+</footer>
 
-        function showTab(id) { const el = document.getElementById(id); if (el) new bootstrap.Tab(el).show(); }
+<div id="toast"></div>
+<script src="js/config.js?v=3"></script>
+<script>
+const API = window.API_BASE;
+const token = localStorage.getItem('token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token) window.location.href = '/auth.html';
 
-        // Fonte da verdade: servidor (localStorage e burlavel)
-        window.ensureSession().then((ok) => {
-            if (!ok) { window.location.href = '/auth.html'; return null; }
-            return fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
-        }).then(async (r) => {
-            if (!r) return;
-            if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
-            const d = await r.json();
-            if (d.success && d.user) {
-                localStorage.setItem('user', JSON.stringify({ id: d.user._id, nome: d.user.nome, email: d.user.email, telefone: d.user.telefone, role: d.user.role }));
-                document.getElementById('userName').textContent = d.user.nome || 'Usuário';
-                document.getElementById('userEmail').textContent = d.user.email || '';
-                document.getElementById('updateNome').value = d.user.nome || '';
-                document.getElementById('updateEmail').value = d.user.email || '';
-                document.getElementById('updateTelefone').value = d.user.telefone || '';
-            }
-        }).catch(() => window.location.href = '/auth.html');
-        
-        carregarEnderecos();
-        renderEnderecos();
-        
-        let enderecos = [];
+function showTabPane(name) {
+    document.querySelectorAll('.tabpane').forEach(p => p.classList.remove('on'));
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('on'));
+    document.getElementById('pane-' + name).classList.add('on');
+    document.getElementById('tabBtn-' + name).classList.add('on');
+}
+function showTab(id) { showTabPane(id.replace('Tab', '')); }
 
-        async function carregarEnderecos() {
-            try {
-                const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
-                const data = await res.json();
-                if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); }
-            } catch { /* mantem lista vazia */ }
-        }
-        
-        function showToast(msg, isError = false) {
-            const toast = document.createElement('div');
-            toast.className = 'toast-custom';
-            toast.style.borderLeftColor = isError ? '#ef4444' : '#10b981';
-            toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> `;
-            toast.appendChild(document.createTextNode(String(msg ?? '')));
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-        
-        function updateCartCount() {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const cartCount = document.getElementById('cartCount');
-            if (cartCount) cartCount.textContent = count;
-        }
-        
-        function updateAuthUI() {
-            const authLink = document.getElementById('authLink');
-            if (user.nome) {
-                authLink.innerHTML = `<div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle"></i> ${window.escapeHtml(String(user.nome || '').split(' ')[0])}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end bg-dark">
-                        <li><a class="dropdown-item text-white" href="/minha-conta.html"><i class="fas fa-user"></i> Minha Conta</a></li>
-                        ${user.role === 'admin' ? '<li><a class="dropdown-item text-white" href="/dashboard.html"><i class="fas fa-chart-line"></i> Admin</a></li>' : ''}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-white" href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
-                    </ul>
-                </div>`;
-            } else {
-                authLink.innerHTML = '<a href="/auth.html" class="btn btn-primary-custom">Entrar</a>';
-            }
-        }
-        
-        function logout() { window.logoutAll(); window.location.href = '/placas.html'; }
-        
-        // Carregar dados do usuário
-        document.getElementById('userName').innerText = user.nome || 'Usuário';
-        document.getElementById('userEmail').innerText = user.email || '';
-        document.getElementById('updateNome').value = user.nome || '';
-        document.getElementById('updateEmail').value = user.email || '';
-        document.getElementById('updateTelefone').value = user.telefone || '';
-        
-        // Atualizar perfil (API real)
-        document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nome = document.getElementById('updateNome').value.trim();
-            const telefone = document.getElementById('updateTelefone').value.trim();
-            if (!nome) { showToast('Nome é obrigatório', true); return; }
-            try {
-                const res = await fetch(API + '/auth/me', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ nome, telefone }) });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    const cur = JSON.parse(localStorage.getItem('user') || '{}');
-                    localStorage.setItem('user', JSON.stringify({ ...cur, nome: data.user.nome, telefone: data.user.telefone }));
-                    showToast('Perfil atualizado com sucesso!');
-                    setTimeout(() => location.reload(), 1200);
-                } else showToast(data.message || 'Erro ao atualizar', true);
-            } catch { showToast('Erro ao conectar', true); }
-        });
-        
-        // Alterar senha
-        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const newPass = document.getElementById('newPassword').value;
-            const confirmPass = document.getElementById('confirmPassword').value;
-            
-            if (newPass !== confirmPass) {
-                showToast('As senhas não conferem!', true);
-                return;
-            }
-            if (newPass.length < 8) {
-                showToast('A senha deve ter pelo menos 8 caracteres!', true);
-                return;
-            }
-            const current = document.getElementById('currentPassword').value;
-            if (!current) { showToast('Informe a senha atual', true); return; }
-            try {
-                const res = await fetch(API + '/auth/password', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ current, password: newPass }) });
-                const data = await res.json();
-                if (res.ok && data.success) { showToast('Senha alterada com sucesso!'); document.getElementById('changePasswordForm').reset(); }
-                else showToast(data.message || 'Erro ao alterar senha', true);
-            } catch { showToast('Erro ao conectar', true); }
-        });
-        
-        // Renderizar endereços
-        function renderEnderecos() {
-            const container = document.getElementById('enderecosList');
-            if (enderecos.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted py-4">Nenhum endereço cadastrado.</div>';
-                return;
-            }
-            container.innerHTML = enderecos.map((e) => `
-                <div class="address-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <strong>${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}</strong><br>
-                            ${window.escapeHtml(e.bairro || '-')}<br>
-                            ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.estado || e.uf || '-')}<br>
-                            CEP: ${window.escapeHtml(e.cep || '-')}
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-warning me-1" onclick="editarEndereco('${e._id}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="excluirEndereco('${e._id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function abrirModalEndereco(id = null) {
-            if (id !== null && id !== '') {
-                const e = enderecos.find(x => x._id === id) || {};
-                document.getElementById('enderecoId').value = id;
-                document.getElementById('endCep').value = e.cep;
-                document.getElementById('endLogradouro').value = e.logradouro;
-                document.getElementById('endNumero').value = e.numero;
-                document.getElementById('endComplemento').value = e.complemento || '';
-                document.getElementById('endBairro').value = e.bairro;
-                document.getElementById('endCidade').value = e.cidade;
-                window.setSelectValue(document.getElementById('endUf'), e.estado || e.uf || 'SP');
-            } else {
-                document.getElementById('enderecoId').value = '';
-                document.getElementById('endCep').value = '';
-                document.getElementById('endLogradouro').value = '';
-                document.getElementById('endNumero').value = '';
-                document.getElementById('endComplemento').value = '';
-                document.getElementById('endBairro').value = '';
-                document.getElementById('endCidade').value = '';
-                document.getElementById('endUf').value = 'SP';
-            }
-            new bootstrap.Modal(document.getElementById('enderecoModal')).show();
-        }
-        
-        function collectEndereco() {
-            return {
-                cep: document.getElementById('endCep').value.trim(),
-                logradouro: document.getElementById('endLogradouro').value.trim(),
-                numero: document.getElementById('endNumero').value.trim(),
-                complemento: document.getElementById('endComplemento').value.trim(),
-                bairro: document.getElementById('endBairro').value.trim(),
-                cidade: document.getElementById('endCidade').value.trim(),
-                estado: document.getElementById('endUf').value
-            };
-        }
-
-        async function salvarEndereco() {
-            const corpo = collectEndereco();
-            if (!corpo.logradouro || !corpo.numero || !corpo.bairro || !corpo.cidade || !corpo.estado || !corpo.cep) {
-                showToast('Preencha logradouro, número, bairro, cidade, UF e CEP', true);
-                return;
-            }
-            const id = document.getElementById('enderecoId').value;
-            try {
-                const res = await fetch(API + '/auth/enderecos' + (id ? '/' + id : ''), {
-                    method: id ? 'PUT' : 'POST',
-                    headers: window.getAuthHeaders(),
-                    body: JSON.stringify(corpo)
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    enderecos = data.enderecos || [];
-                    renderEnderecos();
-                    bootstrap.Modal.getInstance(document.getElementById('enderecoModal')).hide();
-                    showToast('Endereço salvo com sucesso!');
-                } else showToast(data.message || 'Erro ao salvar endereço', true);
-            } catch { showToast('Erro ao conectar', true); }
-        }
-
-        function editarEndereco(id) { abrirModalEndereco(id); }
-        async function excluirEndereco(id) {
-            if (!confirm('Excluir este endereço?')) return;
-            try {
-                const res = await fetch(API + '/auth/enderecos/' + id, { method: 'DELETE', headers: window.getAuthHeaders() });
-                const data = await res.json();
-                if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); showToast('Endereço excluído!'); }
-                else showToast(data.message || 'Erro ao excluir', true);
-            } catch { showToast('Erro ao conectar', true); }
-        }
-        
-        renderEnderecos();
-        updateCartCount();
+window.ensureSession().then((ok) => {
+    if (!ok) { window.location.href = '/auth.html'; return null; }
+    return fetch(API + '/auth/me', { headers: window.getAuthHeaders() });
+}).then(async (r) => {
+    if (!r) return;
+    if (!r.ok) { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = '/auth.html'; return; }
+    const d = await r.json();
+    if (d.success && d.user) {
+        localStorage.setItem('user', JSON.stringify({ id: d.user._id, nome: d.user.nome, email: d.user.email, telefone: d.user.telefone, role: d.user.role }));
+        document.getElementById('userName').textContent = d.user.nome || 'Usuário';
+        document.getElementById('userEmail').textContent = d.user.email || '';
+        document.getElementById('updateNome').value = d.user.nome || '';
+        document.getElementById('updateEmail').value = d.user.email || '';
+        document.getElementById('updateTelefone').value = d.user.telefone || '';
         updateAuthUI();
-    </script>
+    }
+}).catch(() => window.location.href = '/auth.html');
+
+carregarEnderecos();
+let enderecos = [];
+async function carregarEnderecos() {
+    try {
+        const res = await fetch(API + '/auth/enderecos', { headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); }
+    } catch { /* mantem lista vazia */ }
+}
+function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg';
+    toast.style.borderLeftColor = isError ? '#f87171' : '#ffb224';
+    toast.textContent = String(msg ?? '');
+    document.getElementById('toast').appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+function updateCartCount() {
+    try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        document.getElementById('cartCount').textContent = cart.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    } catch {}
+}
+function updateAuthUI() {
+    document.getElementById('authLink').innerHTML = window.userLink() || '<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>';
+}
+function logout() { window.logoutAll(); window.location.href = '/placas.html'; }
+
+document.getElementById('userName').innerText = user.nome || 'Usuário';
+document.getElementById('userEmail').innerText = user.email || '';
+document.getElementById('updateNome').value = user.nome || '';
+document.getElementById('updateEmail').value = user.email || '';
+document.getElementById('updateTelefone').value = user.telefone || '';
+
+document.getElementById('updateProfileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = document.getElementById('updateNome').value.trim();
+    const telefone = document.getElementById('updateTelefone').value.trim();
+    if (!nome) { showToast('Nome é obrigatório', true); return; }
+    try {
+        const res = await fetch(API + '/auth/me', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ nome, telefone }) });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            const cur = JSON.parse(localStorage.getItem('user') || '{}');
+            localStorage.setItem('user', JSON.stringify({ ...cur, nome: data.user.nome, telefone: data.user.telefone }));
+            showToast('Perfil atualizado com sucesso!');
+            setTimeout(() => location.reload(), 1200);
+        } else showToast(data.message || 'Erro ao atualizar', true);
+    } catch { showToast('Erro ao conectar', true); }
+});
+
+document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    if (newPass !== confirmPass) { showToast('As senhas não conferem!', true); return; }
+    if (newPass.length < 8) { showToast('A senha deve ter pelo menos 8 caracteres!', true); return; }
+    const current = document.getElementById('currentPassword').value;
+    if (!current) { showToast('Informe a senha atual', true); return; }
+    try {
+        const res = await fetch(API + '/auth/password', { method: 'PUT', headers: window.getAuthHeaders(), body: JSON.stringify({ current, password: newPass }) });
+        const data = await res.json();
+        if (res.ok && data.success) { showToast('Senha alterada com sucesso!'); document.getElementById('changePasswordForm').reset(); }
+        else showToast(data.message || 'Erro ao alterar senha', true);
+    } catch { showToast('Erro ao conectar', true); }
+});
+
+function renderEnderecos() {
+    const container = document.getElementById('enderecosList');
+    if (!enderecos.length) {
+        container.innerHTML = '<div class="empty">Nenhum endereço cadastrado. Adicione para acelerar o checkout.</div>';
+        return;
+    }
+    container.innerHTML = enderecos.map((e) => `
+        <div class="addr">
+            <div><strong>${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}</strong>
+            <span>${window.escapeHtml(e.bairro || '-')} · ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.estado || e.uf || '-')}<br>CEP: ${window.escapeHtml(e.cep || '-')}</span></div>
+            <div class="acts">
+                <button class="iconbtn" onclick="editarEndereco('${e._id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
+                <button class="iconbtn del" onclick="excluirEndereco('${e._id}')" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`).join('');
+}
+function abrirModalEndereco(id = null) {
+    if (id) {
+        const e = enderecos.find(x => x._id === id) || {};
+        document.getElementById('enderecoId').value = id;
+        document.getElementById('endCep').value = e.cep || '';
+        document.getElementById('endLogradouro').value = e.logradouro || '';
+        document.getElementById('endNumero').value = e.numero || '';
+        document.getElementById('endComplemento').value = e.complemento || '';
+        document.getElementById('endBairro').value = e.bairro || '';
+        document.getElementById('endCidade').value = e.cidade || '';
+        window.setSelectValue(document.getElementById('endUf'), e.estado || e.uf || 'SP');
+    } else {
+        document.getElementById('enderecoId').value = '';
+        ['endCep','endLogradouro','endNumero','endComplemento','endBairro','endCidade'].forEach(i => document.getElementById(i).value = '');
+        document.getElementById('endUf').value = 'SP';
+    }
+    document.getElementById('enderecoModalBg').classList.add('open');
+}
+function fecharModalEndereco() { document.getElementById('enderecoModalBg').classList.remove('open'); }
+function collectEndereco() {
+    return {
+        cep: document.getElementById('endCep').value.trim(),
+        logradouro: document.getElementById('endLogradouro').value.trim(),
+        numero: document.getElementById('endNumero').value.trim(),
+        complemento: document.getElementById('endComplemento').value.trim(),
+        bairro: document.getElementById('endBairro').value.trim(),
+        cidade: document.getElementById('endCidade').value.trim(),
+        estado: document.getElementById('endUf').value
+    };
+}
+async function salvarEndereco() {
+    const corpo = collectEndereco();
+    if (!corpo.logradouro || !corpo.numero || !corpo.bairro || !corpo.cidade || !corpo.estado || !corpo.cep) {
+        showToast('Preencha logradouro, número, bairro, cidade, UF e CEP', true); return;
+    }
+    const id = document.getElementById('enderecoId').value;
+    try {
+        const res = await fetch(API + '/auth/enderecos' + (id ? '/' + id : ''), {
+            method: id ? 'PUT' : 'POST',
+            headers: window.getAuthHeaders(),
+            body: JSON.stringify(corpo)
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            enderecos = data.enderecos || [];
+            renderEnderecos();
+            fecharModalEndereco();
+            showToast('Endereço salvo com sucesso!');
+        } else showToast(data.message || 'Erro ao salvar endereço', true);
+    } catch { showToast('Erro ao conectar', true); }
+}
+function editarEndereco(id) { abrirModalEndereco(id); }
+async function excluirEndereco(id) {
+    if (!confirm('Excluir este endereço?')) return;
+    try {
+        const res = await fetch(API + '/auth/enderecos/' + id, { method: 'DELETE', headers: window.getAuthHeaders() });
+        const data = await res.json();
+        if (res.ok && data.success) { enderecos = data.enderecos || []; renderEnderecos(); showToast('Endereço excluído!'); }
+        else showToast(data.message || 'Erro ao excluir', true);
+    } catch { showToast('Erro ao conectar', true); }
+}
+renderEnderecos();
+updateCartCount();
+updateAuthUI();
+window.renderSocial('socialFooter');
+</script>
 </body>
 </html>
