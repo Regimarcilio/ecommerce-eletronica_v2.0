@@ -99,7 +99,7 @@ section{padding:72px 0}
 #ofertas{background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden}
 .coverflow{position:relative;max-width:920px;margin:0 auto;padding:10px 64px 0;min-height:440px}
 .cf-viewport{overflow:visible;display:flex;justify-content:center}
-.cf-card{flex:0 0 300px;margin:0 -30px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:26px 24px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
+.cf-card{flex:0 0 232px;margin:0 -22px;background:linear-gradient(165deg,var(--card2),#0d1330);border:1px solid var(--line);border-radius:22px;padding:22px 20px;text-align:center;transition:transform .55s cubic-bezier(.22,1,.36,1),opacity .55s,box-shadow .55s;opacity:0;pointer-events:none;position:relative}
 .cf-card .foto{height:150px;display:grid;place-items:center;font-size:4rem;color:var(--amber);margin-bottom:12px}
 .cf-card .foto img{max-height:150px;max-width:100%;object-fit:contain;border-radius:12px}
 .cf-tag{position:absolute;top:16px;left:16px;font-size:.68rem;font-weight:700;letter-spacing:1px;background:var(--grad);color:#1a1000;padding:4px 12px;border-radius:99px}
@@ -110,11 +110,11 @@ section{padding:72px 0}
 .cf-card .parc{font-size:.82rem;color:var(--mut);margin-bottom:14px}
 .cf-card .btn{width:100%;justify-content:center}
 .cf-card.off-l2{transform:translateX(-30px) scale(.72) perspective(900px) rotateY(28deg);opacity:.35}
-.cf-card.off-l2,.cf-card.off-r2{display:none}
-.cf-card.off-l1{transform:translateX(-10px) scale(.86) perspective(900px) rotateY(16deg);opacity:.7}
-.cf-card.active{transform:scale(1);opacity:1;pointer-events:auto;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,178,36,.35);z-index:3}
-.cf-card.off-r1{transform:translateX(10px) scale(.86) perspective(900px) rotateY(-16deg);opacity:.7}
-.cf-card.off-r2{transform:translateX(30px) scale(.72) perspective(900px) rotateY(-28deg);opacity:.35}
+.cf-card.off-l2{transform:translateX(-26px) scale(.64) perspective(900px) rotateY(30deg);opacity:.3}
+.cf-card.off-l1{transform:translateX(-8px) scale(.84) perspective(900px) rotateY(16deg);opacity:.7}
+.cf-card.active{transform:scale(1.04);opacity:1;pointer-events:auto;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,178,36,.35);z-index:3}
+.cf-card.off-r1{transform:translateX(8px) scale(.84) perspective(900px) rotateY(-16deg);opacity:.7}
+.cf-card.off-r2{transform:translateX(26px) scale(.64) perspective(900px) rotateY(-30deg);opacity:.3}
 .cf-nav{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:30px}
 .cf-arrow{width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--txt);cursor:pointer;font-size:1rem;transition:.2s}
 .cf-arrow:hover{border-color:var(--amber);color:var(--amber)}
@@ -460,7 +460,9 @@ async function boot(){
     if(hero){document.getElementById('heroName').textContent=hero.nome;
       document.getElementById('heroCompat').textContent=compat(hero)||'Pronta entrega';
       document.getElementById('heroPrice').textContent=money(hero.preco);}
-    cfBuild(all.filter(p=>p.destaque).concat(all.filter(p=>!p.destaque)).slice(0,5));
+    cfPool = all;
+    cfSorteio();
+    setInterval(cfSorteio, 5 * 60 * 1000); // 5 novos a cada 5 min
     finderInit(all);
   }catch(e){console.error(e)}
 }
@@ -471,6 +473,12 @@ function buildMarcaPills(marcas){
 
 /* ---------- coverflow ---------- */
 let cfItems=[],cfIdx=0,cfTimer=null,cfT0=0;const CF_MS=5200;
+let cfPool=[];
+function cfSorteio(){
+  const pool=[...cfPool];
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  cfBuild(pool.slice(0,5));
+}
 function cfBuild(items){
   cfItems=items;cfIdx=0;
   const track=document.getElementById('cfTrack');
