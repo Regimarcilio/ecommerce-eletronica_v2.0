@@ -1272,6 +1272,15 @@ app.put('/api/contato/:id/lida', auth, admin, asyncHandler(async (req, res) => {
     res.json({ success: true });
 }));
 
+// Admin: exclui mensagem (CRUD completo)
+app.delete('/api/contato/:id', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const c = await Contato.findByIdAndDelete(req.params.id);
+    if (!c) return err(res, 404, 'Mensagem não encontrada', 'NOT_FOUND');
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'mensagem_excluida', por: req.usuarioId, id: req.params.id }));
+    res.json({ success: true });
+}));
+
 // Admin: QR/pairing frescos para parear (proxy; sem expor apikey)
 app.get('/api/config/whatsapp/qr', auth, admin, asyncHandler(async (req, res) => {
     if (!EVO_API_URL || !EVO_APIKEY) return err(res, 502, 'Evolution nao configurado', 'UPSTREAM');

@@ -735,7 +735,7 @@
                             <td>${window.escapeHtml(m.assunto || '—')}</td>
                             <td class="small" style="max-width:280px">${window.escapeHtml(window.truncate(m.mensagem || '', 140))}</td>
                             <td>${m.lida ? '<span class="badge-success">lida</span>' : '<span class="badge-warning">nova</span>'}</td>
-                            <td>${m.lida ? '' : `<button class="btn-view" onclick="marcarLida('${m._id}')">Marcar lida</button>`}</td>
+                            <td>${m.lida ? '' : `<button class="btn-view" onclick="marcarLida('${m._id}')">Marcar lida</button>`} <button class="btn-view" style="color:#f87171" onclick="excluirMsg('${m._id}')">Excluir</button></td>
                         </tr>`;
                     }
                     html += '</tbody></table></div>' + pagerNav('msg', pgMsg);
@@ -752,6 +752,16 @@
                 const res = await fetch(`${API}/contato/${id}/lida`, { method: 'PUT', headers: getHeaders() });
                 const data = await res.json();
                 if (res.ok && data.success) { showToast('Mensagem marcada como lida'); loadMensagens(); atualizaMsgBadge(); }
+                else showToast(data.message || 'Erro', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+
+        async function excluirMsg(id) {
+            if (!confirm('Excluir esta mensagem?')) return;
+            try {
+                const res = await fetch(`${API}/contato/${id}`, { method: 'DELETE', headers: getHeaders() });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Mensagem excluída'); loadMensagens(); atualizaMsgBadge(); }
                 else showToast(data.message || 'Erro', true);
             } catch { showToast('Erro ao conectar', true); }
         }

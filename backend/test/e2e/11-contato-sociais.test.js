@@ -32,6 +32,18 @@ describe('e2e contato + redes sociais', () => {
     assert.ok(!filtrada.data.mensagens.some((m) => String(m._id) === String(id)));
   });
 
+  it('contato CRUD completo: excluir (admin) + 404 + 401', async () => {
+    const c = await api('POST', '/api/contato', {
+      body: { nome: 'E2E Del', email: 'del@t.t', mensagem: 'mensagem para excluir com certeza' },
+    });
+    const id = c.data.protocolo;
+    assert.equal((await api('DELETE', `/api/contato/${id}`, {})).status, 401);
+    assert.equal((await api('DELETE', '/api/contato/000000000000000000000000', { token: atok })).status, 404);
+    assert.equal((await api('DELETE', `/api/contato/${id}`, { token: atok })).status, 200);
+    const list = await api('GET', '/api/contato', { token: atok });
+    assert.ok(!list.data.mensagens.some((m) => String(m._id) === String(id)));
+  });
+
   it('redes sociais: salva, publica e valida', async () => {
     const put = await api('PUT', '/api/config/loja', {
       token: atok,
