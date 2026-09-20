@@ -93,6 +93,19 @@ describe('e2e pagamentos + whatsapp', () => {
     assert.ok(f.data.pagamentos[0].pedido && f.data.pagamentos[0].pedido.numero);
   });
 
+  it('token direto via segredos ativa mpAtivo; remover desativa', async () => {
+    const put = await api('PUT', '/api/config/loja', { token: atok, body: { segredos: { mp_access_token: 'TEST-fake-token-para-e2e' } } });
+    assert.equal(put.status, 200);
+    const pub = await api('GET', '/api/config/loja/public');
+    assert.equal(pub.data.config.mpAtivo, true);
+    const st = await api('GET', '/api/pagamentos/mercadopago/oauth/status', { token: atok });
+    assert.equal(st.data.oauth.conectado, true);
+    const del = await api('PUT', '/api/config/loja', { token: atok, body: { segredos: { mp_access_token: '' } } });
+    assert.equal(del.status, 200);
+    const pub2 = await api('GET', '/api/config/loja/public');
+    assert.equal(pub2.data.config.mpAtivo, false);
+  });
+
   after(async () => {
     if (prodId) await api('DELETE', `/api/produtos/${prodId}`, { token: atok });
     if (catId) await api('DELETE', `/api/categorias/${catId}`, { token: atok });

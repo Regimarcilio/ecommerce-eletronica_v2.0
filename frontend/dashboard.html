@@ -860,6 +860,10 @@
                         <button class="btn btn-sm btn-primary-custom" onclick="mpConectar()"><i class="fas fa-plug"></i> Conectar Mercado Pago</button>
                         <button class="btn btn-sm btn-outline-light" onclick="mpOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
                     </div>
+                    <div class="row mt-2">
+                        <div class="col-md-8 mb-2"><label class="form-label">Ou cole o Access Token direto (APP_USR-…)</label><input id="mpTokenDireto" type="password" class="form-control" placeholder="APP_USR-..." autocomplete="new-password"></div>
+                        <div class="col-md-4 mb-2 d-flex align-items-end"><button class="btn btn-sm btn-primary-custom" onclick="mpSalvarToken()"><i class="fas fa-save"></i> Salvar token</button></div>
+                    </div>
                     <small class="text-muted d-block mt-2">Exige <code>MP_CLIENT_ID</code>/<code>MP_CLIENT_SECRET</code> no <code>backend/.env</code> (guia em <code>docs/MERCADOPAGO.md</code>). Sem isso, o checkout roda em demonstração.</small>
                 </div>
                 <div class="data-card mt-3">
@@ -929,6 +933,24 @@
                 if (!res.ok || !data.success) { showToast(data.message || 'Configure MP_CLIENT_ID/MP_CLIENT_SECRET no backend/.env', true); return; }
                 window.open(data.url, '_blank');
                 showToast('Autorize no Mercado Pago; ao voltar, a conta conecta sozinha.');
+            } catch { showToast('Erro ao conectar', true); }
+        }
+        // Token direto (APP_USR-…): salva cifrado e ativa o modo real sem .env
+        async function mpSalvarToken() {
+            const v = document.getElementById('mpTokenDireto').value.trim();
+            if (!v) { showToast('Cole o Access Token (APP_USR-…)', true); return; }
+            if (!/^(APP_USR|TEST)-/.test(v)) { showToast('Token inválido (esperado APP_USR-… ou TEST-…)', true); return; }
+            try {
+                const res = await fetch(API + '/config/loja', {
+                    method: 'PUT', headers: getHeaders(),
+                    body: JSON.stringify({ segredos: { mp_access_token: v } })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    document.getElementById('mpTokenDireto').value = '';
+                    showToast('Token salvo! Mercado Pago em modo real.');
+                    mpOauthStatus();
+                } else showToast(data.message || 'Erro ao salvar', true);
             } catch { showToast('Erro ao conectar', true); }
         }
         // Volta do OAuth (MP_REDIRECT_URI=dashboard.html?code=...): troca automatica
