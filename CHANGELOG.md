@@ -2,6 +2,11 @@
 
 Formato: `tipo(escopo): descricao` (Conventional Commits). Historico completo em `git log`.
 
+## v1.8.1 — 2026-09-19 — Credenciais manuais no dashboard
+- Dashboard conecta sem `.env`: MP (Client ID/Secret/Redirect + token direto) e PagSeguro (e-mail/token/ambiente), segredos cifrados
+- Backend: `mpClientId/mpRedirectUri/pgsEmail/pgsSandbox` no Settings, fallback env-primeiro, `pgsApi()` por ambiente
+- 49 unit + 82 E2E verdes
+
 ## v1.8.0 — 2026-09-19 — PagSeguro cartão/boleto + MP OAuth
 - PagSeguro checkout hospedado: `POST /api/pagamentos/pagseguro/checkout` (`CHEC_*`, CREDIT_CARD/BOLETO/PIX, `payLink` sandbox validado) + botão "Cartão ou boleto" no checkout
 - Mercado Pago OAuth: `GET .../oauth/url`, `POST .../oauth/token` (authorization_code/refresh_token/client_credentials, segredos cifrados), `GET .../oauth/status`; token via `.env` ou OAuth; `docs/MERCADOPAGO.md` + `MP_CLIENT_*` no `.env.example`

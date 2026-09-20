@@ -22,8 +22,9 @@ retorna `404` num `GET /orders/:id-inexistente` (autenticado); token inválido r
 | `PGS_SANDBOX` | `true` = sandbox, `false`/`ausente` = produção |
 | `API_PUBLIC_URL` | URL pública **https** do backend (exigida p/ `notification_urls`; `localhost` é rejeitado pela API) |
 
-Alternativa ao `.env`: segredo `pagseguro_token` cifrado via painel admin
-(`PUT /api/config/loja` → `segredos`, chave `SETTINGS_KEY` no `.env`).
+Alternativa ao `.env`: cartão **PagSeguro** no dashboard (Configurações) —
+e-mail, token e ambiente (sandbox/produção) preenchidos à mão e salvos
+cifrados (`pgsEmail`, `pagseguro_token`, `pgsSandbox`).
 Prioridade: `PGS_TOKEN` do `.env` primeiro, depois segredo do painel, senão **mock**.
 
 ## Fluxo (PIX via Orders API)
