@@ -853,6 +853,14 @@
                         <div class="col-md-4 mb-3"><label class="form-label">Parcelas máx</label><input id="cfgParc" type="number" min="1" max="21" class="form-control" value="${c.parcelasMax ?? 12}"></div>
                         <div class="col-md-4 mb-3"><label class="form-label">Desconto PIX %</label><input id="cfgDesc" type="number" min="0" max="100" step="0.1" class="form-control" value="${c.descontoPix ?? 5}"></div>
                     </div>
+                    <hr>
+                    <h5><i class="fas fa-bolt"></i> Mercado Pago OAuth <small class="text-muted">(receber de verdade)</small></h5>
+                    <p class="mb-2">Status: <strong id="mpOauthStatus">verificando…</strong></p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-primary-custom" onclick="mpConectar()"><i class="fas fa-plug"></i> Conectar Mercado Pago</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="mpOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
+                    </div>
+                    <small class="text-muted d-block mt-2">Exige <code>MP_CLIENT_ID</code>/<code>MP_CLIENT_SECRET</code> no <code>backend/.env</code> (guia em <code>docs/MERCADOPAGO.md</code>). Sem isso, o checkout roda em demonstração.</small>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-truck"></i> Faixas de frete <small class="text-muted">(vazio = regra padrão)</small></h4>
@@ -886,6 +894,7 @@
                 </div>
                 <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
                 (c.faixasFrete || []).forEach(addFaixaRow);
+                mpOauthStatus();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -895,6 +904,47 @@
                 const data = await res.json();
                 document.getElementById('zapStatus').textContent = !data.status?.configurado ? 'não configurado' : ('Evolution: ' + (data.status.estado || '?'));
             } catch { document.getElementById('zapStatus').textContent = 'erro'; }
+        }
+
+        // ---- Mercado Pago OAuth (conectar a conta do lojista) ----
+        async function mpOauthStatus(manual) {
+            const el = document.getElementById('mpOauthStatus');
+            try {
+                const res = await fetch(API + '/pagamentos/mercadopago/oauth/status', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok || !data.success) { if (el) el.textContent = 'erro'; return; }
+                const o = data.oauth;
+                if (el) {
+                    el.textContent = o.conectado
+                        ? `conectado${o.viaEnv ? ' (via .env)' : ''}${o.expiraEm ? ' · expira em ' + new Date(o.expiraEm).toLocaleDateString('pt-BR') : ''}`
+                        : 'desconectado (checkout em demonstração)';
+                    el.style.color = o.conectado ? '#6ee7b7' : '#fbbf24';
+                }
+            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
+        }
+        async function mpConectar() {
+            try {
+                const res = await fetch(API + '/pagamentos/mercadopago/oauth/url', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok || !data.success) { showToast(data.message || 'Configure MP_CLIENT_ID/MP_CLIENT_SECRET no backend/.env', true); return; }
+                window.open(data.url, '_blank');
+                showToast('Autorize no Mercado Pago; ao voltar, a conta conecta sozinha.');
+            } catch { showToast('Erro ao conectar', true); }
+        }
+        // Volta do OAuth (MP_REDIRECT_URI=dashboard.html?code=...): troca automatica
+        async function mpTrocarCode() {
+            const code = new URLSearchParams(window.location.search).get('code');
+            if (!code) return;
+            try {
+                const res = await fetch(API + '/pagamentos/mercadopago/oauth/token', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({ grant_type: 'authorization_code', code })
+                });
+                const data = await res.json();
+                window.history.replaceState({}, '', window.location.pathname);
+                if (res.ok && data.success) showToast(`Mercado Pago conectado! (conta ${data.user_id || ''})`);
+                else showToast(data.message || 'Falha ao conectar', true);
+            } catch { showToast('Erro ao conectar', true); }
         }
 
         function faixaRow(f) {
@@ -953,6 +1003,9 @@
 
         loadDashboard();
         atualizaMsgBadge();
+        mpTrocarCode();
+        // status OAuth aparece ao abrir Configurações; atualiza se o card existir
+        setTimeout(() => { if (document.getElementById('mpOauthStatus')) mpOauthStatus(); }, 500);
     </script>
 </body>
 </html>
