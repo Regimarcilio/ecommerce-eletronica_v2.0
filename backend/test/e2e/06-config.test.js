@@ -53,6 +53,29 @@ describe('e2e configuracoes da loja', () => {
     assert.ok(!('E2E_K' in (get2.data.config.segredos || {})));
   });
 
+  it('credenciais manuais MP/PGS via painel (sem .env)', async () => {
+    const put = await api('PUT', '/api/config/loja', {
+      token: atok,
+      body: { mpClientId: '123456', mpRedirectUri: 'https://x.test/dash', pgsEmail: 'loja@e2e.t', pgsSandbox: true, segredos: { mp_client_secret: 'sec-test', pagseguro_token: 'tok-test' } },
+    });
+    assert.equal(put.status, 200);
+    const get = await api('GET', '/api/config/loja', { token: atok });
+    assert.equal(get.data.config.mpClientId, '123456');
+    assert.equal(get.data.config.mpRedirectUri, 'https://x.test/dash');
+    assert.equal(get.data.config.pgsEmail, 'loja@e2e.t');
+    assert.equal(get.data.config.pgsSandbox, true);
+    assert.equal(get.data.config.segredos.mp_client_secret, '***');
+    assert.ok(!JSON.stringify(get.data).includes('sec-test'));
+    const st = await api('GET', '/api/pagamentos/mercadopago/oauth/status', { token: atok });
+    assert.equal(st.data.oauth.clientConfigurado, true);
+    assert.equal(st.data.oauth.clientSecretConfigurado, true);
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { pgsEmail: 'nao-email' } })).status, 400);
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { pgsSandbox: 'x' } })).status, 400);
+    await api('PUT', '/api/config/loja', { token: atok, body: { mpClientId: '', mpRedirectUri: '', pgsEmail: '', segredos: { mp_client_secret: '', pagseguro_token: '' } } });
+    const get2 = await api('GET', '/api/config/loja', { token: atok });
+    assert.ok(!('mp_client_secret' in (get2.data.config.segredos || {})));
+  });
+
   it('whatsapp/status responde shape (configurado ou nao)', async () => {
     const r = await api('GET', '/api/config/whatsapp/status', { token: atok });
     assert.equal(r.status, 200);

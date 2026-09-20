@@ -856,7 +856,13 @@
                     <hr>
                     <h5><i class="fas fa-bolt"></i> Mercado Pago OAuth <small class="text-muted">(receber de verdade)</small></h5>
                     <p class="mb-2">Status: <strong id="mpOauthStatus">verificando…</strong></p>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label class="form-label">Client ID (manual)</label><input id="mpClientId" class="form-control" maxlength="60" value="${window.escapeHtml(c.mpClientId || '')}" placeholder="1234567890123456"></div>
+                        <div class="col-md-4 mb-2"><label class="form-label">Client Secret (manual)</label><input id="mpClientSecret" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
+                        <div class="col-md-4 mb-2"><label class="form-label">Redirect URI (opcional)</label><input id="mpRedirectUri" class="form-control" maxlength="300" value="${window.escapeHtml(c.mpRedirectUri || '')}" placeholder="https://sualoja/dashboard.html"></div>
+                    </div>
                     <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-primary-custom" onclick="mpSalvarCredenciais()"><i class="fas fa-save"></i> Salvar credenciais</button>
                         <button class="btn btn-sm btn-primary-custom" onclick="mpConectar()"><i class="fas fa-plug"></i> Conectar Mercado Pago</button>
                         <button class="btn btn-sm btn-outline-light" onclick="mpOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
                     </div>
@@ -865,6 +871,20 @@
                         <div class="col-md-4 mb-2 d-flex align-items-end"><button class="btn btn-sm btn-primary-custom" onclick="mpSalvarToken()"><i class="fas fa-save"></i> Salvar token</button></div>
                     </div>
                     <small class="text-muted d-block mt-2">Exige <code>MP_CLIENT_ID</code>/<code>MP_CLIENT_SECRET</code> no <code>backend/.env</code> (guia em <code>docs/MERCADOPAGO.md</code>). Sem isso, o checkout roda em demonstração.</small>
+                </div>
+                <div class="data-card mt-3">
+                    <h4><i class="fas fa-qrcode"></i> PagSeguro <small class="text-muted">(receber de verdade)</small></h4>
+                    <p class="mb-2">Status: <strong id="pgsStatusDash">verificando…</strong></p>
+                    <div class="row">
+                        <div class="col-md-4 mb-2"><label class="form-label">E-mail da conta (manual)</label><input id="pgsEmail" type="email" class="form-control" maxlength="160" value="${window.escapeHtml(c.pgsEmail || '')}" placeholder="voce@loja.com"></div>
+                        <div class="col-md-4 mb-2"><label class="form-label">Token (manual)</label><input id="pgsToken" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
+                        <div class="col-md-4 mb-2"><label class="form-label">Ambiente</label><select id="pgsSandbox" class="form-select"><option value="true">Sandbox (teste)</option><option value="false">Produção</option></select></div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-primary-custom" onclick="pgsSalvarCredenciais()"><i class="fas fa-save"></i> Salvar e ativar</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="pgsStatusDash(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
+                    </div>
+                    <small class="text-muted d-block mt-2">Sandbox e produção usam tokens distintos. Sem token, o checkout roda em demonstração.</small>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-truck"></i> Faixas de frete <small class="text-muted">(vazio = regra padrão)</small></h4>
@@ -899,6 +919,10 @@
                 <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
                 (c.faixasFrete || []).forEach(addFaixaRow);
                 mpOauthStatus();
+                if (c.pgsSandbox === true || c.pgsSandbox === false) {
+                    document.getElementById('pgsSandbox').value = String(c.pgsSandbox);
+                }
+                pgsStatusDash();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -935,7 +959,54 @@
                 showToast('Autorize no Mercado Pago; ao voltar, a conta conecta sozinha.');
             } catch { showToast('Erro ao conectar', true); }
         }
-        // Token direto (APP_USR-…): salva cifrado e ativa o modo real sem .env
+        // Credenciais manuais MP (Client ID em texto + Secret cifrado)
+        async function mpSalvarCredenciais() {
+            const cid = document.getElementById('mpClientId').value.trim();
+            const sec = document.getElementById('mpClientSecret').value;
+            const redir = document.getElementById('mpRedirectUri').value.trim();
+            if (!cid) { showToast('Informe o Client ID', true); return; }
+            const body = { mpClientId: cid };
+            if (redir) body.mpRedirectUri = redir;
+            if (sec) body.segredos = { mp_client_secret: sec };
+            try {
+                const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    document.getElementById('mpClientSecret').value = '';
+                    showToast('Credenciais MP salvas! Clique em Conectar.');
+                    mpOauthStatus();
+                } else showToast(data.message || 'Erro ao salvar', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+        // Credenciais manuais PagSeguro (e-mail + token cifrado + ambiente)
+        async function pgsSalvarCredenciais() {
+            const email = document.getElementById('pgsEmail').value.trim();
+            const tok = document.getElementById('pgsToken').value;
+            const sandbox = document.getElementById('pgsSandbox').value === 'true';
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
+            const body = { pgsEmail: email, pgsSandbox: sandbox };
+            if (tok) body.segredos = { pagseguro_token: tok };
+            try {
+                const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    document.getElementById('pgsToken').value = '';
+                    showToast('PagSeguro ativado! (' + (sandbox ? 'sandbox' : 'produção') + ')');
+                    pgsStatusDash();
+                } else showToast(data.message || 'Erro ao salvar', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+        async function pgsStatusDash(manual) {
+            const el = document.getElementById('pgsStatusDash');
+            try {
+                const res = await fetch(API + '/config/loja/public');
+                const data = await res.json();
+                if (el) {
+                    el.textContent = data.success && data.config.pagseguroAtivo ? 'ativo (recebendo)' : 'demonstração (sem token)';
+                    el.style.color = data.success && data.config.pagseguroAtivo ? '#6ee7b7' : '#fbbf24';
+                }
+            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
+        }
         async function mpSalvarToken() {
             const v = document.getElementById('mpTokenDireto').value.trim();
             if (!v) { showToast('Cole o Access Token (APP_USR-…)', true); return; }

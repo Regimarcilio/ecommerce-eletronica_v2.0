@@ -34,7 +34,16 @@ const PGS_TOKEN_ENV = process.env.PGS_TOKEN || '';
 const PGS_EMAIL_ENV = process.env.PGS_EMAIL || '';
 const PGS_WEBHOOK_TOKEN = process.env.PGS_WEBHOOK_TOKEN || '';
 const PGS_SANDBOX = String(process.env.PGS_SANDBOX || '').toLowerCase() === 'true';
-const PGS_API = PGS_SANDBOX ? 'https://sandbox.api.pagseguro.com' : 'https://api.pagseguro.com';
+const pgsApiBase = (sandbox) => sandbox ? 'https://sandbox.api.pagseguro.com' : 'https://api.pagseguro.com';
+const PGS_API = pgsApiBase(PGS_SANDBOX);
+async function pgsApi() {
+    if (process.env.PGS_SANDBOX !== undefined && process.env.PGS_SANDBOX !== '') return PGS_API;
+    try {
+        const s = await Settings.findOne({ chave: 'loja' }).select('pgsSandbox').lean();
+        if (s && typeof s.pgsSandbox === 'boolean') return pgsApiBase(s.pgsSandbox);
+    } catch { /* fallback env */ }
+    return PGS_API;
+}
 const EVO_API_URL = (process.env.EVO_API_URL || '').replace(/\/$/, '');
 const EVO_APIKEY = process.env.EVO_APIKEY || '';
 const SETTINGS_KEY = process.env.SETTINGS_KEY || '';
@@ -231,6 +240,11 @@ const SettingsSchema = new mongoose.Schema({
     evoInstance: { type: String, trim: true, maxlength: 80, default: '' },
     condicoesPagamento: { type: String, trim: true, maxlength: 2000, default: '' },
     mpPublicKey: { type: String, trim: true, maxlength: 200, default: '' },
+    // Credenciais preenchidas pelo dashboard (fallback quando ausentes no .env)
+    mpClientId: { type: String, trim: true, maxlength: 60, default: '' },
+    mpRedirectUri: { type: String, trim: true, maxlength: 300, default: '' },
+    pgsEmail: { type: String, trim: true, lowercase: true, maxlength: 160, default: '' },
+    pgsSandbox: { type: Boolean, default: undefined },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
     faixasFrete: [{
@@ -796,7 +810,25 @@ app.put('/api/pedidos/:id/status', auth, admin, asyncHandler(async (req, res) =>
 // ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
 // Referência oficial da API: https://www.mercadopago.com.br/developers/pt/reference
 // (preferences, payments e webhooks usados abaixo seguem essa referência)
-const mpRedirectUri = () => MP_REDIRECT_URI || `${FRONT_URL}/dashboard.html`;
+const mpRedirectUri = () => MP_REDIRECT_URI || '';
+async function mpSettings() {
+    try {
+        return await Settings.findOne({ chave: 'loja' }).select('mpClientId mpRedirectUri pgsEmail segredos').lean();
+    } catch { return null; }
+}
+const getSegredo = (s, k) => {
+    const blob = s?.segredos?.get ? s.segredos.get(k) : s?.segredos?.[k];
+    if (!blob || blob === '***') return '';
+    try { return decifraSegredo(blob); } catch { return ''; }
+};
+// Credenciais: .env primeiro, painel depois (usuário preenche e conecta sem SSH)
+async function mpClientId() { if (MP_CLIENT_ID) return MP_CLIENT_ID; return (await mpSettings())?.mpClientId || ''; }
+async function mpClientSecret() { if (MP_CLIENT_SECRET) return MP_CLIENT_SECRET; return getSegredo(await mpSettings(), 'mp_client_secret'); }
+async function mpRedirectFinal() {
+    if (MP_REDIRECT_URI) return MP_REDIRECT_URI;
+    return (await mpSettings())?.mpRedirectUri || `${FRONT_URL}/dashboard.html`;
+}
+async function pgsEmailFinal() { if (PGS_EMAIL_ENV) return PGS_EMAIL_ENV; return (await mpSettings())?.pgsEmail || ''; }
 async function mpAccessToken() {
     if (MP_ACCESS_TOKEN) return MP_ACCESS_TOKEN;
     try {
@@ -924,7 +956,7 @@ async function pgsCriarCheckout(pedido, email) {
             ...(redir ? { redirect_url: redir } : {})
         };
         if (notifUrls) corpo.notification_urls = notifUrls;
-        const r = await fetch(`${PGS_API}/checkouts`, {
+        const r = await fetch(`${await pgsApi()}/checkouts`, {
             method: 'POST',
             signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1004,7 +1036,7 @@ async function pgsCriarCobranca(pedido, email) {
             qr_codes: [{ amount: { value: Math.round(Number(pedido.total) * 100) }, expiration_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString() }]
         };
         if (notifUrls) corpo.notification_urls = notifUrls;
-        const r = await fetch(`${PGS_API}/orders`, {
+        const r = await fetch(`${await pgsApi()}/orders`, {
             method: 'POST',
             signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1144,10 +1176,12 @@ app.post('/api/pagamentos/webhook', asyncHandler(async (req, res) => {
 
 // Admin: URL de autorização OAuth do Mercado Pago (conecta a conta do lojista)
 app.get('/api/pagamentos/mercadopago/oauth/url', auth, admin, asyncHandler(async (req, res) => {
-    if (!MP_CLIENT_ID) return err(res, 400, 'MP_CLIENT_ID não configurado no .env', 'CONFIG');
+    const cid = await mpClientId();
+    if (!cid) return err(res, 400, 'MP_CLIENT_ID não configurado (preencha no dashboard ou no .env)', 'CONFIG');
+    const redir = await mpRedirectFinal();
     const state = crypto.randomBytes(16).toString('hex');
-    const url = `https://auth.mercadopago.com.br/authorization?client_id=${encodeURIComponent(MP_CLIENT_ID)}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(mpRedirectUri())}&state=${state}`;
-    res.json({ success: true, url, redirectUri: mpRedirectUri() });
+    const url = `https://auth.mercadopago.com.br/authorization?client_id=${encodeURIComponent(cid)}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(redir)}&state=${state}`;
+    res.json({ success: true, url, redirectUri: redir });
 }));
 
 // Admin: conclui OAuth (authorization_code) ou renova (refresh_token); guarda cifrado
@@ -1157,12 +1191,12 @@ app.post('/api/pagamentos/mercadopago/oauth/token', auth, admin, asyncHandler(as
     if (!['authorization_code', 'refresh_token', 'client_credentials'].includes(grant)) {
         return err(res, 400, 'grant_type inválido (authorization_code/refresh_token/client_credentials)', 'VALIDATION');
     }
-    if (!MP_CLIENT_ID || !MP_CLIENT_SECRET) return err(res, 400, 'MP_CLIENT_ID/MP_CLIENT_SECRET não configurados no .env', 'CONFIG');
-    const corpo = { client_id: MP_CLIENT_ID, client_secret: MP_CLIENT_SECRET, grant_type: grant };
+    const corpo = { client_id: await mpClientId(), client_secret: await mpClientSecret(), grant_type: grant };
+    if (!corpo.client_id || !corpo.client_secret) return err(res, 400, 'MP_CLIENT_ID/MP_CLIENT_SECRET não configurados (dashboard ou .env)', 'CONFIG');
     if (grant === 'authorization_code') {
         if (!b.code) return err(res, 400, 'code obrigatório (válido por 10 min)', 'VALIDATION');
         corpo.code = b.code;
-        corpo.redirect_uri = mpRedirectUri();
+        corpo.redirect_uri = await mpRedirectFinal();
     }
     if (grant === 'refresh_token') {
         if (!b.refresh_token) return err(res, 400, 'refresh_token obrigatório', 'VALIDATION');
@@ -1205,6 +1239,8 @@ app.get('/api/pagamentos/mercadopago/oauth/status', auth, admin, asyncHandler(as
             conectado: !!MP_ACCESS_TOKEN || keys.includes('mp_access_token'),
             temRefresh: keys.includes('mp_refresh_token'),
             userIdConfigurado: keys.includes('mp_user_id'),
+            clientConfigurado: !!(MP_CLIENT_ID || s.mpClientId),
+            clientSecretConfigurado: !!(MP_CLIENT_SECRET || keys.includes('mp_client_secret')),
             expiraEm
         }
     });
@@ -1439,6 +1475,10 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             horarioAtendimento: s.horarioAtendimento || '',
             condicoesPagamento: s.condicoesPagamento || '',
             mpPublicKey: s.mpPublicKey || '',
+            mpClientId: s.mpClientId || '',
+            mpRedirectUri: s.mpRedirectUri || '',
+            pgsEmail: s.pgsEmail || '',
+            pgsSandbox: typeof s.pgsSandbox === 'boolean' ? s.pgsSandbox : null,
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
             faixasFrete: s.faixasFrete || [],
@@ -1473,6 +1513,17 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
     if (b.horarioAtendimento !== undefined) s.horarioAtendimento = String(b.horarioAtendimento ?? '').trim().slice(0, 120);
     if (b.condicoesPagamento !== undefined) s.condicoesPagamento = String(b.condicoesPagamento).slice(0, 2000);
     if (b.mpPublicKey !== undefined) s.mpPublicKey = String(b.mpPublicKey).trim().slice(0, 200);
+    if (b.mpClientId !== undefined) s.mpClientId = String(b.mpClientId ?? '').trim().slice(0, 60);
+    if (b.mpRedirectUri !== undefined) s.mpRedirectUri = String(b.mpRedirectUri ?? '').trim().slice(0, 300);
+    if (b.pgsEmail !== undefined) {
+        const v = String(b.pgsEmail ?? '').trim().toLowerCase().slice(0, 160);
+        if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return err(res, 400, 'E-mail PagSeguro inválido', 'VALIDATION');
+        s.pgsEmail = v;
+    }
+    if (b.pgsSandbox !== undefined) {
+        if (typeof b.pgsSandbox !== 'boolean') return err(res, 400, 'pgsSandbox deve ser true/false', 'VALIDATION');
+        s.pgsSandbox = b.pgsSandbox;
+    }
     if (b.parcelasMax !== undefined) {
         const v = Number(b.parcelasMax);
         if (!Number.isInteger(v) || v < 1 || v > 21) return err(res, 400, 'Parcelas entre 1 e 21', 'VALIDATION');
