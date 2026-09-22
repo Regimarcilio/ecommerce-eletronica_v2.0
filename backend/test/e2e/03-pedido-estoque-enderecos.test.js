@@ -94,6 +94,22 @@ describe('e2e pedido + estoque + enderecos', () => {
     assert.equal(over.status, 409);
   });
 
+  it('cliente cancela pendente e exclui cancelado; outro usuario 403', async () => {
+    const o = await api('POST', '/api/pedidos', {
+      token: utok,
+      body: pedidoBase([{ produtoId: prodId, quantity: 1 }]),
+    });
+    assert.equal(o.status, 201);
+    const pid = o.data.pedido._id;
+    assert.equal((await api('PUT', `/api/pedidos/${pid}/cancelar`, { token: evilTok })).status, 403);
+    assert.equal((await api('DELETE', `/api/pedidos/${pid}`, { token: evilTok })).status, 403);
+    assert.equal((await api('DELETE', `/api/pedidos/${pid}`, { token: utok })).status, 409);
+    assert.equal((await api('PUT', `/api/pedidos/${pid}/cancelar`, { token: utok })).status, 200);
+    assert.equal((await api('PUT', `/api/pedidos/${pid}/cancelar`, { token: utok })).status, 409);
+    assert.equal((await api('DELETE', `/api/pedidos/${pid}`, { token: utok })).status, 200);
+    assert.equal((await api('GET', `/api/pedidos/${pid}`, { token: utok })).status, 404);
+  });
+
   it('pedido de outro usuario retorna 403', async () => {
     const list = await api('GET', '/api/pedidos', { token: utok });
     const pid = list.data.pedidos[0]._id;

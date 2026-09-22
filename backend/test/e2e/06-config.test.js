@@ -76,6 +76,24 @@ describe('e2e configuracoes da loja', () => {
     assert.ok(!('mp_client_secret' in (get2.data.config.segredos || {})));
   });
 
+  it('email: servico gmail via painel (validacao + segredos mascarados)', async () => {
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { emailService: 'x' } })).status, 400);
+    const put = await api('PUT', '/api/config/loja', {
+      token: atok,
+      body: { emailService: 'google', googleClientId: 'x.apps.googleusercontent.com', segredos: { google_client_secret: 'sec-g', google_refresh_token: 'ref-g' } },
+    });
+    assert.equal(put.status, 200);
+    const get = await api('GET', '/api/config/loja', { token: atok });
+    assert.equal(get.data.config.emailService, 'google');
+    assert.equal(get.data.config.googleClientId, 'x.apps.googleusercontent.com');
+    assert.equal(get.data.config.segredos.google_client_secret, '***');
+    assert.equal(get.data.config.segredos.google_refresh_token, '***');
+    assert.ok(!JSON.stringify(get.data).includes('ref-g'));
+    await api('PUT', '/api/config/loja', { token: atok, body: { emailService: 'smtp', googleClientId: '', segredos: { google_client_secret: '', google_refresh_token: '' } } });
+    const get2 = await api('GET', '/api/config/loja', { token: atok });
+    assert.ok(!('google_refresh_token' in (get2.data.config.segredos || {})));
+  });
+
   it('whatsapp/status responde shape (configurado ou nao)', async () => {
     const r = await api('GET', '/api/config/whatsapp/status', { token: atok });
     assert.equal(r.status, 200);

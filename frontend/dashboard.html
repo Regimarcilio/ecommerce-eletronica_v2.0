@@ -668,16 +668,6 @@
                         <tr><td colspan="3" class="text-end"><strong>TOTAL:</strong></td><td><strong class="text-primary">R$ ${(Number(p.total) || 0).toFixed(2)}</strong></td></tr></tfoot></table></div><hr>
                         <div class="row"><div class="col-md-6"><strong><i class="fas fa-credit-card"></i> Pagamento:</strong> ${p.pagamento === 'pix' ? 'PIX' : p.pagamento === 'card' ? 'Cartão' : 'Boleto'}</div>
                         <div class="col-md-6"><strong><i class="fas fa-toggle-on"></i> Status:</strong> <span class="${getStatusClass(p.status)}">${getStatusText(p.status)}</span></div></div>
-                        ${p.status === 'pendente' ? `
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-primary-custom" onclick=pagarAgora(${p._id})><i class="fas fa-hand-holding-usd"></i> Pagar Agora</button>
-                                    <button class="btn btn-outline-secondary" onclick=mudarPagamento(${p._id})><i class="fas fa-exchange-alt"></i> Mudar</button>
-                                    <button class="btn btn-danger" onclick=confirmarCancelamento(${p._id})><i class="fas fa-times"></i> Cancelar</button>
-                                </div>
-                            </div>
-                        </div>` : ''}
                         <div class="mt-3"><strong><i class="fas fa-calendar"></i> Data:</strong> ${new Date(p.createdAt).toLocaleString()}</div>`;
                     if (!pedidoModal) pedidoModal = new bootstrap.Modal(document.getElementById('pedidoModal'));
                     pedidoModal.show();
@@ -690,33 +680,6 @@
             if (!statusModal) statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
             document.getElementById('statusSelecionado').value = statusAtual;
             statusModal.show();
-        };
-        
-        window.pagarAgora = function(pedidoId) {
-            if (!confirm('Tem certeza que deseja marcar este pedido como pago?')) return;
-            fetch(API + '/pedidos/' + pedidoId + '/status', { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: 'pago' }) })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) { showToast('Pedido marcado como pago'); loadPedidos(); }
-                    else { showToast('Erro ao pagar pedido', true); }
-                })
-                .catch(() => showToast('Erro de conexão', true));
-        };
-        
-        window.mudarPagamento = function(pedidoId) {
-            if (!confirm('Deseja mudar a forma de pagamento deste pedido?')) return;
-            showToast('Funcionalidade de mudar pagamento em desenvolvimento', true);
-        };
-        
-        window.confirmarCancelamento = function(pedidoId) {
-            if (!confirm('Tem certeza que deseja cancelar este pedido?')) return;
-            fetch(API + '/pedidos/' + pedidoId + '/status', { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: 'cancelado' }) })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) { showToast('Pedido cancelado'); loadPedidos(); }
-                    else { showToast('Erro ao cancelar pedido', true); }
-                })
-                .catch(() => showToast('Erro de conexão', true));
         };
         
         window.atualizarStatusPedido = async function() {
@@ -934,6 +897,14 @@
                         <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-envelope"></i> E-mail da loja</label><input id="cfgEmailLoja" type="email" class="form-control" maxlength="160" value="${window.escapeHtml(c.emailLoja || '')}" placeholder="contato@sualoja.com.br"></div>
                         <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-clock"></i> Horário de atendimento</label><input id="cfgHorario" class="form-control" maxlength="120" value="${window.escapeHtml(c.horarioAtendimento || '')}" placeholder="Seg–Sex, 8h às 18h"></div>
                     </div>
+                    <h6 class="mt-2"><i class="fas fa-paper-plane"></i> Envio de e-mail <small class="text-muted">(notificação de venda)</small></h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label">Serviço</label><select id="cfgEmailService" class="form-select"><option value="smtp">SMTP</option><option value="google">Gmail (API Google)</option><option value="outlook">Outlook</option></select></div>
+                        <div class="col-md-8 mb-3"><label class="form-label">Google Client ID</label><input id="cfgGoogleClientId" class="form-control" maxlength="100" value="${window.escapeHtml(c.googleClientId || '')}" placeholder="...apps.googleusercontent.com"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Google Client Secret</label><input id="cfgGoogleClientSecret" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Google Refresh Token</label><input id="cfgGoogleRefreshToken" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
+                    </div>
+                    <small class="text-muted d-block">SMTP usa <code>SMTP_HOST/PORT/USER/PASS</code> do <code>backend/.env</code>. Gmail usa Client ID/Secret + Refresh Token (guia em <code>docs/EMAIL.md</code>). Segredos ficam cifrados.</small>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-share-nodes"></i> Redes sociais <small class="text-muted">(vazio = ícone oculto no rodapé)</small></h4>
@@ -958,6 +929,9 @@
                 mpOauthStatus();
                 if (c.pgsSandbox === true || c.pgsSandbox === false) {
                     document.getElementById('pgsSandbox').value = String(c.pgsSandbox);
+                }
+                if (['smtp', 'google', 'outlook'].includes(c.emailService)) {
+                    document.getElementById('cfgEmailService').value = c.emailService;
                 }
                 pgsStatusDash();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
@@ -1111,6 +1085,8 @@
                 descontoPix: Number(document.getElementById('cfgDesc').value),
                 faixasFrete: collectFaixas(),
                 emailLoja: document.getElementById('cfgEmailLoja').value.trim(),
+                emailService: document.getElementById('cfgEmailService').value,
+                googleClientId: document.getElementById('cfgGoogleClientId').value.trim(),
                 horarioAtendimento: document.getElementById('cfgHorario').value.trim(),
                 redesSociais: {
                     instagram: document.getElementById('cfgRedeInstagram').value.trim(),
@@ -1121,8 +1097,14 @@
             };
             const sn = document.getElementById('cfgSegNome').value.trim();
             const sv = document.getElementById('cfgSegValor').value;
-            if (sn && sv) body.segredos = { [sn]: sv };
+            const gsec = document.getElementById('cfgGoogleClientSecret').value;
+            const gref = document.getElementById('cfgGoogleRefreshToken').value;
+            const segs = {};
+            if (gsec) segs.google_client_secret = gsec;
+            if (gref) segs.google_refresh_token = gref;
+            if (sn && sv) segs[sn] = sv;
             else if (sn || sv) { showToast('Preencha nome e valor do segredo', true); return; }
+            if (Object.keys(segs).length) body.segredos = segs;
             try {
                 const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
                 const data = await res.json();

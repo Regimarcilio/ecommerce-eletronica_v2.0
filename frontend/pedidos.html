@@ -178,9 +178,9 @@ async function loadPedidos() {
                         <div style="text-align:right;display:flex;flex-direction:column;gap:10px;align-items:flex-end">
                             <span class="badge st-${st}">${status}</span>
                             <button class="btn btn-fire btn-sm" onclick="verDetalhes('${p._id}')"><i class="fa-solid fa-eye"></i> Ver Detalhes</button>
-                            '
-
-
+                            ${p.status === 'pendente' ? `<button class="btn btn-fire btn-sm" onclick="pagarPedido('${p._id}')"><i class="fa-solid fa-bolt"></i> Pagar agora</button>` : ''}
+                            ${p.status === 'pendente' ? `<button class="btn btn-ghost btn-sm" onclick="cancelarPedido('${p._id}')"><i class="fa-solid fa-xmark"></i> Cancelar</button>` : ''}
+                            ${p.status === 'cancelado' ? `<button class="btn btn-ghost btn-sm" onclick="excluirPedido('${p._id}')"><i class="fa-solid fa-trash"></i> Excluir</button>` : ''}
                         </div>
                     </div>`;
             }).join('');
@@ -205,13 +205,68 @@ function getPaymentLabel(pagamento) {
     if (pagamento === 'card') return 'Cartão de Crédito';
     if (pagamento === 'boleto') return 'Boleto Bancário';
     return pagamento || '-';
-
-        window.pagarAgora = function(pedidoId) {
-            if (!confirm('Tem certeza que deseja marcar este pedido como pago?')) return;
-            fetch(API + /pedidos/ + pedidoId + /status, { method: PUT, headers: getAuthHeaders(), body: JSON.stringify({ status: pago }) }
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) { showToast(Pedido
+}
+function toast(msg, isErr) {
+    try {
+        let el = document.getElementById('pedToast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'pedToast';
+            el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;padding:12px 22px;border-radius:999px;font-size:.88rem;font-weight:600;background:' + (isErr ? '#f87171' : '#34d399') + ';color:#0a0e1a';
+            document.body.appendChild(el);
+        }
+        el.style.background = isErr ? '#f87171' : '#34d399';
+        el.textContent = msg;
+        el.style.display = '';
+        clearTimeout(window.__pedToastT);
+        window.__pedToastT = setTimeout(() => { el.style.display = 'none'; }, 3200);
+    } catch {}
+}
+async function apiAuthed(url, opts) {
+    const send = () => fetch(url, { ...(opts || {}), headers: window.getAuthHeaders() });
+    let res = await send();
+    if (res.status === 401 && await window.refreshSession()) res = await send();
+    if (res.status === 401) { window.logoutAll(); window.location.href = '/auth.html'; return null; }
+    return res;
+}
+// Cliente: pagar pedido pendente (gera cobranca e abre o checkout do provedor)
+async function pagarPedido(id) {
+    try {
+        const det = await apiAuthed(API + '/pedidos/' + id, {});
+        const ddata = det ? await det.json() : null;
+        if (!ddata || !ddata.success) { toast('Erro ao carregar pedido', true); return; }
+        const prov = ddata.pedido.provedorPagamento === 'pagseguro' ? 'pagseguro' : 'mercadopago';
+        const endpoint = prov === 'pagseguro' ? '/pagamentos/pagseguro/intent' : '/pagamentos/intent';
+        const res = await apiAuthed(API + endpoint, { method: 'POST', body: JSON.stringify({ pedidoId: id }) });
+        if (!res) return;
+        const data = await res.json();
+        if (!res.ok || !data.success) { toast(data.message || 'Erro ao iniciar pagamento', true); return; }
+        if (data.qrText) { verDetalhes(id); toast('Cobrança gerada! Escaneie o QR no detalhe.', false); return; }
+        if (data.initPoint) { window.location.href = data.initPoint; return; }
+        toast('Cobrança gerada!', false);
+    } catch(e) { toast('Erro ao conectar', true); }
+}
+// Cliente: cancelar pedido pendente
+async function cancelarPedido(id) {
+    if (!confirm('Tem certeza que deseja cancelar este pedido?')) return;
+    try {
+        const res = await apiAuthed(API + '/pedidos/' + id + '/cancelar', { method: 'PUT', body: JSON.stringify({}) });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok && data.success) { toast('Pedido cancelado'); loadPedidos(); fecharDetalhes(); }
+        else toast(data.message || 'Erro ao cancelar pedido', true);
+    } catch(e) { toast('Erro ao conectar', true); }
+}
+// Cliente: excluir pedido cancelado do historico
+async function excluirPedido(id) {
+    if (!confirm('Excluir este pedido cancelado do histórico?')) return;
+    try {
+        const res = await apiAuthed(API + '/pedidos/' + id, { method: 'DELETE' });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok && data.success) { toast('Pedido excluído'); loadPedidos(); fecharDetalhes(); }
+        else toast(data.message || 'Erro ao excluir pedido', true);
+    } catch(e) { toast('Erro ao conectar', true); }
 }
 function fecharDetalhes() { document.getElementById('pedidoModalBg').classList.remove('open'); }
 async function verDetalhes(id) {
@@ -238,7 +293,14 @@ async function verDetalhes(id) {
                 <div>Frete: ${Number(p.frete) === 0 ? 'Grátis' : 'R$ ' + (Number(p.frete) || 0).toFixed(2)}</div>
                 <div>Desconto: R$ ${(Number(p.desconto) || 0).toFixed(2)}</div>
                 <div class="grand">Total: R$ ${(Number(p.total) || 0).toFixed(2)}</div>
-            </div>`;
+            </div>
+            ${p.status === 'pendente' ? `<div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+                <button class="btn btn-fire btn-sm" style="flex:1;justify-content:center" onclick="pagarPedido('${p._id}')"><i class="fa-solid fa-bolt"></i> Pagar agora</button>
+                <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="cancelarPedido('${p._id}')"><i class="fa-solid fa-xmark"></i> Cancelar pedido</button>
+            </div>` : ''}
+            ${p.status === 'cancelado' ? `<div style="display:flex;gap:10px;margin-top:18px">
+                <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="excluirPedido('${p._id}')"><i class="fa-solid fa-trash"></i> Excluir do histórico</button>
+            </div>` : ''}`;
         document.getElementById('pedidoModalBg').classList.add('open');
     } catch(e) { console.error(e); }
 }
