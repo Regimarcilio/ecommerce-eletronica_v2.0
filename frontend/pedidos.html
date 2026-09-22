@@ -178,6 +178,9 @@ async function loadPedidos() {
                         <div style="text-align:right;display:flex;flex-direction:column;gap:10px;align-items:flex-end">
                             <span class="badge st-${st}">${status}</span>
                             <button class="btn btn-fire btn-sm" onclick="verDetalhes('${p._id}')"><i class="fa-solid fa-eye"></i> Ver Detalhes</button>
+                            '
+
+
                         </div>
                     </div>`;
             }).join('');
@@ -202,6 +205,13 @@ function getPaymentLabel(pagamento) {
     if (pagamento === 'card') return 'Cartão de Crédito';
     if (pagamento === 'boleto') return 'Boleto Bancário';
     return pagamento || '-';
+
+        window.pagarAgora = function(pedidoId) {
+            if (!confirm('Tem certeza que deseja marcar este pedido como pago?')) return;
+            fetch(API + /pedidos/ + pedidoId + /status, { method: PUT, headers: getAuthHeaders(), body: JSON.stringify({ status: pago }) }
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) { showToast(Pedido
 }
 function fecharDetalhes() { document.getElementById('pedidoModalBg').classList.remove('open'); }
 async function verDetalhes(id) {

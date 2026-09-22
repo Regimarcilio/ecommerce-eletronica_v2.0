@@ -245,6 +245,8 @@ const SettingsSchema = new mongoose.Schema({
     mpRedirectUri: { type: String, trim: true, maxlength: 300, default: '' },
     pgsEmail: { type: String, trim: true, lowercase: true, maxlength: 160, default: '' },
     pgsSandbox: { type: Boolean, default: undefined },
+    mpWebhookUrl: { type: String, trim: true, maxlength: 300, default: '' },
+    pgsWebhookUrl: { type: String, trim: true, maxlength: 300, default: '' },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
     faixasFrete: [{
@@ -261,7 +263,11 @@ const SettingsSchema = new mongoose.Schema({
         tiktok: { type: String, trim: true, maxlength: 300, default: '' }
     },
     emailLoja: { type: String, trim: true, lowercase: true, maxlength: 160, default: '' },
-    horarioAtendimento: { type: String, trim: true, maxlength: 120, default: '' },
+    // Configurações de envio de email
+    emailService: { type: String, enum: ['smtp', 'google', 'outlook'], default: 'smtp' },
+    googleClientId: { type: String, trim: true, maxlength: 100, default: '' },
+    googleClientSecret: { type: String, trim: true, maxlength: 200, default: '' },
+    googleRefreshToken: { type: String, trim: true, maxlength: 500, default: '' },
     segredos: { type: Map, of: String, default: {} }
 }, { timestamps: true, minimize: false });
 
@@ -828,7 +834,7 @@ async function mpRedirectFinal() {
     if (MP_REDIRECT_URI) return MP_REDIRECT_URI;
     return (await mpSettings())?.mpRedirectUri || `${FRONT_URL}/dashboard.html`;
 }
-async function pgsEmailFinal() { if (PGS_EMAIL_ENV) return PGS_EMAIL_ENV; return (await mpSettings())?.pgsEmail || ''; }
+async function pgsEmailFinal() { return (await mpSettings())?.pgsEmail || process.env.PGS_EMAIL_ENV || ''; }
 async function mpAccessToken() {
     if (MP_ACCESS_TOKEN) return MP_ACCESS_TOKEN;
     try {
@@ -1117,7 +1123,198 @@ async function enviaWhatsApp(pedido, telefoneCadastro = '') {
     return { ok: false, motivo: String(lastErr?.message || 'timeout').slice(0, 120), destino };
 }
 
-// Confirma pagamento de forma idempotente; WhatsApp nunca quebra o fluxo
+// Envia email de notificação de venda com todos os detalhes
+async function enviaEmailVenda(pedido) {
+    try {
+        const s = await getSettings();
+        const emailService = s.emailService || 'smtp';
+
+        // SMTP (configuração tradicional)
+        if (emailService === 'smtp') {
+            const smtpHost = process.env.SMTP_HOST || 'smtp.example.com';
+            const smtpPort = Number(process.env.SMTP_PORT || 587);
+            const smtpUser = process.env.SMTP_USER || s.emailLoja || '';
+            const smtpPass = process.env.SMTP_PASS || s.segredos?.smtp_pass || '';
+
+            if (!smtpUser || !smtpPass) {
+                console.warn('[email] SMTP sem credenciais configuradas (desativado)');
+                return;
+            }
+
+            let nodemailer;
+            try {
+                nodemailer = require('nodemailer');
+            } catch (e) {
+                console.warn('[email] nodemailer nao disponivel');
+                return;
+            }
+
+            const transporter = nodemailer.createTransport({
+                host: smtpHost,
+                port: smtpPort,
+                secure: smtpPort === 465,
+                auth: { user: smtpUser, pass: smtpPass }
+            });
+
+            // ... rest of the template sending code
+            const html = `<!DOCTYPE html>
+            <html><head><meta charset="utf-8"><style>
+            body{font-family:Arial,sans-serif;color:#333;background:#f8f9fa;margin:0;padding:20px}
+            .container{max-width:600px;margin:0 auto;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px}
+            h2{color:#2c3e50;border-bottom:2px solid #eee;padding-bottom:10px}
+            .table{width:100%;border-collapse:collapse;margin:20px 0}
+            .table th,.table td{padding:8px;border:1px solid #ddd;text-align:left}
+            .table th{background:#f2f2f2}
+            .total{font-size:1.2em;font-weight:bold;color:#2c3e50}
+            footer{margin-top:30px;font-size:0.8em;color:#777;text-align:center}
+            </style></head><body><div class="container">
+            <h2>🧾 Novo Pedido Confirmado - #{pedido.numero}</h2>
+            <p><strong>Cliente:</strong> ${pedido.cliente ? (pedido.cliente.nome || pedido.cliente.email || 'Não informado') : 'Não informado'}</p>
+            <p><strong>E-mail:</strong> ${pedido.cliente?.email || 'Não informado'}</p>
+            <p><strong>Telefone:</strong> ${pedido.cliente?.telefone || 'Não informado'}</p>
+            <p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
+            <table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
+            <div style="margin:20px 0;">
+            <p><strong>Subtotal:</strong> R$ ${subtotalItens.toFixed(2)}</p>
+            <p><strong>Frete:</strong> R$ ${frete.toFixed(2)}</p>
+            <p><strong>Desconto:</strong> R$ ${desconto.toFixed(2)}</p>
+            <p class="total"><strong>TOTAL: R$ ${total.toFixed(2)}</strong></p></div>
+            <p><strong>Forma de pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
+            <p><strong>Status:</strong> ${pedido.status}</p>
+            <footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvidas.</footer></div></body></html>`;
+
+            const info = await nodemailer.sendMail({
+                from: from,
+                to: pedido.cliente?.email || smtpUser,
+                subject: `Novo Pedido #${pedido.numero} - ${pedido.provedorPagamento}`,
+                html
+            });
+            console.log('[email] enviado via SMTP:', info.messageId);
+            return;
+        }
+
+        // Google OAuth
+        if (emailService === 'google') {
+            const googleClientId = process.env.GOOGLE_CLIENT_ID || s.googleClientId || '';
+            const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET || s.googleClientSecret || '';
+            const googleRefreshToken = s.googleRefreshToken || '';
+
+            if (!googleClientId || !googleClientSecret || !googleRefreshToken) {
+                console.warn('[email] Google OAuth nao configurado (client_id/secret/refresh_token)');
+                return;
+            }
+
+            // Usar a biblioteca googleapis para enviar email
+            try {
+                const { google } = require('googleapis');
+                const oauth2Client = new google.auth.OAuth2(
+                    googleClientId,
+                    googleClientSecret,
+                    'https://developers.google.com/oauthplayground'
+                );
+                oauth2Client.setCredentials({ refresh_token: googleRefreshToken });
+
+                // Testa a conexão buscando o perfil do usuário
+                const oauth2 = oauth2Client.getOAuth2Client();
+                const people = google.people({ version: 'v1' });
+                const profile = await people.people.get({
+                    resourceName: 'people/me',
+                    auth: oauth2
+                });
+                console.log('[email] Google OAuth conectado:', profile.data.names ? profile.data.names[0].displayName : 'sem nome');
+
+                // Envia email usando nodemailer com credenciais OAuth
+                let nodemailer;
+                try {
+                    nodemailer = require('nodemailer');
+                } catch (e) {
+                    console.warn('[email] nodemailer nao disponivel');
+                    return;
+                }
+
+                const transporter = nodemailer.createTransport({
+                    host: 'smtp.gmail.com',
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        type: 'OAuth2',
+                        user: 'loja@suadominio.com', // email fixo ou extraído do token
+                        clientId: googleClientId,
+                        clientSecret: googleClientSecret,
+                        refreshToken: googleRefreshToken
+                    }
+                });
+
+                // ... template de email igual ao SMTP
+                const itens = (pedido.items || []).map(i => {
+                    const nome = i.nome || i.titulo || 'Produto';
+                    const qty = i.quantidade || 1;
+                    const preco = i.precoUnitario || i.preco || 0;
+                    const subtotal = i.subtotal || i.quantidade * i.precoUnitario || 0;
+                    return `<tr><td style="padding:8px;border:1px solid #ddd;">${nome}</td><td style="padding:8px;border:1px solid #ddd;text-align:center;">${qty}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">R$ ${preco.toFixed(2)}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">R$ ${subtotal.toFixed(2)}</td></tr>`;
+                }).join('');
+
+                const total = Number(pedido.total || 0);
+                const subtotalItens = Number((pedido.items || []).reduce((s, i) => s + (i.subtotal || i.quantidade * i.precoUnitario || 0), 0));
+                const frete = Number(pedido.frete || 0);
+                const desconto = Number(pedido.desconto || 0);
+
+                const html = `<!DOCTYPE html>
+                <html><head><meta charset="utf-8"><style>
+                body{font-family:Arial,sans-serif;color:#333;background:#f8f9fa;margin:0;padding:20px}
+                .container{max-width:600px;margin:0 auto;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px}
+                h2{color:#2c3e50;border-bottom:2px solid #eee;padding-bottom:10px}
+                .table{width:100%;border-collapse:collapse;margin:20px 0}
+                .table th,.table td{padding:8px;border:1px solid #ddd;text-align:left}
+                .table th{background:#f2f2f2}
+                .total{font-size:1.2em;font-weight:bold;color:#2c3e50}
+                footer{margin-top:30px;font-size:0.8em;color:#777;text-align:center}
+                </style></head><body><div class="container">
+                <h2>🧾 Novo Pedido Confirmado - #{pedido.numero}</h2>
+                <p><strong>Cliente:</strong> ${pedido.cliente ? (pedido.cliente.nome || pedido.cliente.email || 'Não informado') : 'Não informado'}</p>
+                <p><strong>E-mail:</strong> ${pedido.cliente?.email || 'Não informado'}</p>
+                <p><strong>Telefone:</strong> ${pedido.cliente?.telefone || 'Não informado'}</p>
+                <p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
+                <table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
+                <div style="margin:20px 0;">
+                <p><strong>Subtotal:</strong> R$ ${subtotalItens.toFixed(2)}</p>
+                <p><strong>Frete:</strong> R$ ${frete.toFixed(2)}</p>
+                <p><strong>Desconto:</strong> R$ ${desconto.toFixed(2)}</p>
+                <p class="total"><strong>TOTAL: R$ ${total.toFixed(2)}</strong></p></div>
+                <p><strong>Forma de pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
+                <p><strong>Status:</strong> ${pedido.status}</p>
+                <footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvades.</footer></div></body></html>`;
+
+                const info = await nodemailer.sendMail({
+                    from: 'loja@suadominio.com',
+                    to: pedido.cliente?.email || 'loja@suadominio.com',
+                    subject: `Novo Pedido #${pedido.numero} - ${pedido.provedorPagamento}`,
+                    html
+                });
+                console.log('[email] enviado via Google OAuth:', info.messageId);
+                return;
+            } catch (error) {
+                console.error('[email] Google OAuth erro:', error.message);
+                throw error;
+            }
+        }
+
+        // Outlook/Hotmail (será implementado similarmente)
+        if (emailService === 'outlook') {
+            console.warn('[email] Servico Outlook nao implementado ainda, usando SMTP');
+            // Fallback para SMTP
+            await enviaEmailVenda(pedido); // recursive call with SMTP
+            return;
+        }
+
+        console.warn('[email] Servico de email desconhecido:', emailService);
+    } catch (error) {
+        console.error('enviaEmailVenda erro:', error.message);
+        throw error;
+    }
+}
+
+// Confirma pagamento de forma idempotente; WhatsApp + Email nunca quebra o fluxo
 async function confirmaPagamento(pedidoId, aprovado, provedorId = '', provedor = 'mercadopago') {
     const pedido = await Pedido.findById(pedidoId);
     if (!pedido) return { ok: false };
@@ -1131,6 +1328,7 @@ async function confirmaPagamento(pedidoId, aprovado, provedorId = '', provedor =
     await pedido.save();
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pagamento_aprovado', pedido: pedido.numero }));
     try { await enviaWhatsApp(pedido); } catch (error) { console.error('whatsapp:', error.message); }
+    try { await enviaEmailVenda(pedido); } catch (error) { console.error('email:', error.message); }
     return { ok: true };
 }
 
