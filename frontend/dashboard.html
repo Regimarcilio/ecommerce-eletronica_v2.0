@@ -177,6 +177,12 @@
         <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button class="btn btn-primary-custom" onclick="atualizarStatusPedido()">Atualizar Status</button></div></div></div>
     </div>
 
+    <!-- Modal Detalhes do Cliente -->
+    <div class="modal fade" id="clienteModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title"><i class="fas fa-user"></i> Detalhes do Cliente</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body" id="clienteDetalhesBody"></div><div class="modal-footer border-0"><span id="clienteBloquearWrap"></span><button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div></div></div>
+    </div>
+
     <!-- Modal Visualizar Mensagem -->
     <div class="modal fade" id="msgModal" tabindex="-1">
         <div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header border-0"><h5 class="modal-title"><i class="fas fa-envelope"></i> Mensagem</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
@@ -205,7 +211,7 @@
         }).catch(() => window.location.href = '/auth.html');
         document.getElementById('userName').textContent = (user && user.nome) || 'Admin';
         
-        let produtoModal, categoriaModal, pedidoModal, statusModal, novaCategoriaRapidaModal;
+        let produtoModal, categoriaModal, pedidoModal, statusModal, novaCategoriaRapidaModal, clienteModal;
         let pedidoAtualId = null;
         let listaCategorias = [];
         
@@ -228,6 +234,7 @@
         const pgProd = { page: 1, pages: 1 }, pgCat = { page: 1, pages: 1 },
               pgPed = { page: 1, pages: 1 }, pgCli = { page: 1, pages: 1 }, pgMsg = { page: 1, pages: 1 };
         let msgFiltro = '';
+        let listaClientes = [];
         function pagerNav(prefix, st) {
             return `<nav class="d-flex justify-content-center align-items-center gap-3 mt-3"><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',-1)" ${st.page <= 1 ? 'disabled' : ''}>← Anterior</button><span class="text-muted small">Página ${st.page} de ${st.pages}</span><button class="btn btn-outline-light btn-sm" onclick="mudarPaginaTab('${prefix}',1)" ${st.page >= st.pages ? 'disabled' : ''}>Próxima →</button></nav>`;
         }
@@ -691,10 +698,11 @@
                 const data = await res.json();
                 if (data.success && data.clientes && data.clientes.length > 0) {
                     pgCli.pages = data.pages || 1;
-                    let html = '<div class="data-card"><h4>Clientes (' + (data.total ?? data.clientes.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Email</th><th>Telefone</th><th>Cadastro</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
+                    listaClientes = data.clientes;
+                    let html = '<div class="data-card"><h4>Clientes (' + (data.total ?? data.clientes.length) + ')</h4><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome do Cliente</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const c of data.clientes) {
                         const badge = c.status === 'bloqueado' ? '<span class="badge bg-danger">bloqueado</span>' : c.status === 'inativo' ? '<span class="badge-warning">inativo</span>' : '<span class="badge-active">ativo</span>';
-                        html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${window.escapeHtml(c.email || '-')}</td><td>${window.escapeHtml(c.telefone || '-')}</td><td>${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '-'}</td><td>${badge}</td><td>${c.status !== 'bloqueado' ? `<button class="btn-view" style="color:#f87171" onclick="statusCliente('${c._id}','bloqueado')">Bloquear</button>` : `<button class="btn-view" onclick="statusCliente('${c._id}','ativo')">Ativar</button>`}</td></tr>`;
+                        html += `<tr><td>${window.escapeHtml(c.nome || '-')}</td><td>${badge}</td><td><button class="btn-view" onclick="verClienteDetalhes('${c._id}')"><i class="fas fa-eye"></i> Ver</button></td></tr>`;
                     }
                     html += '</tbody></table></div>' + pagerNav('cli', pgCli) + '</div>';
                     document.getElementById('content').innerHTML = html;
@@ -707,9 +715,28 @@
             try {
                 const res = await fetch(`${API}/clientes/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: st }) });
                 const data = await res.json();
-                if (res.ok && data.success) { showToast('Cliente ' + (st === 'ativo' ? 'ativado' : st === 'bloqueado' ? 'bloqueado' : 'inativado')); loadClientes(); }
+                if (res.ok && data.success) { showToast('Cliente ' + (st === 'ativo' ? 'ativado' : st === 'bloqueado' ? 'bloqueado' : 'inativado')); if (clienteModal) clienteModal.hide(); loadClientes(); }
                 else showToast(data.message || 'Erro', true);
             } catch { showToast('Erro ao conectar', true); }
+        }
+
+        function verClienteDetalhes(id) {
+            const c = (listaClientes || []).find((x) => String(x._id) === String(id));
+            if (!c) { showToast('Cliente não encontrado', true); return; }
+            const ends = (c.enderecos || []).map((e) => `${window.escapeHtml(e.logradouro || '-')}, ${window.escapeHtml(e.numero || '-')}${e.complemento ? ' - ' + window.escapeHtml(e.complemento) : ''}<br>${window.escapeHtml(e.bairro || '-')} · ${window.escapeHtml(e.cidade || '-')} - ${window.escapeHtml(e.estado || '-')}<br>CEP: ${window.escapeHtml(e.cep || '-')}${e.rotulo ? ` <small class="text-muted">(${window.escapeHtml(e.rotulo)})</small>` : ''}`).join('<hr>') || '<span class="text-muted">Nenhum endereço cadastrado.</span>';
+            const badge = c.status === 'bloqueado' ? '<span class="badge bg-danger">bloqueado</span>' : c.status === 'inativo' ? '<span class="badge-warning">inativo</span>' : '<span class="badge-active">ativo</span>';
+            document.getElementById('clienteDetalhesBody').innerHTML = `
+                <p><strong><i class="fas fa-user"></i> Nome:</strong> ${window.escapeHtml(c.nome || '-')}</p>
+                <p><strong><i class="fas fa-envelope"></i> E-mail:</strong> ${window.escapeHtml(c.email || '-')}</p>
+                <p><strong><i class="fas fa-phone"></i> Telefone:</strong> ${window.escapeHtml(c.telefone || '-')}</p>
+                <p><strong><i class="fas fa-toggle-on"></i> Status:</strong> ${badge}</p>
+                <p><strong><i class="fas fa-calendar"></i> Cadastro:</strong> ${c.createdAt ? new Date(c.createdAt).toLocaleString('pt-BR') : '-'}</p>
+                <hr><h6><i class="fas fa-map-marker-alt"></i> Endereços</h6><p>${ends}</p>`;
+            document.getElementById('clienteBloquearWrap').innerHTML = c.status !== 'bloqueado'
+                ? `<button class="btn btn-danger" onclick="statusCliente('${c._id}','bloqueado')"><i class="fas fa-ban"></i> Bloquear</button>`
+                : `<button class="btn btn-primary-custom" onclick="statusCliente('${c._id}','ativo')"><i class="fas fa-check"></i> Desbloquear</button>`;
+            if (!clienteModal) clienteModal = new bootstrap.Modal(document.getElementById('clienteModal'));
+            clienteModal.show();
         }
         
         // ==================== MENSAGENS (contato do site) ====================
