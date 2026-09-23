@@ -1345,8 +1345,8 @@ app.get('/api/pagamentos/mercadopago/oauth/url', auth, admin, asyncHandler(async
 app.post('/api/pagamentos/mercadopago/oauth/token', auth, admin, asyncHandler(async (req, res) => {
     const b = req.body || {};
     const grant = String(b.grant_type || 'authorization_code');
-    if (!['authorization_code', 'refresh_token', 'client_credentials'].includes(grant)) {
-        return err(res, 400, 'grant_type inválido (authorization_code/refresh_token/client_credentials)', 'VALIDATION');
+    if (!['authorization_code', 'refresh_token'].includes(grant)) {
+        return err(res, 400, 'grant_type inválido (authorization_code/refresh_token). client_credentials gera token só p/ recursos próprios e não cria preferências de checkout', 'VALIDATION');
     }
     const corpo = { client_id: await mpClientId(), client_secret: await mpClientSecret(), grant_type: grant };
     if (!corpo.client_id || !corpo.client_secret) return err(res, 400, 'MP_CLIENT_ID/MP_CLIENT_SECRET não configurados (dashboard ou .env)', 'CONFIG');

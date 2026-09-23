@@ -74,6 +74,8 @@ describe('e2e pagamentos + whatsapp', () => {
     assert.equal((await api('GET', '/api/pagamentos/mercadopago/oauth/url', { token: utok })).status, 403);
     const bad = await api('POST', '/api/pagamentos/mercadopago/oauth/token', { token: atok, body: { grant_type: 'x' } });
     assert.equal(bad.status, 400);
+    const cc = await api('POST', '/api/pagamentos/mercadopago/oauth/token', { token: atok, body: { grant_type: 'client_credentials' } });
+    assert.equal(cc.status, 400);
     const semCode = await api('POST', '/api/pagamentos/mercadopago/oauth/token', { token: atok, body: { grant_type: 'authorization_code' } });
     assert.ok([400].includes(semCode.status));
     const st = await api('GET', '/api/pagamentos/mercadopago/oauth/status', { token: atok });
