@@ -5,3 +5,5 @@ npm-debug.log
 .DS_Store
 # Google OAuth client secrets (contem client_secret real — nunca commitar)
 docs/client_secret*.json
+# Credenciais de teste/producao (contem Access Token real — nunca commitar)
+docs/valoresteste.md

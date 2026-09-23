@@ -888,6 +888,8 @@ async function mpCriarPreferencia(pedido, email) {
         // MP exige URL publica https p/ notification_url; local: omite (polling cobre)
         const pubUrl = String(process.env.API_PUBLIC_URL || '');
         const notificacao = /^https:\/\//.test(pubUrl) ? { notification_url: `${pubUrl.replace(/\/$/, '')}/api/pagamentos/webhook` } : {};
+        // auto_return=approved exige back_urls https; com localhost o MP rejeita (invalid_auto_return)
+        const autoReturn = /^https:\/\//.test(FRONT_URL) ? { auto_return: 'approved' } : {};
         const r = await fetch('https://api.mercadopago.com/checkout/preferences', {
             method: 'POST',
             signal: ctrl.signal,
@@ -896,7 +898,7 @@ async function mpCriarPreferencia(pedido, email) {
                 items: pedido.items.map((i) => ({ title: String(i.nome || 'Item').slice(0, 100), quantity: Number(i.quantity) || 1, unit_price: Number(i.preco) || 0, currency_id: 'BRL' })),
                 payer: { email },
                 back_urls: { success: `${FRONT_URL}/pedidos.html`, pending: `${FRONT_URL}/pedidos.html`, failure: `${FRONT_URL}/checkout.html` },
-                auto_return: 'approved',
+                ...autoReturn,
                 ...notificacao,
                 external_reference: String(pedido._id)
             })
