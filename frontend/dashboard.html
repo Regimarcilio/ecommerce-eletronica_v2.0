@@ -853,28 +853,6 @@
                         <div class="col-md-4 mb-3"><label class="form-label">Parcelas máx</label><input id="cfgParc" type="number" min="1" max="21" class="form-control" value="${c.parcelasMax ?? 12}"></div>
                         <div class="col-md-4 mb-3"><label class="form-label">Desconto PIX %</label><input id="cfgDesc" type="number" min="0" max="100" step="0.1" class="form-control" value="${c.descontoPix ?? 5}"></div>
                     </div>
-                    <hr>
-                    <h5><i class="fas fa-bolt"></i> Mercado Pago OAuth <small class="text-muted">(receber de verdade)</small></h5>
-                    <p class="mb-2">Status: <strong id="mpOauthStatus">verificando…</strong></p>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-sm btn-primary-custom" onclick="mpConectar()"><i class="fas fa-plug"></i> Conectar Mercado Pago</button>
-                        <button class="btn btn-sm btn-outline-light" onclick="mpOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
-                    </div>
-                    <small class="text-muted d-block mt-2">Credenciais (<code>MP_CLIENT_ID</code>/<code>MP_CLIENT_SECRET</code>/<code>MP_ACCESS_TOKEN</code>) ficam <strong>somente</strong> no <code>backend/.env</code> (guia em <code>docs/MERCADOPAGO.md</code>). Sem isso, o checkout roda em demonstração.</small>
-                </div>
-                <div class="data-card mt-3">
-                    <h4><i class="fas fa-qrcode"></i> PagSeguro <small class="text-muted">(receber de verdade)</small></h4>
-                    <p class="mb-2">Status: <strong id="pgsStatusDash">verificando…</strong></p>
-                    <div class="row">
-                        <div class="col-md-4 mb-2"><label class="form-label">E-mail da conta (manual)</label><input id="pgsEmail" type="email" class="form-control" maxlength="160" value="${window.escapeHtml(c.pgsEmail || '')}" placeholder="voce@loja.com"></div>
-                        <div class="col-md-4 mb-2"><label class="form-label">Token (manual)</label><input id="pgsToken" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
-                        <div class="col-md-4 mb-2"><label class="form-label">Ambiente</label><select id="pgsSandbox" class="form-select"><option value="true">Sandbox (teste)</option><option value="false">Produção</option></select></div>
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-sm btn-primary-custom" onclick="pgsSalvarCredenciais()"><i class="fas fa-save"></i> Salvar e ativar</button>
-                        <button class="btn btn-sm btn-outline-light" onclick="pgsStatusDash(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
-                    </div>
-                    <small class="text-muted d-block mt-2">Sandbox e produção usam tokens distintos. Sem token, o checkout roda em demonstração.</small>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-truck"></i> Faixas de frete <small class="text-muted">(vazio = regra padrão)</small></h4>
@@ -916,14 +894,9 @@
                 </div>
                 <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
                 (c.faixasFrete || []).forEach(addFaixaRow);
-                mpOauthStatus();
-                if (c.pgsSandbox === true || c.pgsSandbox === false) {
-                    document.getElementById('pgsSandbox').value = String(c.pgsSandbox);
-                }
                 if (['smtp', 'google', 'outlook'].includes(c.emailService)) {
                     document.getElementById('cfgEmailService').value = c.emailService;
                 }
-                pgsStatusDash();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -935,60 +908,6 @@
             } catch { document.getElementById('zapStatus').textContent = 'erro'; }
         }
 
-        // ---- Mercado Pago OAuth (conectar a conta do lojista) ----
-        async function mpOauthStatus(manual) {
-            const el = document.getElementById('mpOauthStatus');
-            try {
-                const res = await fetch(API + '/pagamentos/mercadopago/oauth/status', { headers: getHeaders() });
-                const data = await res.json();
-                if (!res.ok || !data.success) { if (el) el.textContent = 'erro'; return; }
-                const o = data.oauth;
-                if (el) {
-                    el.textContent = o.conectado
-                        ? `conectado${o.viaEnv ? ' (via .env)' : ''}${o.expiraEm ? ' · expira em ' + new Date(o.expiraEm).toLocaleDateString('pt-BR') : ''}`
-                        : 'desconectado (checkout em demonstração)';
-                    el.style.color = o.conectado ? '#6ee7b7' : '#fbbf24';
-                }
-            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
-        }
-        async function mpConectar() {
-            try {
-                const res = await fetch(API + '/pagamentos/mercadopago/oauth/url', { headers: getHeaders() });
-                const data = await res.json();
-                if (!res.ok || !data.success) { showToast(data.message || 'Configure MP_CLIENT_ID/MP_CLIENT_SECRET no backend/.env', true); return; }
-                window.open(data.url, '_blank');
-                showToast('Autorize no Mercado Pago; ao voltar, a conta conecta sozinha.');
-            } catch { showToast('Erro ao conectar', true); }
-        }
-        // Credenciais manuais PagSeguro (e-mail + token cifrado + ambiente)
-        async function pgsSalvarCredenciais() {
-            const email = document.getElementById('pgsEmail').value.trim();
-            const tok = document.getElementById('pgsToken').value;
-            const sandbox = document.getElementById('pgsSandbox').value === 'true';
-            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('E-mail inválido', true); return; }
-            const body = { pgsEmail: email, pgsSandbox: sandbox };
-            if (tok) body.segredos = { pagseguro_token: tok };
-            try {
-                const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    document.getElementById('pgsToken').value = '';
-                    showToast('PagSeguro ativado! (' + (sandbox ? 'sandbox' : 'produção') + ')');
-                    pgsStatusDash();
-                } else showToast(data.message || 'Erro ao salvar', true);
-            } catch { showToast('Erro ao conectar', true); }
-        }
-        async function pgsStatusDash(manual) {
-            const el = document.getElementById('pgsStatusDash');
-            try {
-                const res = await fetch(API + '/config/loja/public');
-                const data = await res.json();
-                if (el) {
-                    el.textContent = data.success && data.config.pagseguroAtivo ? 'ativo (recebendo)' : 'demonstração (sem token)';
-                    el.style.color = data.success && data.config.pagseguroAtivo ? '#6ee7b7' : '#fbbf24';
-                }
-            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
-        }
         // Volta do OAuth (MP_REDIRECT_URI=dashboard.html?code=...): troca automatica
         async function mpTrocarCode() {
             const code = new URLSearchParams(window.location.search).get('code');
@@ -1070,8 +989,6 @@
         loadDashboard();
         atualizaMsgBadge();
         mpTrocarCode();
-        // status OAuth aparece ao abrir Configurações; atualiza se o card existir
-        setTimeout(() => { if (document.getElementById('mpOauthStatus')) mpOauthStatus(); }, 500);
     </script>
 </body>
 </html>
