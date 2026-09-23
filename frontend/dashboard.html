@@ -382,21 +382,12 @@
                 if (prodData.success && prodData.produtos) {
                     if (prodData.produtos.length === 0 && pgProd.page > 1) { pgProd.page--; loadProdutos(); return; }
                     pgProd.pages = prodData.pages || 1;
-                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Produtos (' + (prodData.total ?? prodData.produtos.length) + ')</h4><button class="btn-primary-custom" onclick="abrirModalProduto()"><i class="fas fa-plus"></i> Novo Produto</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Tipo</th><th>SKU</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
-                    const TIPO_LB = { PRINCIPAL: 'Principal', FONTE: 'Fonte', TCOM: 'T-Con' };
+                    let html = '<div class="data-card"><div class="d-flex justify-content-between mb-3"><h4>Produtos (' + (prodData.total ?? prodData.produtos.length) + ')</h4><button class="btn-primary-custom" onclick="abrirModalProduto()"><i class="fas fa-plus"></i> Novo Produto</button></div><div class="table-responsive"><table class="table table-dark"><thead><tr><th>Nome</th><th>Categoria</th><th>Status</th><th>Ações</th></tr></thead><tbody>';
                     for (const p of prodData.produtos) {
                         const nomeCategoria = categoriasMap[p.categoria] || p.categoria_nome || 'Sem categoria';
-                        const tipoCell = p.tipoPlaca && TIPO_LB[p.tipoPlaca]
-                            ? `<span class="badge-tipo badge-${window.escapeHtml(p.tipoPlaca)}">${window.escapeHtml(TIPO_LB[p.tipoPlaca])}</span>`
-                            : '<span class="text-muted">—</span>';
-                        const compBits = [p.marca, p.modeloTV ? 'comp. ' + p.modeloTV : ''].filter(Boolean);
                         html += `<tr>
-                            <td>${window.escapeHtml(p.nome)}${compBits.length ? `<span class="compat-cell">${window.escapeHtml(compBits.join(' · '))}</span>` : ''}</td>
-                            <td>${tipoCell}</td>
-                            <td>${window.escapeHtml(p.sku ?? '-')}</td>
+                            <td>${window.escapeHtml(p.nome)}</td>
                             <td><span class="badge-active">${window.escapeHtml(nomeCategoria)}</span></td>
-                            <td>R$ ${(Number(p.preco) || 0).toFixed(2)}</td>
-                            <td>${p.quantidade ?? 0}</td>
                             <td><span class="badge-active">${window.escapeHtml(p.status)}</span></td>
                             <td><button class="btn-edit" onclick="editarProduto('${p._id}')"><i class="fas fa-edit"></i> Editar</button> <button class="btn-delete" onclick="excluirProduto('${p._id}')"><i class="fas fa-trash"></i> Excluir</button></td>
                         </tr>`;
