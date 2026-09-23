@@ -7,8 +7,8 @@ Ref da API: https://www.mercadopago.com.br/developers/pt/reference
 
 | Modo | Envs | Uso |
 |---|---|---|
-| Token direto | `MP_ACCESS_TOKEN` ou campo "Access Token" no dashboard | Colar o `APP_USR-...`; vale de imediato |
-| OAuth (recomendado) | `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_REDIRECT_URI` **ou campos manuais no dashboard** (Configurações → Mercado Pago OAuth) | Conecta a conta sem expor token; access expira em ~180 dias e renova via refresh |
+| Token direto | `MP_ACCESS_TOKEN` no `backend/.env` | Colar o `APP_USR-...`; vale de imediato |
+| OAuth (recomendado) | `MP_CLIENT_ID`, `MP_CLIENT_SECRET`, `MP_REDIRECT_URI` no `backend/.env` | Conecta a conta sem expor token; access expira em ~180 dias e renova via refresh |
 
 Prioridade do token em tempo de execução: `MP_ACCESS_TOKEN` do `.env` →
 segredo cifrado `mp_access_token` (gravado pelo OAuth) → **mock**.

@@ -7,3 +7,4 @@ npm-debug.log
 docs/client_secret*.json
 # Credenciais de teste/producao (contem Access Token real — nunca commitar)
 docs/valoresteste.md
+docs/Credenciais de produção.md

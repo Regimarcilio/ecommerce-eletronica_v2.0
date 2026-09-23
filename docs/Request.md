@@ -121,7 +121,7 @@ GET http://localhost:5010/api/pagamentos/mercadopago/oauth/status
 - `conectado`: `true` quando o token está válido e a conta está ativa
 - `temRefresh`: `true` se existe refresh token disponível
 - `userId`: ID do usuário na conta Mercado Pago
-- `clientConfigurado`: se o Client ID foi configurado (via dashboard ou .env)
+- `clientConfigurado`: se o Client ID foi configurado (somente via `backend/.env`)
 - `clientSecretConfigurado`: se o Client Secret foi configurado
 
 ---
