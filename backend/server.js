@@ -901,8 +901,18 @@ async function mpCriarPreferencia(pedido, email) {
                 external_reference: String(pedido._id)
             })
         });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.message || 'MP erro');
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            const detalhe = data.message || data.error_description || data.error || `HTTP ${r.status}`;
+            // 401/403: token inválido, expirado ou sem permissão (ex.: "At least one policy returned UNAUTHORIZED")
+            if (r.status === 401 || r.status === 403) {
+                throw Object.assign(new Error(`Mercado Pago recusou (${detalhe}). Verifique o token: se expirou, reconecte a conta no dashboard (Configurações → Mercado Pago). Se o e-mail do comprador é o mesmo da conta vendedora, finalize com outra conta — não é permitido comprar de si mesmo.`), { statusCode: 422, code: 'MP_UNAUTHORIZED' });
+            }
+            if (r.status >= 400 && r.status < 500) {
+                throw Object.assign(new Error(`Mercado Pago ${r.status}: ${detalhe}`), { statusCode: 422, code: 'MP_PAYMENT' });
+            }
+            throw Object.assign(new Error(`Mercado Pago ${r.status}: ${detalhe}`), { statusCode: 502, code: 'UPSTREAM' });
+        }
         return { modo: 'real', id: data.id, init_point: data.init_point };
     } finally { clearTimeout(t); }
 }
@@ -1286,7 +1296,13 @@ app.post('/api/pagamentos/intent', auth, asyncHandler(async (req, res) => {
     }
     if (pedido.status !== 'pendente') return err(res, 409, 'Pedido já processado', 'STATE');
     const user = await Usuario.findById(req.usuarioId).select('email');
-    const pref = await mpCriarPreferencia(pedido, user?.email || '');
+    let pref;
+    try {
+        pref = await mpCriarPreferencia(pedido, user?.email || '');
+    } catch (error) {
+        if (error.statusCode) return err(res, error.statusCode, error.message, error.code);
+        throw error;
+    }
     await Pagamento.findOneAndUpdate(
         { pedidoId: pedido._id },
         { $set: { mpPreferenceId: pref.id, initPoint: pref.init_point, modo: pref.modo, status: 'criado' } },
