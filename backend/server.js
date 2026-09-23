@@ -99,7 +99,6 @@ const PEDIDO_FLOW = {
     entregue: [],
     cancelado: []
 };
-const notDeleted = { deletedAt: null };
 const err = (res, status, message, code) => res.status(status).json({ success: false, message, code });
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const parsePaging = (q) => {
@@ -245,8 +244,6 @@ const SettingsSchema = new mongoose.Schema({
     mpRedirectUri: { type: String, trim: true, maxlength: 300, default: '' },
     pgsEmail: { type: String, trim: true, lowercase: true, maxlength: 160, default: '' },
     pgsSandbox: { type: Boolean, default: undefined },
-    mpWebhookUrl: { type: String, trim: true, maxlength: 300, default: '' },
-    pgsWebhookUrl: { type: String, trim: true, maxlength: 300, default: '' },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
     faixasFrete: [{
@@ -841,7 +838,6 @@ app.delete('/api/pedidos/:id', auth, asyncHandler(async (req, res) => {
 // ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
 // Referência oficial da API: https://www.mercadopago.com.br/developers/pt/reference
 // (preferences, payments e webhooks usados abaixo seguem essa referência)
-const mpRedirectUri = () => MP_REDIRECT_URI || '';
 async function mpSettings() {
     try {
         return await Settings.findOne({ chave: 'loja' }).select('mpClientId mpRedirectUri pgsEmail emailService googleClientId emailLoja segredos').lean();
