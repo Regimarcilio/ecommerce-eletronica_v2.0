@@ -784,8 +784,8 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         const r = await enviaWhatsApp(pedido, dono?.telefone || '');
         zap = { enviado: r.ok, motivo: r.ok ? 'enviado' : (r.motivo || 'falha'), para: maskFone(r.destino || '') };
     } catch (error) { zap = { enviado: false, motivo: 'falha', para: '' }; }
-    // Notifica cliente + loja sobre o novo pedido (pago ou não); nunca quebra o 201
-    try { await enviaEmailPedidoNovo(pedido); } catch (error) { console.error('email pedido novo:', error.message); }
+    // Notifica por e-mail em segundo plano (fora do caminho crítico do 201)
+    enviaEmailPedidoNovo(pedido).catch((error) => console.error('email pedido novo:', error.message));
     const cfgLoja = await getSettings();
     res.status(201).json({
         success: true,
@@ -1208,6 +1208,22 @@ ${blocoTotaisPedido(t)}
 <p><strong>Status:</strong> ${pedido.status} (o provedor avisará o pagamento)</p>
 <footer>Notificação automática de novo pedido da sua loja online.</footer></div></body></html>`;
 }
+// E-mail do CLIENTE: pedido recebido, aguardando pagamento
+function templateEmailPedidoRecebido(pedido) {
+    const nome = pedido.cliente?.nome || 'cliente';
+    const itens = linhasItensPedido(pedido);
+    const t = totaisPedido(pedido);
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>${estiloEmailVenda}
+</style></head><body><div class="container">
+<h2>🧾 Pedido recebido - ${pedido.numero}</h2>
+<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e estamos aguardando a confirmação do pagamento. O provedor (${pedido.provedorPagamento}) enviará o recibo; ao aprovar, você recebe a confirmação de compra aqui da loja.</p>
+<table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
+${blocoTotaisPedido(t)}
+<p><strong>Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
+<p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
+<footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvidas.</footer></div></body></html>`;
+}
 // Notifica a LOJA sobre o NOVO pedido (pago ou não); nunca quebra o 201
 async function enviaEmailPedidoNovo(pedido) {
     // Em ambiente de teste automatizado não dispara e-mail (suíte E2E cria dezenas de pedidos)
@@ -1217,14 +1233,21 @@ async function enviaEmailPedidoNovo(pedido) {
         const service = s?.emailService || 'smtp';
         const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
         const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? (process.env.EMAIL_FROM || s.emailLoja) : '';
-        if (!lojaEmail) { console.warn('[email] e-mail da loja nao configurado (novo pedido nao notificado)'); return; }
+        const clienteEmail = emailOk(pedido.cliente?.email) ? pedido.cliente.email : '';
+        if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (novo pedido)'); return; }
         const enviar = (to, subject, html) => {
             if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
             if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
             return enviaEmailSmtp(s, { to, subject, html });
         };
-        try { await enviar(lojaEmail, `Novo pedido #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailPedidoNovo(pedido)); }
-        catch (error) { console.error('email pedido/loja:', error.message); }
+        if (clienteEmail && clienteEmail !== lojaEmail) {
+            try { await enviar(clienteEmail, `Pedido #${pedido.numero} recebido - aguardando pagamento`, templateEmailPedidoRecebido(pedido)); }
+            catch (error) { console.error('email pedido/cliente:', error.message); }
+        }
+        if (lojaEmail) {
+            try { await enviar(lojaEmail, `Novo pedido #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailPedidoNovo(pedido)); }
+            catch (error) { console.error('email pedido/loja:', error.message); }
+        }
     } catch (error) {
         console.error('enviaEmailPedidoNovo erro:', error.message);
         throw error;
