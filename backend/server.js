@@ -1313,17 +1313,22 @@ async function enviaEmailGmail(s, { to, subject, html }) {
 async function confirmaPagamento(pedidoId, aprovado, provedorId = '', provedor = 'mercadopago') {
     const pedido = await Pedido.findById(pedidoId);
     if (!pedido) return { ok: false };
-    await Pagamento.findOneAndUpdate(
+    const pgto = await Pagamento.findOneAndUpdate(
         { pedidoId: pedido._id },
         { $set: { status: aprovado ? 'aprovado' : 'recusado', provedor, ...(provedorId ? (provedor === 'pagseguro' ? { pgsOrderId: provedorId } : { mpPreferenceId: provedorId }) : {}) } },
-        { upsert: true }
+        { upsert: true, new: true }
     );
     if (!aprovado || pedido.status !== 'pendente') return { ok: true, jaProcessado: pedido.status !== 'pendente' };
     pedido.status = 'pago';
     await pedido.save();
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pagamento_aprovado', pedido: pedido.numero }));
     try { await enviaWhatsApp(pedido); } catch (error) { console.error('whatsapp:', error.message); }
-    try { await enviaEmailVenda(pedido); } catch (error) { console.error('email:', error.message); }
+    // E-mail só p/ venda real (modo mock = teste/webhook de teste: sem notificação)
+    if (pgto?.modo === 'real') {
+        try { await enviaEmailVenda(pedido); } catch (error) { console.error('email:', error.message); }
+    } else {
+        console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'email_ignorado_mock', pedido: pedido.numero }));
+    }
     return { ok: true };
 }
 
