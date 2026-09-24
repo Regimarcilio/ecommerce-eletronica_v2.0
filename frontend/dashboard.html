@@ -929,7 +929,7 @@
         // Volta do OAuth (MP_REDIRECT_URI=dashboard.html?code=...): troca automatica
         async function mpTrocarCode() {
             const q = new URLSearchParams(window.location.search);
-            if (!q.get('code') || q.get('scope')) return; // com scope= é do Google
+            if (!q.get('code') || !q.get('state')) return; // sem state= é do Google
             const code = q.get('code');
             try {
                 const res = await fetch(API + '/pagamentos/mercadopago/oauth/token', {
@@ -967,8 +967,8 @@
         }
         async function googleTrocarCode() {
             const q = new URLSearchParams(window.location.search);
-            // Google devolve scope=... junto do code; o MP não (só code+state)
-            if (!q.get('code') || !q.get('scope')) return;
+            // Google não recebe state nosso (só enviamos ao MP); MP devolve state
+            if (!q.get('code') || q.get('state')) return;
             const code = q.get('code');
             if (!document.getElementById('googleOauthStatus')) return;
             try {
