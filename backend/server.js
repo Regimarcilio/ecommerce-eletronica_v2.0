@@ -1465,7 +1465,8 @@ app.get('/api/config/google/oauth/status', auth, admin, asyncHandler(async (req,
         oauth: {
             conectado: keys.includes('google_refresh_token') || !!process.env.GOOGLE_REFRESH_TOKEN,
             viaEnv: !!process.env.GOOGLE_REFRESH_TOKEN,
-            clientConfigurado: !!(await googleClientIdFinal())
+            clientConfigurado: !!(await googleClientIdFinal()),
+            redirectUri: await googleRedirectFinal()
         }
     });
 }));

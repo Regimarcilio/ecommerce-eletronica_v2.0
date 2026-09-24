@@ -886,6 +886,7 @@
                     </div>
                     <small class="text-muted d-block">SMTP usa <code>SMTP_HOST/PORT/USER/PASS</code> do <code>backend/.env</code>. Gmail usa Client ID/Secret + Refresh Token (guia em <code>docs/EMAIL.md</code>). Segredos ficam cifrados.</small>
                     <p class="mb-2 mt-2">Conta Google: <strong id="googleOauthStatus">verificando…</strong></p>
+                    <p class="mb-2"><small class="text-muted">Redirect a cadastrar no Google: <code id="googleRedirectUri">…</code></small></p>
                     <div class="d-flex gap-2 flex-wrap">
                         <button class="btn btn-sm btn-primary-custom" onclick="googleConectar()"><i class="fas fa-plug"></i> Conectar conta Google</button>
                         <button class="btn btn-sm btn-outline-light" onclick="googleOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
@@ -953,6 +954,8 @@
                     const o = data.oauth || {};
                     el.textContent = o.conectado ? `conectada${o.viaEnv ? ' (via .env)' : ''}` : 'desconectada';
                     el.style.color = o.conectado ? '#6ee7b7' : '#fbbf24';
+                    const er = document.getElementById('googleRedirectUri');
+                    if (er && o.redirectUri) er.textContent = o.redirectUri;
                 }
             } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
         }

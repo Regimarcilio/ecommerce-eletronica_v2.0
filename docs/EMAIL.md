@@ -19,7 +19,8 @@ Remetente: `EMAIL_FROM` do `.env` ou **e-mail da loja** do painel.
 1. O arquivo `docs/client_secret*.json` (baixado do Google Cloud) já está no projeto — **nunca commitar** (está no `.gitignore`).
 2. Copie para `backend/.env`: `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` do arquivo.
 3. Ative a **Gmail API** no projeto (Google Cloud → APIs e serviços → Biblioteca → Gmail API → Ativar).
-4. No Google Cloud (APIs e serviços → Credenciais → seu Client ID), cadastre em **URIs de redirecionamento autorizados** a URL do dashboard (padrão: `http://localhost:8083/dashboard.html`, ou `GOOGLE_REDIRECT_URI` no `.env`).
+4. No Google Cloud (APIs e serviços → Credenciais → seu Client ID), cadastre em **URIs de redirecionamento autorizados** a URL do dashboard (`http://localhost:8083/dashboard.html`, ou `GOOGLE_REDIRECT_URI` no `.env` — o painel mostra o valor exato em "Redirect a cadastrar no Google").
+5. Na **Tela de consentimento OAuth → Escopos**, adicione `https://www.googleapis.com/auth/gmail.send`. O Google exige que os escopos do código sejam os mesmos da tela de consentimento ([doc](https://support.google.com/cloud/answer/7454865)); sem isso, aparece a tela de "app não verificado" para todo mundo.
 5. No painel (Configurações → Loja → Envio de e-mail): selecione **Gmail (API Google)** e clique **Conectar conta Google** → autorize com a conta da loja.
 6. Ao voltar, a troca do `code` é automática e o refresh token fica **cifrado** (`GET /config/google/oauth/status` mostra `conectada`). No próximo pagamento aprovado, o log mostra `[email] enviado via Gmail API: <id>`.
 
