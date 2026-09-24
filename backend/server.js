@@ -1157,42 +1157,71 @@ async function enviaWhatsApp(pedido, telefoneCadastro = '') {
 }
 
 // Template HTML do e-mail de venda (detalhes do pedido)
-function templateEmailVenda(pedido) {
-    const itens = (pedido.items || []).map((i) => {
+function linhasItensPedido(pedido) {
+    return (pedido.items || []).map((i) => {
         const nome = i.nome || i.titulo || 'Produto';
         const qty = i.quantidade ?? i.quantity ?? 1;
         const preco = Number(i.precoUnitario ?? i.preco ?? i.price ?? 0);
         const sub = Number(i.subtotal ?? (Number(qty) * preco));
         return `<tr><td style="padding:8px;border:1px solid #ddd;">${nome}</td><td style="padding:8px;border:1px solid #ddd;text-align:center;">${qty}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">R$ ${preco.toFixed(2)}</td><td style="padding:8px;border:1px solid #ddd;text-align:right;">R$ ${sub.toFixed(2)}</td></tr>`;
     }).join('');
+}
+function totaisPedido(pedido) {
     const subtotalItens = Number((pedido.items || []).reduce((acc, i) => acc + Number(i.subtotal ?? (Number(i.quantidade ?? i.quantity ?? 0) * Number(i.precoUnitario ?? i.preco ?? i.price ?? 0))), 0));
     const frete = Number(pedido.frete || 0);
     const desconto = Number(pedido.desconto || 0);
     const total = Number(pedido.total ?? (subtotalItens + frete - desconto));
-    return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body{font-family:Arial,sans-serif;color:#333;background:#f8f9fa;margin:0;padding:20px}
+    return { subtotalItens, frete, desconto, total };
+}
+const estiloEmailVenda = `body{font-family:Arial,sans-serif;color:#333;background:#f8f9fa;margin:0;padding:20px}
 .container{max-width:600px;margin:0 auto;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px}
 h2{color:#2c3e50;border-bottom:2px solid #eee;padding-bottom:10px}
 .table{width:100%;border-collapse:collapse;margin:20px 0}
 .table th,.table td{padding:8px;border:1px solid #ddd;text-align:left}
 .table th{background:#f2f2f2}
 .total{font-size:1.2em;font-weight:bold;color:#2c3e50}
-footer{margin-top:30px;font-size:0.8em;color:#777;text-align:center}
+footer{margin-top:30px;font-size:0.8em;color:#777;text-align:center}`;
+function blocoTotaisPedido(t) {
+    return `<div style="margin:20px 0;">
+<p><strong>Subtotal:</strong> R$ ${t.subtotalItens.toFixed(2)}</p>
+<p><strong>Frete:</strong> R$ ${t.frete.toFixed(2)}</p>
+<p><strong>Desconto:</strong> R$ ${t.desconto.toFixed(2)}</p>
+<p class="total"><strong>TOTAL: R$ ${t.total.toFixed(2)}</strong></p></div>`;
+}
+// E-mail da LOJA: notificação de VENDA com os dados da venda
+function templateEmailVenda(pedido) {
+    const itens = linhasItensPedido(pedido);
+    const t = totaisPedido(pedido);
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>${estiloEmailVenda}
 </style></head><body><div class="container">
-<h2>🧾 Novo Pedido Confirmado - ${pedido.numero}</h2>
+<h2>💰 Nova venda recebida - ${pedido.numero}</h2>
 <p><strong>Cliente:</strong> ${pedido.cliente ? (pedido.cliente.nome || pedido.cliente.email || 'Não informado') : 'Não informado'}</p>
 <p><strong>E-mail:</strong> ${pedido.cliente?.email || 'Não informado'}</p>
 <p><strong>Telefone:</strong> ${pedido.cliente?.telefone || 'Não informado'}</p>
 <p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
 <table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
-<div style="margin:20px 0;">
-<p><strong>Subtotal:</strong> R$ ${subtotalItens.toFixed(2)}</p>
-<p><strong>Frete:</strong> R$ ${frete.toFixed(2)}</p>
-<p><strong>Desconto:</strong> R$ ${desconto.toFixed(2)}</p>
-<p class="total"><strong>TOTAL: R$ ${total.toFixed(2)}</strong></p></div>
+${blocoTotaisPedido(t)}
 <p><strong>Forma de pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
 <p><strong>Status:</strong> ${pedido.status}</p>
+<footer>Notificação automática de venda da sua loja online.</footer></div></body></html>`;
+}
+// E-mail do CLIENTE: confirmação de COMPRA do site
+function templateEmailCompra(pedido) {
+    const nome = pedido.cliente?.nome || 'cliente';
+    const itens = linhasItensPedido(pedido);
+    const t = totaisPedido(pedido);
+    const e = pedido.endereco || {};
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>${estiloEmailVenda}
+</style></head><body><div class="container">
+<h2>✅ Pedido confirmado - ${pedido.numero}</h2>
+<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e o pagamento foi aprovado. Acompanhe em <strong>Meus pedidos</strong>.</p>
+<table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
+${blocoTotaisPedido(t)}
+<p><strong>Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
+<p><strong>Entrega:</strong> ${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}, ${e.cidade || '-'}/${e.estado || '-'} · CEP ${e.cep || '-'}</p>
+<p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
 <footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvidas.</footer></div></body></html>`;
 }
 
@@ -1201,16 +1230,28 @@ async function enviaEmailVenda(pedido) {
     try {
         const s = await getSettings().catch(() => null);
         const service = s?.emailService || 'smtp';
-        // Notifica o cliente E a loja (e-mail da loja sempre recebe a venda)
-        const lojaEmail = process.env.EMAIL_FROM || s?.emailLoja || '';
-        const dest = [...new Set([pedido.cliente?.email, lojaEmail].filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '')))];
-        if (!dest.length) { console.warn('[email] sem destinatarios (cliente e loja sem e-mail)'); return; }
-        const to = dest.join(', ');
-        const subject = `Novo Pedido #${pedido.numero} - ${pedido.provedorPagamento}`;
-        const html = templateEmailVenda(pedido);
-        if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
-        if (service === 'outlook') { console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)'); }
-        return enviaEmailSmtp(s, { to, subject, html });
+        // Loja SEMPRE recebe a venda; cliente recebe a confirmação de compra
+        const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
+        const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? (process.env.EMAIL_FROM || s.emailLoja) : '';
+        const clienteEmail = emailOk(pedido.cliente?.email) ? pedido.cliente.email : '';
+        if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (cliente e loja sem e-mail)'); return; }
+        const enviar = (to, subject, html) => {
+            if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
+            if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
+            return enviaEmailSmtp(s, { to, subject, html });
+        };
+        // Cliente: confirmação de compra do site (além do recibo do provedor)
+        if (clienteEmail && clienteEmail !== lojaEmail) {
+            try { await enviar(clienteEmail, `Seu pedido #${pedido.numero} foi confirmado`, templateEmailCompra(pedido)); }
+            catch (error) { console.error('email compra:', error.message); }
+        }
+        // Loja: notificação de venda com os dados da venda
+        if (lojaEmail) {
+            try { await enviar(lojaEmail, `Nova venda #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailVenda(pedido)); }
+            catch (error) { console.error('email venda:', error.message); }
+        } else {
+            console.warn('[email] e-mail da loja nao configurado (venda nao notificada)');
+        }
     } catch (error) {
         console.error('enviaEmailVenda erro:', error.message);
         throw error;
