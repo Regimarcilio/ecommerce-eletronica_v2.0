@@ -29,6 +29,15 @@ Remetente: `EMAIL_FROM` do `.env` ou **e-mail da loja** do painel.
 5. Na lista, ache **Gmail API v1** → marque `https://www.googleapis.com/auth/gmail.send` → Authorize APIs → login na conta da loja → Exchange authorization code for tokens.
 6. Cole o **Refresh token** no `GOOGLE_REFRESH_TOKEN` do `backend/.env` ou no painel (Configurações → Loja → Google Refresh Token — fica cifrado).
 
+## Erro "Acesso bloqueado: app não concluiu a verificação do Google"
+
+Normal com app em modo **Teste**. Resolva assim (Google Cloud → APIs e serviços → **Tela de consentimento OAuth**):
+
+1. Em **Usuários de teste**, clique **+ ADD USERS** e adicione o e-mail da conta da loja (a mesma que vai autorizar). Só usuários de teste conseguem autorizar enquanto o app não for verificado.
+2. Tente conectar de novo no painel. O escopo `gmail.send` é restrito: fora de usuários de teste, o Google bloqueia.
+3. Atenção: em modo Teste, o refresh token **expira em 7 dias** — se o envio parar com `invalid_grant`, reconecte a conta.
+4. Verificação formal do app (processo do Google com domínio, política de privacidade etc.) só vale a pena se terceiros forem conectar as contas deles. Para a conta da própria loja, usuário de teste basta.
+
 ## Testes sem enviar e-mail de verdade
 
 Sem `GOOGLE_REFRESH_TOKEN` (ou sem `SMTP_USER/SMTP_PASS`), o envio só registra aviso e retorna — os testes E2E validam esse caminho.
