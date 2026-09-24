@@ -877,20 +877,6 @@
                         <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-envelope"></i> E-mail da loja</label><input id="cfgEmailLoja" type="email" class="form-control" maxlength="160" value="${window.escapeHtml(c.emailLoja || '')}" placeholder="contato@sualoja.com.br"></div>
                         <div class="col-md-6 mb-3"><label class="form-label"><i class="fas fa-clock"></i> Horário de atendimento</label><input id="cfgHorario" class="form-control" maxlength="120" value="${window.escapeHtml(c.horarioAtendimento || '')}" placeholder="Seg–Sex, 8h às 18h"></div>
                     </div>
-                    <h6 class="mt-2"><i class="fas fa-paper-plane"></i> Envio de e-mail <small class="text-muted">(notificação de venda)</small></h6>
-                    <div class="row">
-                        <div class="col-md-4 mb-3"><label class="form-label">Serviço</label><select id="cfgEmailService" class="form-select"><option value="smtp">SMTP</option><option value="google">Gmail (API Google)</option><option value="outlook">Outlook</option></select></div>
-                        <div class="col-md-8 mb-3"><label class="form-label">Google Client ID</label><input id="cfgGoogleClientId" class="form-control" maxlength="100" value="${window.escapeHtml(c.googleClientId || '')}" placeholder="...apps.googleusercontent.com"></div>
-                        <div class="col-md-6 mb-3"><label class="form-label">Google Client Secret</label><input id="cfgGoogleClientSecret" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
-                        <div class="col-md-6 mb-3"><label class="form-label">Google Refresh Token</label><input id="cfgGoogleRefreshToken" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
-                    </div>
-                    <small class="text-muted d-block">SMTP usa <code>SMTP_HOST/PORT/USER/PASS</code> do <code>backend/.env</code>. Gmail usa Client ID/Secret + Refresh Token (guia em <code>docs/EMAIL.md</code>). Segredos ficam cifrados.</small>
-                    <p class="mb-2 mt-2">Conta Google: <strong id="googleOauthStatus">verificando…</strong></p>
-                    <p class="mb-2"><small class="text-muted">Redirect a cadastrar no Google: <code id="googleRedirectUri">…</code></small></p>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn btn-sm btn-primary-custom" onclick="googleConectar()"><i class="fas fa-plug"></i> Conectar conta Google</button>
-                        <button class="btn btn-sm btn-outline-light" onclick="googleOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
-                    </div>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-share-nodes"></i> Redes sociais <small class="text-muted">(vazio = ícone oculto no rodapé)</small></h4>
@@ -912,10 +898,6 @@
                 </div>
                 <button class="btn-primary-custom mt-3" onclick="salvarConfiguracoes()"><i class="fas fa-save"></i> Salvar configurações</button>`;
                 (c.faixasFrete || []).forEach(addFaixaRow);
-                if (['smtp', 'google', 'outlook'].includes(c.emailService)) {
-                    document.getElementById('cfgEmailService').value = c.emailService;
-                }
-                googleOauthStatus();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -940,47 +922,6 @@
                 const data = await res.json();
                 window.history.replaceState({}, '', window.location.pathname);
                 if (res.ok && data.success) showToast(`Mercado Pago conectado! (conta ${data.user_id || ''})`);
-                else showToast(data.message || 'Falha ao conectar', true);
-            } catch { showToast('Erro ao conectar', true); }
-        }
-
-        // ---- Google OAuth (conta p/ Gmail; refresh cifrado, sem Playground) ----
-        async function googleOauthStatus(manual) {
-            const el = document.getElementById('googleOauthStatus');
-            try {
-                const res = await fetch(API + '/config/google/oauth/status', { headers: getHeaders() });
-                const data = await res.json();
-                if (el) {
-                    const o = data.oauth || {};
-                    el.textContent = o.conectado ? `conectada${o.viaEnv ? ' (via .env)' : ''}` : 'desconectada';
-                    el.style.color = o.conectado ? '#6ee7b7' : '#fbbf24';
-                    const er = document.getElementById('googleRedirectUri');
-                    if (er && o.redirectUri) er.textContent = o.redirectUri;
-                }
-            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
-        }
-        async function googleConectar() {
-            try {
-                const res = await fetch(API + '/config/google/oauth/url', { headers: getHeaders() });
-                const data = await res.json();
-                if (!res.ok || !data.success) { showToast(data.message || 'Configure GOOGLE_CLIENT_ID/SECRET', true); return; }
-                window.open(data.url, '_blank');
-                showToast('Autorize no Google; ao voltar, a conta conecta sozinha.');
-            } catch { showToast('Erro ao conectar', true); }
-        }
-        async function googleTrocarCode() {
-            const q = new URLSearchParams(window.location.search);
-            // Google não recebe state nosso (só enviamos ao MP); MP devolve state
-            if (!q.get('code') || q.get('state')) return;
-            const code = q.get('code');
-            if (!document.getElementById('googleOauthStatus')) return;
-            try {
-                const res = await fetch(API + '/config/google/oauth/token', {
-                    method: 'POST', headers: getHeaders(), body: JSON.stringify({ code })
-                });
-                const data = await res.json();
-                window.history.replaceState({}, '', window.location.pathname);
-                if (res.ok && data.success) { showToast('Conta Google conectada!'); googleOauthStatus(); }
                 else showToast(data.message || 'Falha ao conectar', true);
             } catch { showToast('Erro ao conectar', true); }
         }
@@ -1019,8 +960,6 @@
                 descontoPix: Number(document.getElementById('cfgDesc').value),
                 faixasFrete: collectFaixas(),
                 emailLoja: document.getElementById('cfgEmailLoja').value.trim(),
-                emailService: document.getElementById('cfgEmailService').value,
-                googleClientId: document.getElementById('cfgGoogleClientId').value.trim(),
                 horarioAtendimento: document.getElementById('cfgHorario').value.trim(),
                 redesSociais: {
                     instagram: document.getElementById('cfgRedeInstagram').value.trim(),
@@ -1031,14 +970,8 @@
             };
             const sn = document.getElementById('cfgSegNome').value.trim();
             const sv = document.getElementById('cfgSegValor').value;
-            const gsec = document.getElementById('cfgGoogleClientSecret').value;
-            const gref = document.getElementById('cfgGoogleRefreshToken').value;
-            const segs = {};
-            if (gsec) segs.google_client_secret = gsec;
-            if (gref) segs.google_refresh_token = gref;
-            if (sn && sv) segs[sn] = sv;
+            if (sn && sv) body.segredos = { [sn]: sv };
             else if (sn || sv) { showToast('Preencha nome e valor do segredo', true); return; }
-            if (Object.keys(segs).length) body.segredos = segs;
             try {
                 const res = await fetch(API + '/config/loja', { method: 'PUT', headers: getHeaders(), body: JSON.stringify(body) });
                 const data = await res.json();
@@ -1050,7 +983,6 @@
         loadDashboard();
         atualizaMsgBadge();
         mpTrocarCode();
-        googleTrocarCode();
     </script>
 </body>
 </html>
