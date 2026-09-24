@@ -1201,8 +1201,11 @@ async function enviaEmailVenda(pedido) {
     try {
         const s = await getSettings().catch(() => null);
         const service = s?.emailService || 'smtp';
-        const to = pedido.cliente?.email || '';
-        if (!to) { console.warn('[email] pedido sem e-mail do cliente (nao enviado)'); return; }
+        // Notifica o cliente E a loja (e-mail da loja sempre recebe a venda)
+        const lojaEmail = process.env.EMAIL_FROM || s?.emailLoja || '';
+        const dest = [...new Set([pedido.cliente?.email, lojaEmail].filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '')))];
+        if (!dest.length) { console.warn('[email] sem destinatarios (cliente e loja sem e-mail)'); return; }
+        const to = dest.join(', ');
         const subject = `Novo Pedido #${pedido.numero} - ${pedido.provedorPagamento}`;
         const html = templateEmailVenda(pedido);
         if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
