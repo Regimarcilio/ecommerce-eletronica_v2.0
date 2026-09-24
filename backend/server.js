@@ -1401,6 +1401,75 @@ app.get('/api/pagamentos/mercadopago/oauth/status', auth, admin, asyncHandler(as
     });
 }));
 
+// Admin: Google OAuth p/ Gmail (conecta a conta e guarda o refresh cifrado)
+async function googleRedirectFinal() {
+    if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+    return `${FRONT_URL}/dashboard.html`;
+}
+async function googleClientIdFinal() {
+    if (process.env.GOOGLE_CLIENT_ID) return process.env.GOOGLE_CLIENT_ID;
+    try { return (await Settings.findOne({ chave: 'loja' }).select('googleClientId').lean())?.googleClientId || ''; }
+    catch { return ''; }
+}
+app.get('/api/config/google/oauth/url', auth, admin, asyncHandler(async (req, res) => {
+    const cid = await googleClientIdFinal();
+    if (!cid) return err(res, 400, 'GOOGLE_CLIENT_ID não configurado (backend/.env ou painel)', 'CONFIG');
+    const redir = await googleRedirectFinal();
+    const state = crypto.randomBytes(16).toString('hex');
+    const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+        client_id: cid, redirect_uri: redir, response_type: 'code',
+        scope: 'https://www.googleapis.com/auth/gmail.send',
+        access_type: 'offline', prompt: 'consent', state
+    }).toString();
+    res.json({ success: true, url, redirectUri: redir });
+}));
+app.post('/api/config/google/oauth/token', auth, admin, asyncHandler(async (req, res) => {
+    const code = String(req.body?.code || '');
+    if (!code) return err(res, 400, 'code obrigatório', 'VALIDATION');
+    const s = await getSettings();
+    const cid = await googleClientIdFinal();
+    const csec = process.env.GOOGLE_CLIENT_SECRET || getSegredo(s, 'google_client_secret');
+    if (!cid || !csec) return err(res, 400, 'GOOGLE_CLIENT_ID/SECRET não configurados (backend/.env ou painel)', 'CONFIG');
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    let data;
+    try {
+        const r = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST', signal: ctrl.signal,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                code, client_id: cid, client_secret: csec,
+                redirect_uri: await googleRedirectFinal(), grant_type: 'authorization_code'
+            }).toString()
+        });
+        data = await r.json().catch(() => ({}));
+        if (!r.ok) throw Object.assign(new Error(`Google ${r.status}: ${data.error_description || data.error || 'falha OAuth'}`), { statusCode: 502, code: 'UPSTREAM' });
+    } catch (error) {
+        clearTimeout(t);
+        if (error.statusCode) return err(res, error.statusCode, error.message, error.code);
+        throw error;
+    }
+    if (!data.refresh_token) return err(res, 502, 'Google não devolveu refresh_token (revogue o acesso e conecte de novo)', 'UPSTREAM');
+    try {
+        s.segredos.set('google_refresh_token', cifraSegredo(data.refresh_token));
+        await s.save();
+    } catch (error) { return err(res, error.statusCode || 500, error.message, error.code || 'INTERNAL'); }
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'google_oauth_conectado', por: req.usuarioId }));
+    res.json({ success: true });
+}));
+app.get('/api/config/google/oauth/status', auth, admin, asyncHandler(async (req, res) => {
+    const s = await getSettings();
+    const keys = [...(s.segredos || new Map()).keys()];
+    res.json({
+        success: true,
+        oauth: {
+            conectado: keys.includes('google_refresh_token') || !!process.env.GOOGLE_REFRESH_TOKEN,
+            viaEnv: !!process.env.GOOGLE_REFRESH_TOKEN,
+            clientConfigurado: !!(await googleClientIdFinal())
+        }
+    });
+}));
+
 // Auditoria de pagamentos (admin): lista intents com pedido, provedor, modo e status
 app.get('/api/pagamentos', auth, admin, asyncHandler(async (req, res) => {
     const query = {};

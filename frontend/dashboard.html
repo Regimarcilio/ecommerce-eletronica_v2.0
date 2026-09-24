@@ -885,6 +885,11 @@
                         <div class="col-md-6 mb-3"><label class="form-label">Google Refresh Token</label><input id="cfgGoogleRefreshToken" type="password" class="form-control" placeholder="•••••••• (vazio = mantém)" autocomplete="new-password"></div>
                     </div>
                     <small class="text-muted d-block">SMTP usa <code>SMTP_HOST/PORT/USER/PASS</code> do <code>backend/.env</code>. Gmail usa Client ID/Secret + Refresh Token (guia em <code>docs/EMAIL.md</code>). Segredos ficam cifrados.</small>
+                    <p class="mb-2 mt-2">Conta Google: <strong id="googleOauthStatus">verificando…</strong></p>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-sm btn-primary-custom" onclick="googleConectar()"><i class="fas fa-plug"></i> Conectar conta Google</button>
+                        <button class="btn btn-sm btn-outline-light" onclick="googleOauthStatus(true)"><i class="fas fa-rotate"></i> Atualizar status</button>
+                    </div>
                 </div>
                 <div class="data-card mt-3">
                     <h4><i class="fas fa-share-nodes"></i> Redes sociais <small class="text-muted">(vazio = ícone oculto no rodapé)</small></h4>
@@ -909,6 +914,7 @@
                 if (['smtp', 'google', 'outlook'].includes(c.emailService)) {
                     document.getElementById('cfgEmailService').value = c.emailService;
                 }
+                googleOauthStatus();
             } catch(e) { document.getElementById('content').innerHTML = '<div class="alert alert-danger">Erro ao carregar configurações</div>'; }
         }
 
@@ -922,8 +928,9 @@
 
         // Volta do OAuth (MP_REDIRECT_URI=dashboard.html?code=...): troca automatica
         async function mpTrocarCode() {
-            const code = new URLSearchParams(window.location.search).get('code');
-            if (!code) return;
+            const q = new URLSearchParams(window.location.search);
+            if (!q.get('code') || q.get('scope')) return; // com scope= é do Google
+            const code = q.get('code');
             try {
                 const res = await fetch(API + '/pagamentos/mercadopago/oauth/token', {
                     method: 'POST', headers: getHeaders(),
@@ -932,6 +939,45 @@
                 const data = await res.json();
                 window.history.replaceState({}, '', window.location.pathname);
                 if (res.ok && data.success) showToast(`Mercado Pago conectado! (conta ${data.user_id || ''})`);
+                else showToast(data.message || 'Falha ao conectar', true);
+            } catch { showToast('Erro ao conectar', true); }
+        }
+
+        // ---- Google OAuth (conta p/ Gmail; refresh cifrado, sem Playground) ----
+        async function googleOauthStatus(manual) {
+            const el = document.getElementById('googleOauthStatus');
+            try {
+                const res = await fetch(API + '/config/google/oauth/status', { headers: getHeaders() });
+                const data = await res.json();
+                if (el) {
+                    const o = data.oauth || {};
+                    el.textContent = o.conectado ? `conectada${o.viaEnv ? ' (via .env)' : ''}` : 'desconectada';
+                    el.style.color = o.conectado ? '#6ee7b7' : '#fbbf24';
+                }
+            } catch { if (el) el.textContent = 'erro'; if (manual) showToast('Erro ao conectar', true); }
+        }
+        async function googleConectar() {
+            try {
+                const res = await fetch(API + '/config/google/oauth/url', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok || !data.success) { showToast(data.message || 'Configure GOOGLE_CLIENT_ID/SECRET', true); return; }
+                window.open(data.url, '_blank');
+                showToast('Autorize no Google; ao voltar, a conta conecta sozinha.');
+            } catch { showToast('Erro ao conectar', true); }
+        }
+        async function googleTrocarCode() {
+            const q = new URLSearchParams(window.location.search);
+            // Google devolve scope=... junto do code; o MP não (só code+state)
+            if (!q.get('code') || !q.get('scope')) return;
+            const code = q.get('code');
+            if (!document.getElementById('googleOauthStatus')) return;
+            try {
+                const res = await fetch(API + '/config/google/oauth/token', {
+                    method: 'POST', headers: getHeaders(), body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                window.history.replaceState({}, '', window.location.pathname);
+                if (res.ok && data.success) { showToast('Conta Google conectada!'); googleOauthStatus(); }
                 else showToast(data.message || 'Falha ao conectar', true);
             } catch { showToast('Erro ao conectar', true); }
         }
@@ -1001,6 +1047,7 @@
         loadDashboard();
         atualizaMsgBadge();
         mpTrocarCode();
+        googleTrocarCode();
     </script>
 </body>
 </html>

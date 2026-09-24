@@ -94,6 +94,24 @@ describe('e2e configuracoes da loja', () => {
     assert.ok(!('google_refresh_token' in (get2.data.config.segredos || {})));
   });
 
+  it('google oauth: url/status/token validam sem expor segredos', async () => {
+    assert.equal((await api('GET', '/api/config/google/oauth/url', {})).status, 401);
+    assert.equal((await api('GET', '/api/config/google/oauth/url', { token: utok })).status, 403);
+    const url = await api('GET', '/api/config/google/oauth/url', { token: atok });
+    assert.ok([200, 400].includes(url.status));
+    if (url.status === 200) {
+      assert.match(url.data.url, /accounts\.google\.com/);
+      assert.match(url.data.url, /gmail\.send/);
+    } else assert.match(url.data.message, /GOOGLE_CLIENT_ID/);
+    assert.equal((await api('POST', '/api/config/google/oauth/token', { token: atok, body: {} })).status, 400);
+    const fake = await api('POST', '/api/config/google/oauth/token', { token: atok, body: { code: 'x-invalido' } });
+    assert.ok([400, 502].includes(fake.status));
+    const st = await api('GET', '/api/config/google/oauth/status', { token: atok });
+    assert.equal(st.status, 200);
+    assert.equal(typeof st.data.oauth.conectado, 'boolean');
+    assert.ok(!JSON.stringify(st.data).includes('GOCSPX'));
+  });
+
   it('whatsapp/status responde shape (configurado ou nao)', async () => {
     const r = await api('GET', '/api/config/whatsapp/status', { token: atok });
     assert.equal(r.status, 200);
