@@ -3,6 +3,20 @@
 O backend envia o e-mail de venda em `confirmaPagamento()` (após o WhatsApp).
 Sem credenciais, só registra `warn` no log — o pagamento **não quebra**.
 
+## Recomendado: Gmail com senha de app (SMTP) — só notificação, sem OAuth
+
+Se o objetivo é **apenas receber a notificação de venda no seu e-mail** (sem
+enviar nada a clientes), este é o caminho: sem projeto Google Cloud, sem tela
+de consentimento, sem verificação, sem expiração de 7 dias.
+
+1. Na conta Gmail da loja, ative a **verificação em duas etapas** (Conta Google → Segurança).
+2. Gere uma **senha de app**: Segurança → *Senhas de app* → nome `Loja` → copie o código de 16 letras.
+3. No `backend/.env` (ou segredos `smtp_pass` no painel):
+   `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`,
+   `SMTP_USER=<seu@gmail.com>`, `SMTP_PASS=<senha-de-app>`,
+   `EMAIL_FROM=<seu@gmail.com>`.
+4. No painel (Configurações → Loja): serviço **SMTP** e **e-mail da loja** = o mesmo Gmail.
+
 ## Opções (`emailService` em Configurações → Loja, ou `backend/.env`)
 
 | Serviço | Onde configura | Envio |
