@@ -1190,6 +1190,48 @@ function blocoTotaisPedido(t) {
 <p><strong>Desconto:</strong> R$ ${t.desconto.toFixed(2)}</p>
 <p class="total"><strong>TOTAL: R$ ${t.total.toFixed(2)}</strong></p></div>`;
 }
+function linhasItensPedidoDark(pedido) {
+    return (pedido.items || []).map((i) => {
+        const nome = i.nome || i.titulo || 'Produto';
+        const qty = i.quantidade ?? i.quantity ?? 1;
+        const preco = Number(i.precoUnitario ?? i.preco ?? i.price ?? 0);
+        const sub = Number(i.subtotal ?? (Number(qty) * preco));
+        return `<tr><td style="padding:9px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">${nome}</td><td align="center" style="padding:9px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">${qty}</td><td align="right" style="padding:9px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">R$ ${preco.toFixed(2)}</td><td align="right" style="padding:9px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">R$ ${sub.toFixed(2)}</td></tr>`;
+    }).join('');
+}
+function blocoTotaisPedidoDark(t) {
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;font-size:14px;color:#9aa4c7;">
+<tr><td>Subtotal:</td><td align="right">R$ ${t.subtotalItens.toFixed(2)}</td></tr>
+<tr><td>Frete:</td><td align="right">${t.frete === 0 ? 'Grátis' : 'R$ ' + t.frete.toFixed(2)}</td></tr>
+<tr><td>Desconto:</td><td align="right">R$ ${t.desconto.toFixed(2)}</td></tr>
+<tr><td style="padding-top:8px;font-size:18px;font-weight:bold;color:#ffb224;">TOTAL:</td><td align="right" style="padding-top:8px;font-size:18px;font-weight:bold;color:#ffb224;">R$ ${t.total.toFixed(2)}</td></tr>
+</table>`;
+}
+// Layout do e-mail DO CLIENTE espelhado na página da loja (PlacaCerta):
+// fundo escuro + âmbar, tabela 600px e CSS 100% inline (compatível com Gmail/Outlook)
+function layoutEmailCliente(titulo, preheader, corpoHtml) {
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#0a0e1a;color:#f2f5ff;font-family:Arial,Helvetica,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0e1a;padding:24px 12px;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#131b36;border:1px solid rgba(255,255,255,0.09);border-radius:18px;overflow:hidden;">
+<tr><td style="background-color:#ff8a00;height:4px;font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td style="padding:24px 28px 8px;font-size:22px;font-weight:bold;color:#f2f5ff;">
+<span style="display:inline-block;background-color:#ff8a00;color:#1a1000;border-radius:10px;width:34px;height:34px;text-align:center;font-size:18px;line-height:34px;">&#9889;</span>
+&nbsp;Placa<em style="font-style:normal;color:#ffb224;">Certa</em></td></tr>
+<tr><td style="padding:8px 28px 0;font-size:19px;font-weight:bold;color:#f2f5ff;">${titulo}</td></tr>
+<tr><td style="padding:16px 28px 0;font-size:14px;line-height:1.6;color:#f2f5ff;">${corpoHtml}</td></tr>
+<tr><td align="center" style="padding:24px 28px;">
+<a href="${FRONT_URL}/pedidos.html" style="display:inline-block;background-color:#ffb224;color:#1a1000;font-weight:bold;font-size:15px;padding:13px 34px;border-radius:999px;text-decoration:none;">Acompanhar meu pedido</a>
+</td></tr>
+<tr><td style="padding:0 28px 24px;font-size:12px;line-height:1.6;color:#9aa4c7;text-align:center;">Este é um e-mail automático da PlacaCerta. Responda se tiver dúvidas.<br>Dica: acompanhe tudo em Meus pedidos.</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
 // E-mail da LOJA: NOVO PEDIDO recebido (pago ou não — o provedor avisa o pagamento)
 function templateEmailPedidoNovo(pedido) {
     const itens = linhasItensPedido(pedido);
@@ -1211,18 +1253,19 @@ ${blocoTotaisPedido(t)}
 // E-mail do CLIENTE: pedido recebido, aguardando pagamento
 function templateEmailPedidoRecebido(pedido) {
     const nome = pedido.cliente?.nome || 'cliente';
-    const itens = linhasItensPedido(pedido);
     const t = totaisPedido(pedido);
-    return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>${estiloEmailVenda}
-</style></head><body><div class="container">
-<h2>🧾 Pedido recebido - ${pedido.numero}</h2>
-<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e estamos aguardando a confirmação do pagamento. O provedor (${pedido.provedorPagamento}) enviará o recibo; ao aprovar, você recebe a confirmação de compra aqui da loja.</p>
-<table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
-${blocoTotaisPedido(t)}
-<p><strong>Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
-<p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
-<footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvidas.</footer></div></body></html>`;
+    const corpo = `<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e estamos <strong style="color:#fbbf24;">aguardando a confirmação do pagamento</strong>. O provedor (${pedido.provedorPagamento}) enviará o recibo; ao aprovar, você recebe a confirmação de compra aqui da loja.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;font-size:13px;">
+<thead><tr>
+<th align="left" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">PRODUTO</th>
+<th align="center" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">QTD</th>
+<th align="right" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">PREÇO</th>
+<th align="right" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">TOTAL</th>
+</tr></thead><tbody>${linhasItensPedidoDark(pedido)}</tbody></table>
+${blocoTotaisPedidoDark(t)}
+<p style="font-size:13px;color:#9aa4c7;"><strong style="color:#f2f5ff;">Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})<br>
+<strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>`;
+    return layoutEmailCliente(`Pedido recebido · ${pedido.numero}`, `Recebemos seu pedido ${pedido.numero}. Aguardando pagamento. Total R$ ${t.total.toFixed(2)}.`, corpo);
 }
 // Notifica a LOJA sobre o NOVO pedido (pago ou não); nunca quebra o 201
 async function enviaEmailPedidoNovo(pedido) {
@@ -1274,20 +1317,21 @@ ${blocoTotaisPedido(t)}
 // E-mail do CLIENTE: confirmação de COMPRA do site
 function templateEmailCompra(pedido) {
     const nome = pedido.cliente?.nome || 'cliente';
-    const itens = linhasItensPedido(pedido);
     const t = totaisPedido(pedido);
     const e = pedido.endereco || {};
-    return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>${estiloEmailVenda}
-</style></head><body><div class="container">
-<h2>✅ Pedido confirmado - ${pedido.numero}</h2>
-<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e o pagamento foi aprovado. Acompanhe em <strong>Meus pedidos</strong>.</p>
-<table class="table"><thead><tr><th>Produto</th><th>Qtd</th><th style="text-align:right">Preço</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${itens}</tbody></table>
-${blocoTotaisPedido(t)}
-<p><strong>Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})</p>
-<p><strong>Entrega:</strong> ${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}, ${e.cidade || '-'}/${e.estado || '-'} · CEP ${e.cep || '-'}</p>
-<p><strong>Data:</strong> ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>
-<footer>Este é um e-mail automático da sua loja online. Responda a esta mensagem se tiver dúvidas.</footer></div></body></html>`;
+    const corpo = `<p>Olá, <strong>${nome}</strong>! Recebemos seu pedido e o pagamento foi <strong style="color:#6ee7b7;">aprovado</strong>.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0;font-size:13px;">
+<thead><tr>
+<th align="left" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">PRODUTO</th>
+<th align="center" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">QTD</th>
+<th align="right" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">PREÇO</th>
+<th align="right" style="font-size:11px;letter-spacing:1px;color:#9aa4c7;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,0.09);">TOTAL</th>
+</tr></thead><tbody>${linhasItensPedidoDark(pedido)}</tbody></table>
+${blocoTotaisPedidoDark(t)}
+<p style="font-size:13px;color:#9aa4c7;"><strong style="color:#f2f5ff;">Pagamento:</strong> ${pedido.pagamento} (${pedido.provedorPagamento})<br>
+<strong style="color:#f2f5ff;">Entrega:</strong> ${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}, ${e.cidade || '-'}/${e.estado || '-'} · CEP ${e.cep || '-'}<br>
+<strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>`;
+    return layoutEmailCliente(`Pedido confirmado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi aprovado. Total R$ ${t.total.toFixed(2)}.`, corpo);
 }
 
 // Envia e-mail de notificação de venda (SMTP ou Gmail API); nunca quebra o fluxo
