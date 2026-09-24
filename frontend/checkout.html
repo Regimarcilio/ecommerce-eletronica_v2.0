@@ -423,6 +423,9 @@ function showToast(msg, isError = false) {
     setTimeout(() => toast.remove(), 3000);
 }
 async function confirmarPedido() {
+    // Anti duplo-clique: um pedido por vez (evita pedidos/e-mails duplicados)
+    if (window.__enviandoPedido) return;
+    window.__enviandoPedido = true;
     const nome = document.getElementById('nome').value.trim();
     const email = document.getElementById('email').value.trim();
     const telefone = document.getElementById('telefone').value.trim();
@@ -463,8 +466,8 @@ async function confirmarPedido() {
             window.__lastPedidoId = data.pedido._id || data.pedido.id;
             window.__lastCpf = document.getElementById('cpf').value.trim();
             mostrarPagamento(data);
-        } else showToast(data.message || 'Erro ao processar pedido', true);
-    } catch(e) { showToast('Erro ao conectar', true); }
+        } else { window.__enviandoPedido = false; showToast(data.message || 'Erro ao processar pedido', true); }
+    } catch(e) { window.__enviandoPedido = false; showToast('Erro ao conectar', true); }
 }
 let provedorSel = 'mercadopago';
 let cfgMpAtivo = true, cfgPgsAtivo = false;
