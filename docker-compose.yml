@@ -30,6 +30,8 @@ services:
       E2E_NO_LIMIT: ${E2E_NO_LIMIT:-}
     ports:
       - "5010:5000"
+    volumes:
+      - fotos_data:/app/fotos
     depends_on:
       mongodb:
         condition: service_healthy
@@ -45,6 +47,8 @@ services:
     restart: always
     ports:
       - "8083:80"
+    volumes:
+      - fotos_data:/usr/share/nginx/html/fotos:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -67,3 +71,4 @@ services:
 volumes:
   mongo_data:
   evo_instances:
+  fotos_data:

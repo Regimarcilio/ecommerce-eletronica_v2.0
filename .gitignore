@@ -3,6 +3,9 @@ backend/.env
 .env
 npm-debug.log
 .DS_Store
+# Uploads locais de fotos (vão p/ volume fotos_data no compose)
+fotos/
+backend/fotos/
 # Google OAuth client secrets (contem client_secret real — nunca commitar)
 docs/client_secret*.json
 docs/client_google.json

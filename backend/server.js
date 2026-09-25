@@ -9,6 +9,9 @@ const crypto = require('crypto');
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
@@ -661,6 +664,34 @@ app.delete('/api/produtos/:id', auth, admin, asyncHandler(async (req, res) => {
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'produto_excluido', por: req.usuarioId, id: req.params.id }));
     res.json({ success: true });
 }));
+
+// Upload de foto p/ volume compartilhado (no banco vai só /fotos/<arquivo>)
+const FOTOS_DIR = process.env.FOTOS_DIR || '/app/fotos';
+const uploadFoto = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => { try { fs.mkdirSync(FOTOS_DIR, { recursive: true }); cb(null, FOTOS_DIR); } catch (e) { cb(e); } },
+        filename: (req, file, cb) => {
+            const base = (path.parse(file.originalname).name || 'foto').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'foto';
+            const ext = file.mimetype === 'image/png' ? 'png' : file.mimetype === 'image/webp' ? 'webp' : 'jpg';
+            cb(null, `${base}-${Date.now()}.${ext}`);
+        }
+    }),
+    limits: { fileSize: 3 * 1024 * 1024, files: 1 },
+    fileFilter: (req, file, cb) => {
+        if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) return cb(null, true);
+        cb(Object.assign(new Error('Tipo inválido (só JPG/PNG/WebP)'), { statusCode: 400, code: 'VALIDATION' }));
+    }
+});
+
+// Admin: upload de foto do produto (disco; no banco vai só a URL)
+app.post('/api/produtos/foto', auth, admin, (req, res) => {
+    uploadFoto.single('foto')(req, res, (e) => {
+        if (e) return err(res, e.statusCode || 400, e.code === 'LIMIT_FILE_SIZE' ? 'Foto até 3MB' : (e.message || 'Upload inválido'), e.code || 'VALIDATION');
+        if (!req.file) return err(res, 400, 'Arquivo foto obrigatório', 'VALIDATION');
+        console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'foto_enviada', por: req.usuarioId, arquivo: req.file.filename }));
+        res.json({ success: true, url: `/fotos/${req.file.filename}` });
+    });
+});
 
 // ========== ROTAS DE CATEGORIAS ==========
 app.get('/api/categorias', asyncHandler(async (req, res) => {

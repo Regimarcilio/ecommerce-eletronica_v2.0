@@ -139,7 +139,7 @@
                 <div class="col-md-4 mb-3"><label class="form-label">Modelo TV compatível</label><input type="text" id="prodModeloTV" class="form-control" maxlength="120" placeholder="43UJ6525..."></div>
             </div>
             <div class="mb-3"><label class="form-label">Descrição</label><textarea id="prodDescricao" class="form-control" rows="3" maxlength="2000" placeholder="Detalhes do produto exibidos na página principal"></textarea></div>
-            <div class="mb-3"><label class="form-label">Foto do produto (URL)</label><input type="url" id="prodImagem" class="form-control" placeholder="https://..." oninput="previewProdImagem()"><div class="mt-2 text-center"><img id="prodImagemPrev" style="max-height:120px;max-width:100%;display:none;border-radius:8px;" alt="Prévia da foto"></div><small class="text-muted">Aparece no lugar do ícone padrão na página principal.</small></div>
+            <div class="mb-3"><label class="form-label">Foto do produto (URL)</label><input type="url" id="prodImagem" class="form-control" placeholder="https://... ou /fotos/..." oninput="previewProdImagem()"><div class="mt-2 d-flex gap-2 align-items-center flex-wrap"><input type="file" id="prodImagemFile" class="form-control" accept="image/jpeg,image/png,image/webp" style="max-width:280px"><button type="button" class="btn btn-sm btn-outline-light" onclick="uploadFotoProduto()"><i class="fas fa-upload"></i> Enviar foto</button></div><div class="mt-2 text-center"><img id="prodImagemPrev" style="max-height:120px;max-width:100%;display:none;border-radius:8px;" alt="Prévia da foto"></div><small class="text-muted">Envie JPG/PNG/WebP até 3MB ou cole a URL. Salva em /fotos/; no banco vai só o caminho.</small></div>
             <div class="mb-3"><label class="form-label">Status</label><select id="prodStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
             <div class="mb-3 form-check"><input type="checkbox" id="prodDestaque" class="form-check-input"><label class="form-check-label" for="prodDestaque">Destaque na página principal</label></div>
         </div>
@@ -460,6 +460,23 @@
             const img = document.getElementById('prodImagemPrev');
             if (url) { img.src = url; img.style.display = ''; }
             else { img.removeAttribute('src'); img.style.display = 'none'; }
+        }
+
+        async function uploadFotoProduto() {
+            const input = document.getElementById('prodImagemFile');
+            const file = input && input.files && input.files[0];
+            if (!file) { showToast('Escolha um arquivo JPG/PNG/WebP', true); return; }
+            if (file.size > 3 * 1024 * 1024) { showToast('Foto até 3MB', true); return; }
+            const fd = new FormData();
+            fd.append('foto', file);
+            try {
+                const res = await fetch(API + '/produtos/foto', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+                const data = await res.json();
+                if (!res.ok || !data.success) { showToast(data.message || 'Erro ao enviar foto', true); return; }
+                document.getElementById('prodImagem').value = data.url;
+                previewProdImagem();
+                showToast('Foto enviada!');
+            } catch { showToast('Erro ao conectar', true); }
         }
 
         async function salvarProduto() {
