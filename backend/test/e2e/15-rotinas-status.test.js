@@ -121,7 +121,8 @@ describe('e2e rotinas automaticas + rastreio + recebido', () => {
   });
 
   it('winback: inativo 15+d recebe ofertas 1x (cooldown)', async () => {
-    const r = await register(`e2e-win-${tag}@gmail.com`, 'E2E Win');
+    // @t.t não tem MX: envio pulado sem bounce, contador segue válido
+    const r = await register(`e2e-win-${tag}@t.t`, 'E2E Win');
     assert.equal(r.status, 200);
     const wtok = r.data.token;
     const o = await api('POST', '/api/pedidos', {
