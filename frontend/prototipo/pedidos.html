@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meus Pedidos — Protótipo PlacaCerta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--bg:#0a0e1a;--card:#131b36;--line:rgba(255,255,255,.09);--amber:#ffb224;--txt:#f2f5ff;--mut:#9aa4c7;--grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);--r:18px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.demo{background:var(--grad);color:#1a1000;font-size:.8rem;font-weight:700;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap;padding:8px 24px}
+.brand{font-weight:700;font-size:1.25rem}
+.brand em{font-style:normal;color:var(--amber)}
+.nav-links{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--mut)}
+.nav-links a:hover,.nav-links a.on{color:var(--amber)}
+main{padding:36px 0 72px}
+.order{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;margin-bottom:14px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}
+.order .total{font-size:1.2rem;font-weight:700;color:var(--amber)}
+.badge{padding:5px 14px;border-radius:999px;font-size:.72rem;font-weight:700;text-transform:uppercase}
+.st-pendente{background:rgba(245,158,11,.14);color:#fbbf24}
+.st-pago{background:rgba(110,231,183,.12);color:#6ee7b7}
+.st-entregue{background:rgba(32,201,151,.12);color:#34d399}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.82rem;padding:9px 18px;border-radius:999px;background:var(--grad);color:#1a1000;margin:2px}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-danger{background:transparent;color:#f87171;border:1px solid #f87171}
+.modal-bg{position:fixed;inset:0;background:rgba(4,6,14,.7);display:none;place-items:center;z-index:100;padding:20px}
+.modal-bg.open{display:grid}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;max-width:560px;width:100%}
+.modal table{width:100%;border-collapse:collapse;font-size:.86rem;margin:12px 0}
+.modal td,.modal th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mut);font-size:.82rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo"><i class="fa-solid fa-flask"></i>&nbsp; PROTÓTIPO — dados fictícios, sem login, sem backend</div>
+<header><div class="wrap nav">
+<a class="brand" href="./index.html">⚡ Placa<em>Certa</em></a>
+<nav class="nav-links">
+<a href="./index.html">Início</a><a href="./produto.html">Produto</a><a href="./carrinho.html">Carrinho</a><a href="./checkout.html">Checkout</a><a href="./pedidos.html" class="on">Pedidos</a><a href="./conta.html">Conta</a><a href="./admin.html">Admin</a>
+</nav></div></header>
+<main class="wrap">
+<h1 style="margin-bottom:16px"><i class="fa-solid fa-box" style="color:var(--amber)"></i> Meus Pedidos</h1>
+<div id="lista"></div>
+</main>
+<div class="modal-bg" id="modal" onclick="if(event.target===this)fechar()">
+<div class="modal"><h3 id="mTitulo"></h3><div id="mCorpo" style="font-size:.9rem;color:var(--mut)"></div>
+<div id="mAcoes" style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap"></div>
+<div style="margin-top:14px"><button class="btn btn-ghost" onclick="fechar()">Fechar</button></div>
+</div></div>
+<footer>Protótipo navegável — PlacaCerta (demonstração)</footer>
+<script>
+const PEDIDOS = [
+  { numero: 'PED-0003', status: 'pendente', total: 89.90, itens: [['Placa T-Con Philco 32" PTV32', 1, 69.90], ['Frete', 1, 20.00]] },
+  { numero: 'PED-0002', status: 'pago', total: 189.90, itens: [['Placa Principal LG 43" UJ6525', 1, 189.90]] },
+  { numero: 'PED-0001', status: 'entregue', total: 279.80, itens: [['Placa Fonte Samsung 50" TU8000', 1, 149.90], ['Placa T-Con Samsung 50" TU8000', 1, 89.90], ['Frete', 1, 40.00]] }
+];
+const ROT = { pendente: 'Pendente', pago: 'Pago', entregue: 'Entregue' };
+document.getElementById('lista').innerHTML = PEDIDOS.map((p, i) =>
+  '<div class="order"><div><h3>Pedido ' + p.numero + '</h3><div class="total">R$ ' + p.total.toFixed(2) + '</div></div>' +
+  '<div style="text-align:right"><span class="badge st-' + p.status + '">' + ROT[p.status] + '</span><br><br>' +
+  '<button class="btn" onclick="ver(' + i + ')"><i class="fa-solid fa-eye"></i> Ver Detalhes</button></div></div>'
+).join('');
+function ver(i) {
+  const p = PEDIDOS[i];
+  document.getElementById('mTitulo').textContent = 'Pedido ' + p.numero;
+  document.getElementById('mCorpo').innerHTML =
+    '<table><thead><tr><th>Item</th><th>Qtd</th><th>Total</th></tr></thead><tbody>' +
+    p.itens.map(it => '<tr><td>' + it[0] + '</td><td>' + it[1] + '</td><td>R$ ' + (it[1] * it[2]).toFixed(2) + '</td></tr>').join('') +
+    '</tbody></table><p><b>Total: R$ ' + p.total.toFixed(2) + '</b> · Status: ' + ROT[p.status] + '</p>';
+  let acoes = '';
+  if (p.status === 'pendente') {
+    acoes = '<button class="btn" onclick="alert(\'Demonstração: pagamento iniciado.\')">Pagar agora</button>' +
+            '<button class="btn btn-ghost" onclick="alert(\'Demonstração: pedido cancelado.\');fechar()">Cancelar</button>';
+  } else if (p.status === 'pago') {
+    acoes = '<button class="btn btn-ghost" onclick="alert(\'Demonstração: acompanhamento da entrega.\')">Acompanhar entrega</button>';
+  }
+  document.getElementById('mAcoes').innerHTML = acoes;
+  document.getElementById('modal').classList.add('open');
+}
+function fechar() { document.getElementById('modal').classList.remove('open'); }
+</script>
+</body>
+</html>

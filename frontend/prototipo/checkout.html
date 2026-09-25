@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — Protótipo PlacaCerta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--bg:#0a0e1a;--card:#131b36;--line:rgba(255,255,255,.09);--amber:#ffb224;--txt:#f2f5ff;--mut:#9aa4c7;--grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);--r:18px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.demo{background:var(--grad);color:#1a1000;font-size:.8rem;font-weight:700;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap;padding:8px 24px}
+.brand{font-weight:700;font-size:1.25rem}
+.brand em{font-style:normal;color:var(--amber)}
+.nav-links{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--mut)}
+.nav-links a:hover,.nav-links a.on{color:var(--amber)}
+main{padding:36px 0 72px}
+.steps{display:flex;gap:8px;margin-bottom:20px;font-size:.85rem;color:var(--mut)}
+.steps b{color:var(--amber)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:28px;margin-bottom:16px}
+.box h2{font-size:1.1rem;margin-bottom:14px}
+label{display:block;font-size:.82rem;color:var(--mut);margin:10px 0 4px}
+input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#0e1428;color:var(--txt)}
+.payopt{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer}
+.payopt.on{border-color:var(--amber)}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.9rem;padding:12px 24px;border-radius:999px;background:var(--grad);color:#1a1000;margin:6px 6px 0 0}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mut);font-size:.82rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo"><i class="fa-solid fa-flask"></i>&nbsp; PROTÓTIPO — dados fictícios, sem login, sem backend</div>
+<header><div class="wrap nav">
+<a class="brand" href="./index.html">⚡ Placa<em>Certa</em></a>
+<nav class="nav-links">
+<a href="./index.html">Início</a><a href="./produto.html">Produto</a><a href="./carrinho.html">Carrinho</a><a href="./checkout.html" class="on">Checkout</a><a href="./pedidos.html">Pedidos</a><a href="./conta.html">Conta</a><a href="./admin.html">Admin</a>
+</nav></div></header>
+<main class="wrap">
+<div class="steps"><span><b>1</b> Carrinho</span><span>→</span><span><b>2</b> Entrega e pagamento</span><span>→</span><span>3 Pedido</span></div>
+<div class="box">
+<h2><i class="fa-solid fa-truck" style="color:var(--amber)"></i> Entrega</h2>
+<label>Nome</label><input value="Cliente Demonstração">
+<label>CEP</label><input value="01310-100">
+</div>
+<div class="box">
+<h2><i class="fa-solid fa-credit-card" style="color:var(--amber)"></i> Pagamento</h2>
+<div class="payopt on" onclick="selectPay(this)"><b>PIX</b> <span style="color:var(--mut);font-size:.85rem">— aprovação imediata (demonstração)</span></div>
+<div class="payopt" onclick="selectPay(this)"><b>Cartão de crédito</b> <span style="color:var(--mut);font-size:.85rem">— em até 12x (demonstração)</span></div>
+<div class="payopt" onclick="selectPay(this)"><b>Boleto</b> <span style="color:var(--mut);font-size:.85rem">— compensa em 1-2 dias (demonstração)</span></div>
+</div>
+<div class="box">
+<h2><i class="fa-solid fa-bolt" style="color:var(--amber)"></i> Pagar</h2>
+<button class="btn" onclick="pagar('Mercado Pago')"><i class="fa-solid fa-bolt"></i> Pagar com Mercado Pago</button>
+<button class="btn btn-ghost" onclick="pagar('PagSeguro')"><i class="fa-solid fa-qrcode"></i> Pagar com PagSeguro</button>
+</div>
+</main>
+<footer>Protótipo navegável — PlacaCerta (demonstração)</footer>
+<script>
+function selectPay(el) {
+  document.querySelectorAll('.payopt').forEach(o => o.classList.remove('on'));
+  el.classList.add('on');
+}
+function pagar(prov) {
+  alert('Demonstração: pedido PED-0001 criado e cobrança ' + prov + ' gerada (sem backend). Veja em Pedidos.');
+  window.location.href = './pedidos.html';
+}
+</script>
+</body>
+</html>

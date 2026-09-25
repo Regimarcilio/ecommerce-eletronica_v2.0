@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Protótipo PlacaCerta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--bg:#0a0e1a;--card:#131b36;--line:rgba(255,255,255,.09);--amber:#ffb224;--txt:#f2f5ff;--mut:#9aa4c7;--grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);--r:18px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.demo{background:var(--grad);color:#1a1000;font-size:.8rem;font-weight:700;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap;padding:8px 24px}
+.brand{font-weight:700;font-size:1.25rem}
+.brand em{font-style:normal;color:var(--amber)}
+.nav-links{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--mut)}
+.nav-links a:hover,.nav-links a.on{color:var(--amber)}
+main{padding:36px 0 72px;display:grid;grid-template-columns:220px 1fr;gap:20px}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+.side{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;align-self:start}
+.side button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--mut);padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.9rem}
+.side button.on,.side button:hover{color:var(--amber);background:rgba(255,178,36,.08)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--mut);padding:8px 6px;border-bottom:1px solid var(--line)}
+td{padding:9px 6px;border-bottom:1px solid var(--line)}
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;cursor:pointer;font-weight:700;font-size:.78rem;padding:7px 14px;border-radius:999px;background:var(--grad);color:#1a1000;margin:2px}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.btn-danger{background:transparent;color:#f87171;border:1px solid #f87171}
+.badge{padding:4px 12px;border-radius:999px;font-size:.7rem;font-weight:700}
+.ok{background:rgba(110,231,183,.12);color:#6ee7b7}
+.warn{background:rgba(245,158,11,.14);color:#fbbf24}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mut);font-size:.82rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo"><i class="fa-solid fa-flask"></i>&nbsp; PROTÓTIPO — dados fictícios, sem login, sem backend</div>
+<header><div class="wrap nav">
+<a class="brand" href="./index.html">⚡ Placa<em>Certa</em></a>
+<nav class="nav-links">
+<a href="./index.html">Início</a><a href="./produto.html">Produto</a><a href="./carrinho.html">Carrinho</a><a href="./checkout.html">Checkout</a><a href="./pedidos.html">Pedidos</a><a href="./conta.html">Conta</a><a href="./admin.html" class="on">Admin</a>
+</nav></div></header>
+<main class="wrap">
+<div class="side">
+<button class="on" onclick="aba('produtos',this)"><i class="fa-solid fa-box"></i> Produtos</button>
+<button onclick="aba('pedidos',this)"><i class="fa-solid fa-shopping-cart"></i> Pedidos</button>
+<button onclick="aba('clientes',this)"><i class="fa-solid fa-users"></i> Clientes</button>
+<button onclick="aba('msgs',this)"><i class="fa-solid fa-envelope"></i> Mensagens</button>
+<button onclick="aba('cfg',this)"><i class="fa-solid fa-gear"></i> Configurações</button>
+</div>
+<div class="box"><div id="conteudo"></div></div>
+</main>
+<footer>Protótipo navegável — PlacaCerta (demonstração)</footer>
+<script>
+const T = {
+  produtos: '<h2>Produtos (3)</h2><br><table><thead><tr><th>Nome</th><th>Categoria</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    '<tr><td>Placa Principal LG 43" UJ6525</td><td>Principal</td><td><span class="badge ok">ativo</span></td><td><button class="btn" onclick="alert(\'Demonstração: editar produto.\')">Editar</button> <button class="btn btn-danger" onclick="alert(\'Demonstração: excluir produto.\')">Excluir</button></td></tr>' +
+    '<tr><td>Placa Fonte Samsung 50" TU8000</td><td>Fonte</td><td><span class="badge ok">ativo</span></td><td><button class="btn" onclick="alert(\'Demonstração: editar produto.\')">Editar</button> <button class="btn btn-danger" onclick="alert(\'Demonstração: excluir produto.\')">Excluir</button></td></tr>' +
+    '<tr><td>Placa T-Con Philco 32" PTV32</td><td>T-Con</td><td><span class="badge warn">inativo</span></td><td><button class="btn" onclick="alert(\'Demonstração: editar produto.\')">Editar</button> <button class="btn btn-danger" onclick="alert(\'Demonstração: excluir produto.\')">Excluir</button></td></tr>' +
+    '</tbody></table><br><button class="btn" onclick="alert(\'Demonstração: novo produto.\')">+ Novo Produto</button>',
+  pedidos: '<h2>Pedidos (3)</h2><br><table><thead><tr><th>Número</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    '<tr><td><b>PED-0003</b></td><td><span class="badge warn">Pendente</span></td><td><button class="btn" onclick="alert(\'Demonstração: detalhes do pedido.\')">Ver</button> <button class="btn btn-ghost" onclick="alert(\'Demonstração: status atualizado.\')">Status</button></td></tr>' +
+    '<tr><td><b>PED-0002</b></td><td><span class="badge ok">Pago</span></td><td><button class="btn" onclick="alert(\'Demonstração: detalhes do pedido.\')">Ver</button> <button class="btn btn-ghost" onclick="alert(\'Demonstração: status atualizado.\')">Status</button></td></tr>' +
+    '<tr><td><b>PED-0001</b></td><td><span class="badge ok">Entregue</span></td><td><button class="btn" onclick="alert(\'Demonstração: detalhes do pedido.\')">Ver</button> <button class="btn btn-ghost" onclick="alert(\'Demonstração: status atualizado.\')">Status</button></td></tr>' +
+    '</tbody></table>',
+  clientes: '<h2>Clientes (2)</h2><br><table><thead><tr><th>Nome do Cliente</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    '<tr><td>Cliente Demonstração</td><td><span class="badge ok">ativo</span></td><td><button class="btn" onclick="alert(\'Demonstração: detalhes + Bloquear.\')">Ver</button></td></tr>' +
+    '<tr><td>Outro Cliente</td><td><span class="badge warn">bloqueado</span></td><td><button class="btn" onclick="alert(\'Demonstração: detalhes + Bloquear.\')">Ver</button></td></tr>' +
+    '</tbody></table>',
+  msgs: '<h2>Mensagens (2)</h2><br><table><thead><tr><th>Data</th><th>Nome</th><th>Status</th><th>Ações</th></tr></thead><tbody>' +
+    '<tr><td>24/09/2026</td><td>Visitante</td><td><span class="badge warn">Pendente</span></td><td><button class="btn" onclick="alert(\'Demonstração: mensagem + Responder/Excluir.\')">Ver</button></td></tr>' +
+    '<tr><td>23/09/2026</td><td>Cliente Demo</td><td><span class="badge ok">Lida</span></td><td><button class="btn" onclick="alert(\'Demonstração: mensagem + Responder/Excluir.\')">Ver</button></td></tr>' +
+    '</tbody></table>',
+  cfg: '<h2>Configurações</h2><br><p style="color:var(--mut);font-size:.9rem">Loja, frete, redes sociais e segredos (demonstração — nada é salvo).</p><br>' +
+    '<button class="btn" onclick="alert(\'Demonstração: configurações salvas.\')">Salvar configurações</button>'
+};
+function aba(k, btn) {
+  document.querySelectorAll('.side button').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('conteudo').innerHTML = T[k];
+}
+aba('produtos', document.querySelector('.side button'));
+</script>
+</body>
+</html>

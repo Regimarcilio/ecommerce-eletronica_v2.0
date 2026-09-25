@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produto — Protótipo PlacaCerta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+:root{--bg:#0a0e1a;--card:#131b36;--line:rgba(255,255,255,.09);--amber:#ffb224;--txt:#f2f5ff;--mut:#9aa4c7;--grad:linear-gradient(120deg,#ffb224,#ff8a00 55%,#ff5e3a);--r:18px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.demo{background:var(--grad);color:#1a1000;font-size:.8rem;font-weight:700;text-align:center;padding:8px 16px}
+header{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);border-bottom:1px solid var(--line)}
+.nav{display:flex;align-items:center;gap:20px;min-height:64px;flex-wrap:wrap;padding:8px 24px}
+.brand{font-weight:700;font-size:1.25rem}
+.brand em{font-style:normal;color:var(--amber)}
+.nav-links{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--mut)}
+.nav-links a:hover,.nav-links a.on{color:var(--amber)}
+main{padding:36px 0 72px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:32px;display:grid;grid-template-columns:1fr 1fr;gap:28px}
+@media(max-width:800px){.box{grid-template-columns:1fr}}
+.foto{background:#0e1428;border:1px solid var(--line);border-radius:14px;min-height:280px;display:grid;place-items:center;font-size:4rem;color:#3d4a7d}
+.meta{font-size:.88rem;color:var(--mut);margin:10px 0}
+.price{font-size:2rem;font-weight:700;color:var(--amber);margin:12px 0}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-weight:700;font-size:.9rem;padding:12px 24px;border-radius:999px;background:var(--grad);color:#1a1000;margin-right:10px}
+.btn-ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.qty{display:flex;gap:10px;align-items:center;margin:14px 0}
+.qty button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#0b1128;color:var(--txt);cursor:pointer;font-size:1rem}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mut);font-size:.82rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="demo"><i class="fa-solid fa-flask"></i>&nbsp; PROTÓTIPO — dados fictícios, sem login, sem backend</div>
+<header><div class="wrap nav">
+<a class="brand" href="./index.html">⚡ Placa<em>Certa</em></a>
+<nav class="nav-links">
+<a href="./index.html">Início</a><a href="./produto.html" class="on">Produto</a><a href="./carrinho.html">Carrinho</a><a href="./checkout.html">Checkout</a><a href="./pedidos.html">Pedidos</a><a href="./conta.html">Conta</a><a href="./admin.html">Admin</a>
+</nav></div></header>
+<main class="wrap">
+<div class="box">
+<div class="foto"><i class="fa-solid fa-microchip"></i></div>
+<div>
+<h1 id="nome">Placa Principal LG 43" UJ6525</h1>
+<div class="meta">Tipo: Principal · Marca: LG · Compatível: UJ6525 · <span style="color:#6ee7b7">Em estoque</span></div>
+<div class="price" id="preco">R$ 189,90</div>
+<div class="qty"><button onclick="mudarQtd(-1)">−</button><b id="qtd">1</b><button onclick="mudarQtd(1)">+</button></div>
+<button class="btn" onclick="addCarrinho()"><i class="fa-solid fa-cart-plus"></i> Adicionar ao carrinho</button>
+<a class="btn btn-ghost" href="./carrinho.html">Ver carrinho</a>
+</div>
+</div>
+</main>
+<footer>Protótipo navegável — PlacaCerta (demonstração)</footer>
+<script>
+let qtd = 1;
+function mudarQtd(d) { qtd = Math.min(99, Math.max(1, qtd + d)); document.getElementById('qtd').textContent = qtd; }
+function addCarrinho() {
+  try {
+    const cart = JSON.parse(localStorage.getItem('proto_cart') || '[]');
+    cart.push({ nome: document.getElementById('nome').textContent, qtd: qtd, preco: 189.90 });
+    localStorage.setItem('proto_cart', JSON.stringify(cart));
+  } catch (e) { /* demonstracao */ }
+  alert(qtd + ' item(ns) no carrinho (demonstração).');
+}
+</script>
+</body>
+</html>
