@@ -703,6 +703,8 @@
                         <tr><td colspan="3" class="text-end"><strong>TOTAL:</strong></td><td><strong class="text-primary">R$ ${(Number(p.total) || 0).toFixed(2)}</strong></td></tr></tfoot></table></div><hr>
                         <div class="row"><div class="col-md-6"><strong><i class="fas fa-credit-card"></i> Pagamento:</strong> ${p.pagamento === 'pix' ? 'PIX' : p.pagamento === 'card' ? 'Cartão' : 'Boleto'}</div>
                         <div class="col-md-6"><strong><i class="fas fa-toggle-on"></i> Status:</strong> <span class="${getStatusClass(p.status)}">${getStatusText(p.status)}</span></div></div>
+                        <div class="mt-2"><strong><i class="fas fa-truck"></i> Rastreio:</strong> ${p.trackingCode ? window.escapeHtml(p.trackingCode) : '<span class="text-muted">não informado</span>'}</div>
+                        ${['pendente', 'pago'].includes(p.status) ? `<div class="mt-2"><button class="btn btn-sm btn-primary-custom" onclick="informarRastreio('${p._id}')"><i class="fas fa-truck"></i> Informar rastreio</button></div>` : ''}
                         <div class="mt-3"><strong><i class="fas fa-calendar"></i> Data:</strong> ${new Date(p.createdAt).toLocaleString()}</div>`;
                     if (!pedidoModal) pedidoModal = new bootstrap.Modal(document.getElementById('pedidoModal'));
                     pedidoModal.show();
@@ -717,6 +719,19 @@
             statusModal.show();
         };
         
+        window.informarRastreio = async function(id) {
+            const code = prompt('Código de rastreio (5-40 letras/números):', '');
+            if (code === null) return;
+            const trackingCode = String(code).trim().toUpperCase();
+            if (!/^[A-Z0-9]{5,40}$/.test(trackingCode)) { showToast('Código inválido (5-40 letras/números)', true); return; }
+            try {
+                const res = await fetch(API + '/pedidos/' + id + '/rastreio', { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ trackingCode }) });
+                const data = await res.json();
+                if (res.ok && data.success) { showToast('Rastreio informado! Pedido enviado e cliente notificado.'); verPedidoDetalhes(id); loadPedidos(); }
+                else showToast(data.message || 'Erro ao informar rastreio', true);
+            } catch(e) { showToast('Erro ao conectar', true); }
+        };
+
         window.atualizarStatusPedido = async function() {
             const novoStatus = document.getElementById('statusSelecionado').value;
             try {

@@ -240,7 +240,8 @@ const PedidoSchema = new mongoose.Schema({
     frete: { type: Number, required: true, min: 0 },
     desconto: { type: Number, required: true, min: 0, default: 0 },
     total: { type: Number, required: true, min: 0 },
-    status: { type: String, enum: ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'], default: 'pendente' }
+    status: { type: String, enum: ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'], default: 'pendente' },
+    trackingCode: { type: String, trim: true, maxlength: 60, default: '' }
 }, { timestamps: true });
 
 // Configuracoes editaveis da loja (singleton "loja"); segredos vao cifrados
@@ -257,6 +258,9 @@ const SettingsSchema = new mongoose.Schema({
     pgsSandbox: { type: Boolean, default: undefined },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
+    // Rotinas automáticas (dias; 0 = desliga a respectiva rotina)
+    diasEntregaAuto: { type: Number, min: 0, max: 90, default: 15 },
+    diasCancelaPendente: { type: Number, min: 0, max: 30, default: 3 },
     faixasFrete: [{
         uf: { type: String, trim: true, uppercase: true, maxlength: 2, default: '' },
         atePeso: { type: Number, min: 0, default: 30 },
@@ -890,6 +894,56 @@ app.delete('/api/pedidos/:id', auth, asyncHandler(async (req, res) => {
     res.json({ success: true });
 }));
 
+// Admin: informa rastreio (avança p/ enviado) e notifica SÓ o cliente
+app.put('/api/pedidos/:id/rastreio', auth, admin, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const code = String(req.body?.trackingCode ?? '').trim().toUpperCase().slice(0, 60);
+    if (!/^[A-Z0-9]{5,40}$/.test(code)) return err(res, 400, 'Código de rastreio inválido (5-40 letras/números)', 'VALIDATION');
+    const pedido = await Pedido.findById(req.params.id);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (!['pendente', 'pago'].includes(pedido.status)) return err(res, 422, `Só informa rastreio de pedido pendente/pago (atual: ${pedido.status})`, 'STATE');
+    pedido.trackingCode = code;
+    pedido.status = 'enviado';
+    await pedido.save();
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_enviado', por: req.usuarioId, id: pedido._id, rastreio: code }));
+    // Notificação só p/ cliente (modo real); nunca quebra a resposta
+    try {
+        const pgto = await Pagamento.findOne({ pedidoId: pedido._id }).lean();
+        if (pgto?.modo === 'real' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
+            const s = await getSettings().catch(() => null);
+            const service = s?.emailService || 'smtp';
+            const html = templateEmailRastreio(pedido);
+            const subject = `Pedido enviado · ${pedido.numero} - código ${code}`;
+            if (service === 'google') await enviaEmailGmail(s, { to: pedido.cliente.email, subject, html });
+            else await enviaEmailSmtp(s, { to: pedido.cliente.email, subject, html });
+        }
+    } catch (error) { console.error('email rastreio:', error.message); }
+    res.json({ success: true, pedido });
+}));
+
+// Cliente: confirma recebimento do pedido enviado
+app.put('/api/pedidos/:id/recebido', auth, asyncHandler(async (req, res) => {
+    if (!isValidId(req.params.id)) return err(res, 400, 'ID inválido', 'VALIDATION');
+    const pedido = await Pedido.findById(req.params.id);
+    if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
+    if (pedido.usuarioId.toString() !== req.usuarioId) return err(res, 403, 'Acesso negado', 'FORBIDDEN');
+    if (pedido.status !== 'enviado') return err(res, 409, 'Só é possível confirmar pedido enviado', 'STATE');
+    pedido.status = 'entregue';
+    await pedido.save();
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_entregue_cliente', por: req.usuarioId, id: pedido._id }));
+    try {
+        const pgto = await Pagamento.findOne({ pedidoId: pedido._id }).lean();
+        const s = await getSettings().catch(() => null);
+        const lojaEmail = s?.emailLoja || process.env.EMAIL_FROM || '';
+        if (pgto?.modo === 'real' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lojaEmail)) {
+            const html = templateEmailStatus(pedido, `Entrega confirmada · ${pedido.numero}`, `O cliente confirmou o recebimento do pedido ${pedido.numero}.`, `<p>O cliente <strong>${pedido.cliente?.nome || ''}</strong> confirmou o recebimento do pedido <strong>${pedido.numero}</strong>.</p>`);
+            if ((s?.emailService || 'smtp') === 'google') await enviaEmailGmail(s, { to: lojaEmail, subject: `Entrega confirmada · ${pedido.numero}`, html });
+            else await enviaEmailSmtp(s, { to: lojaEmail, subject: `Entrega confirmada · ${pedido.numero}`, html });
+        }
+    } catch (error) { console.error('email entregue/loja:', error.message); }
+    res.json({ success: true, pedido });
+}));
+
 // ========== PAGAMENTOS (Mercado Pago) + WHATSAPP ==========
 // Referência oficial da API: https://www.mercadopago.com.br/developers/pt/reference
 // (preferences, payments e webhooks usados abaixo seguem essa referência)
@@ -996,6 +1050,131 @@ async function mpBuscarPagamento(paymentId) {
         return r.json();
     } finally { clearTimeout(t); }
 }
+
+// Consulta pagamentos MP pela referência externa (reconciliação sem webhook)
+async function mpBuscarPorReferencia(pedidoId) {
+    const token = await mpAccessToken();
+    if (!token) return [];
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    try {
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/search?external_reference=${encodeURIComponent(String(pedidoId))}&limit=10`, {
+            signal: ctrl.signal,
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) return [];
+        return data.results || [];
+    } catch { return []; } finally { clearTimeout(t); }
+}
+
+// Consulta status da order PagSeguro (reconciliação sem webhook)
+async function pgsBuscarPedido(orderId) {
+    const token = await pgsTokenAtivo();
+    if (!token || !orderId) return null;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    try {
+        const r = await fetch(`${await pgsApi()}/orders/${encodeURIComponent(orderId)}`, {
+            signal: ctrl.signal,
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await r.json().catch(() => null);
+        return r.ok ? data : null;
+    } catch { return null; } finally { clearTimeout(t); }
+}
+
+// Restaura estoque ao cancelar (best-effort)
+async function restauraEstoque(pedido) {
+    for (const it of pedido.items || []) {
+        if (!it.produtoId) continue;
+        try { await Produto.findOneAndUpdate({ _id: it.produtoId }, { $inc: { quantidade: Number(it.quantity) || 0 } }); }
+        catch (error) { console.error('estoque restore:', error.message); }
+    }
+}
+
+// Rotinas automáticas: reconcilia pagamentos + entrega + cancela pendentes
+// agora: Date de referência (permite ?agora= no endpoint p/ E2E)
+async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
+    const s = await getSettings().catch(() => null);
+    const diasEntrega = Number(s?.diasEntregaAuto ?? 15);
+    const diasCancela = Number(s?.diasCancelaPendente ?? 3);
+    const escopo = Array.isArray(pedidoIds) && pedidoIds.length ? { _id: { $in: pedidoIds.filter(isValidId) } } : {};
+    const out = { reconciliados: 0, entregues: 0, cancelados: 0, erros: 0 };
+    const t0 = Date.now();
+    // 1) Pendentes com intenção real há +30min: confere nos provedores
+    try {
+        const alvos = await Pagamento.find({ status: 'criado', modo: 'real' }).select('pedidoId provedor mpPreferenceId pgsOrderId createdAt').lean();
+        for (const pg of alvos) {
+            try {
+                if (escopo._id && !escopo._id.$in.some((id) => String(id) === String(pg.pedidoId))) continue;
+                if (Date.now() - new Date(pg.createdAt).getTime() < 30 * 60 * 1000) continue;
+                const pedido = await Pedido.findById(pg.pedidoId);
+                if (!pedido || pedido.status !== 'pendente') continue;
+                let aprovado = false;
+                if (pg.provedor === 'mercadopago') {
+                    const pays = await mpBuscarPorReferencia(pg.pedidoId);
+                    aprovado = pays.some((p) => p.status === 'approved');
+                } else {
+                    const ord = await pgsBuscarPedido(pg.pgsOrderId);
+                    aprovado = ['PAID', 'APPROVED', 'AUTHORIZED'].includes(String(ord?.status || '').toUpperCase());
+                }
+                if (aprovado) {
+                    await confirmaPagamento(pg.pedidoId, true, pg.provedor === 'pagseguro' ? (pg.pgsOrderId || '') : String(pg.mpPreferenceId || ''), pg.provedor);
+                    out.reconciliados++;
+                }
+            } catch (error) { out.erros++; console.error('rotina reconcilia:', error.message); }
+        }
+    } catch (error) { out.erros++; console.error('rotina reconcilia lista:', error.message); }
+    // 2) Enviados há +diasEntregaAuto: entrega automática + pós-venda ao cliente
+    if (diasEntrega > 0) {
+        const limite = new Date(agora.getTime() - diasEntrega * 24 * 3600 * 1000);
+        const lista = await Pedido.find({ status: 'enviado', updatedAt: { $lt: limite }, ...escopo }).limit(200);
+        for (const pedido of lista) {
+            try {
+                pedido.status = 'entregue';
+                await pedido.save();
+                out.entregues++;
+                console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_entregue_auto', id: pedido._id }));
+                try {
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
+                        const st = s || await getSettings().catch(() => null);
+                        const html = templateEmailStatus(pedido, `Pedido entregue · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi marcado como entregue.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi marcado como <strong style="color:#6ee7b7;">entregue</strong>. Obrigado pela compra!</p>`);
+                        if ((st?.emailService || 'smtp') === 'google') await enviaEmailGmail(st, { to: pedido.cliente.email, subject: `Pedido entregue · ${pedido.numero}`, html });
+                        else await enviaEmailSmtp(st, { to: pedido.cliente.email, subject: `Pedido entregue · ${pedido.numero}`, html });
+                    }
+                } catch (error) { console.error('email entregue:', error.message); }
+            } catch (error) { out.erros++; console.error('rotina entrega:', error.message); }
+        }
+    }
+    // 3) Pendentes há +diasCancela: cancela + restaura estoque + avisa cliente
+    if (diasCancela > 0) {
+        const limite = new Date(agora.getTime() - diasCancela * 24 * 3600 * 1000);
+        const lista = await Pedido.find({ status: 'pendente', createdAt: { $lt: limite }, ...escopo }).limit(200);
+        for (const pedido of lista) {
+            try {
+                pedido.status = 'cancelado';
+                await pedido.save();
+                await restauraEstoque(pedido);
+                out.cancelados++;
+                console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pedido_cancelado_auto', id: pedido._id }));
+                try {
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
+                        const st = s || await getSettings().catch(() => null);
+                        const html = templateEmailStatus(pedido, `Pedido cancelado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi cancelado por falta de pagamento.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi <strong style="color:#f87171;">cancelado</strong> por falta de pagamento. Se ainda quiser, refaça a compra no site.</p>`);
+                        if ((st?.emailService || 'smtp') === 'google') await enviaEmailGmail(st, { to: pedido.cliente.email, subject: `Pedido cancelado · ${pedido.numero}`, html });
+                        else await enviaEmailSmtp(st, { to: pedido.cliente.email, subject: `Pedido cancelado · ${pedido.numero}`, html });
+                    }
+                } catch (error) { console.error('email cancelado:', error.message); }
+            } catch (error) { out.erros++; console.error('rotina cancela:', error.message); }
+        }
+    }
+    const ms = Date.now() - t0;
+    rotinasEstado.ultima = { em: new Date().toISOString(), ms, ...out };
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'rotinas', ...out, ms }));
+    return rotinasEstado.ultima;
+}
+const rotinasEstado = { ultima: null };
 
 // ---- Mercado Pago OAuth (docs/Create and refresh token.md) ----
 // Troca code/refresh por access_token e guarda cifrado nos segredos (nunca expõe)
@@ -1385,6 +1564,19 @@ ${blocoTotaisPedidoDark(t)}
 <strong style="color:#f2f5ff;">Entrega:</strong> ${e.logradouro || '-'}, ${e.numero || '-'} - ${e.bairro || '-'}, ${e.cidade || '-'}/${e.estado || '-'} · CEP ${e.cep || '-'}<br>
 <strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.createdAt).toLocaleString('pt-BR')}</p>`;
     return layoutEmailCliente(`Pedido confirmado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi aprovado. Total R$ ${t.total.toFixed(2)}.`, corpo);
+}
+
+// E-mail genérico de STATUS do pedido (dark, padrão da página) — cliente ou loja
+function templateEmailStatus(pedido, titulo, preheader, mensagemHtml) {
+    return layoutEmailCliente(titulo, preheader, `${mensagemHtml}
+<p style="font-size:13px;color:#9aa4c7;"><strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.updatedAt || pedido.createdAt).toLocaleString('pt-BR')}</p>`);
+}
+// E-mail do CLIENTE: código de rastreio (só ele recebe)
+function templateEmailRastreio(pedido) {
+    const corpo = `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi <strong style="color:#38e1ff;">enviado</strong>. Acompanhe a entrega com o código abaixo:</p>
+<p style="font-size:22px;font-weight:bold;letter-spacing:2px;color:#ffb224;background-color:#0a0e1a;border:1px dashed #ffb224;border-radius:12px;padding:14px;text-align:center;">${pedido.trackingCode}</p>
+<p style="font-size:13px;color:#9aa4c7;">Rastreie no site dos Correios ou da transportadora. Qualquer dúvida, responda este e-mail.</p>`;
+    return templateEmailStatus(pedido, `Pedido enviado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi enviado. Código: ${pedido.trackingCode}.`, corpo);
 }
 
 // Envia e-mail de notificação de venda (SMTP ou Gmail API); nunca quebra o fluxo
@@ -1919,6 +2111,8 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             pgsSandbox: typeof s.pgsSandbox === 'boolean' ? s.pgsSandbox : null,
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
+            diasEntregaAuto: s.diasEntregaAuto ?? 15,
+            diasCancelaPendente: s.diasCancelaPendente ?? 3,
             faixasFrete: s.faixasFrete || [],
             redesSociais: {
                 instagram: s.redesSociais?.instagram || '',
@@ -1976,6 +2170,16 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         const v = Number(b.descontoPix);
         if (Number.isNaN(v) || v < 0 || v > 100) return err(res, 400, 'Desconto entre 0 e 100', 'VALIDATION');
         s.descontoPix = v;
+    }
+    if (b.diasEntregaAuto !== undefined) {
+        const v = Number(b.diasEntregaAuto);
+        if (!Number.isInteger(v) || v < 0 || v > 90) return err(res, 400, 'diasEntregaAuto entre 0 e 90 (0 desliga)', 'VALIDATION');
+        s.diasEntregaAuto = v;
+    }
+    if (b.diasCancelaPendente !== undefined) {
+        const v = Number(b.diasCancelaPendente);
+        if (!Number.isInteger(v) || v < 0 || v > 30) return err(res, 400, 'diasCancelaPendente entre 0 e 30 (0 desliga)', 'VALIDATION');
+        s.diasCancelaPendente = v;
     }
     if (b.faixasFrete !== undefined) {
         if (!Array.isArray(b.faixasFrete) || b.faixasFrete.length > 50) return err(res, 400, 'Faixas inválidas (máx 50)', 'VALIDATION');
@@ -2127,6 +2331,24 @@ app.get('/api/metrics', auth, admin, asyncHandler(async (req, res) => {
     });
 }));
 
+// Admin: rotinas automáticas (reconciliação + entrega + cancela pendentes)
+app.post('/api/admin/rotinas/executar', auth, admin, asyncHandler(async (req, res) => {
+    let agora;
+    if (req.query.agora !== undefined) {
+        agora = new Date(String(req.query.agora));
+        if (Number.isNaN(agora.getTime())) return err(res, 400, 'agora inválido (ISO)', 'VALIDATION');
+    }
+    let pedidoIds = null;
+    if (req.body?.pedidoIds !== undefined) {
+        if (!Array.isArray(req.body.pedidoIds) || req.body.pedidoIds.length > 50) return err(res, 400, 'pedidoIds inválido (lista até 50)', 'VALIDATION');
+        pedidoIds = req.body.pedidoIds;
+    }
+    res.json({ success: true, rotinas: await executarRotinas({ ...(agora ? { agora } : {}), ...(pedidoIds ? { pedidoIds } : {}) }) });
+}));
+app.get('/api/admin/rotinas/status', auth, admin, asyncHandler(async (req, res) => {
+    res.json({ success: true, rotinas: rotinasEstado });
+}));
+
 // Handler central — nunca vaza stack/message interno
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
@@ -2153,6 +2375,20 @@ async function init() {
         });
         console.log('Admin criado');
     }
+    // Rotinas automáticas a cada 10 min (sem sobreposição; off em teste E2E)
+    if (process.env.E2E_NO_LIMIT === 'true') {
+        console.log('Rotinas off (E2E_NO_LIMIT)');
+    } else try {
+        const cron = require('node-cron');
+        let rodando = false;
+        cron.schedule('*/10 * * * *', async () => {
+            if (rodando) return;
+            rodando = true;
+            try { await executarRotinas(); } catch (error) { console.error('rotinas cron:', error.message); }
+            rodando = false;
+        });
+        console.log('Rotinas agendadas (10 min)');
+    } catch (error) { console.error('rotinas cron off:', error.message); }
 }
 
 mongoose.connect(MONGODB_URI)

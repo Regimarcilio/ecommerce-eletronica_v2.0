@@ -180,6 +180,7 @@ async function loadPedidos() {
                             <button class="btn btn-fire btn-sm" onclick="verDetalhes('${p._id}')"><i class="fa-solid fa-eye"></i> Ver Detalhes</button>
                             ${p.status === 'pendente' ? `<button class="btn btn-fire btn-sm" onclick="pagarPedido('${p._id}')"><i class="fa-solid fa-bolt"></i> Pagar agora</button>` : ''}
                             ${p.status === 'pendente' ? `<button class="btn btn-ghost btn-sm" onclick="cancelarPedido('${p._id}')"><i class="fa-solid fa-xmark"></i> Cancelar</button>` : ''}
+                            ${p.status === 'enviado' ? `<button class="btn btn-fire btn-sm" onclick="confirmarRecebimento('${p._id}')"><i class="fa-solid fa-check"></i> Confirmar recebimento</button>` : ''}
                             ${p.status === 'cancelado' ? `<button class="btn btn-ghost btn-sm" onclick="excluirPedido('${p._id}')"><i class="fa-solid fa-trash"></i> Excluir</button>` : ''}
                         </div>
                     </div>`;
@@ -257,6 +258,17 @@ async function cancelarPedido(id) {
         else toast(data.message || 'Erro ao cancelar pedido', true);
     } catch(e) { toast('Erro ao conectar', true); }
 }
+// Cliente: confirma recebimento do pedido enviado
+async function confirmarRecebimento(id) {
+    if (!confirm('Confirma que recebeu este pedido?')) return;
+    try {
+        const res = await apiAuthed(API + '/pedidos/' + id + '/recebido', { method: 'PUT', body: JSON.stringify({}) });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok && data.success) { toast('Recebimento confirmado, obrigado!'); loadPedidos(); fecharDetalhes(); }
+        else toast(data.message || 'Erro ao confirmar recebimento', true);
+    } catch(e) { toast('Erro ao conectar', true); }
+}
 // Cliente: excluir pedido cancelado do historico
 async function excluirPedido(id) {
     if (!confirm('Excluir este pedido cancelado do histórico?')) return;
@@ -285,6 +297,7 @@ async function verDetalhes(id) {
         document.getElementById('pedidoDetalhesBody').innerHTML = `
             <p class="kv"><strong>Número:</strong> ${window.escapeHtml(p.numero)}</p>
             <p class="kv"><strong>Status:</strong> <span class="badge st-${window.escapeHtml(p.status || 'pendente')}">${window.escapeHtml((p.status || '').toUpperCase())}</span></p>
+            ${p.trackingCode ? `<p class="kv"><strong>Rastreio:</strong> ${window.escapeHtml(p.trackingCode)}</p>` : ''}
             <p class="kv"><strong>Pagamento:</strong> ${window.escapeHtml(getPaymentLabel(p.pagamento))}${p.provedorPagamento ? ' via ' + window.escapeHtml(provLabel(p.provedorPagamento)) : ''}</p>
             <p class="kv"><strong>Entrega:</strong> ${window.escapeHtml(p.endereco?.logradouro || '-')}, ${window.escapeHtml(p.endereco?.numero || '-')} - ${window.escapeHtml(p.endereco?.bairro || '-')}, ${window.escapeHtml(p.endereco?.cidade || '-')}/${window.escapeHtml(p.endereco?.estado || '-')} · CEP ${window.escapeHtml(p.endereco?.cep || '-')}</p>
             <table class="det"><thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead><tbody>${itensHtml}</tbody></table>
@@ -300,6 +313,9 @@ async function verDetalhes(id) {
             </div>` : ''}
             ${p.status === 'cancelado' ? `<div style="display:flex;gap:10px;margin-top:18px">
                 <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" onclick="excluirPedido('${p._id}')"><i class="fa-solid fa-trash"></i> Excluir do histórico</button>
+            </div>` : ''}
+            ${p.status === 'enviado' ? `<div style="display:flex;gap:10px;margin-top:18px">
+                <button class="btn btn-fire btn-sm" style="flex:1;justify-content:center" onclick="confirmarRecebimento('${p._id}')"><i class="fa-solid fa-check"></i> Confirmar recebimento</button>
             </div>` : ''}`;
         document.getElementById('pedidoModalBg').classList.add('open');
     } catch(e) { console.error(e); }
