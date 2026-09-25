@@ -1201,7 +1201,7 @@ async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
                     const ofertas = await Produto.aggregate([
                         { $match: { status: 'ativo', deletedAt: null, quantidade: { $gt: 0 } } },
                         { $sample: { size: 4 } },
-                        { $project: { nome: 1, preco: 1 } }
+                        { $project: { nome: 1, preco: 1, imagens: 1, imagemUrl: 1 } }
                     ]);
                     const st = s || await getSettings().catch(() => null);
                     await enviarEmailNotificacao(st, st?.emailService || 'smtp', {
@@ -1218,8 +1218,8 @@ async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
     }
     const ms = Date.now() - t0;
     rotinasEstado.ultima = { em: new Date().toISOString(), ms, ...out };
-    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'rotinas', ...out, ms }));
-    return rotinasEstado.ultima;
+    console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'rotinas', referencia: agora.toISOString(), ...out, ms }));
+    return { ...rotinasEstado.ultima, referencia: agora.toISOString() };
 }
 const rotinasEstado = { ultima: null };
 
@@ -1616,15 +1616,26 @@ function templateEmailStatus(pedido, titulo, preheader, mensagemHtml) {
     return layoutEmailCliente(titulo, preheader, `${mensagemHtml}
 <p style="font-size:13px;color:#9aa4c7;"><strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.updatedAt || pedido.createdAt).toLocaleString('pt-BR')}</p>`);
 }
+// URL absoluta da foto p/ e-mail (cliente de e-mail não resolve caminho relativo)
+function fotoAbsolutaEmail(p) {
+    const rel = (Array.isArray(p.imagens) && p.imagens[0]) || p.imagemUrl || '';
+    if (!rel) return '';
+    if (/^https?:\/\//i.test(rel)) return rel;
+    return `${String(FRONT_URL || '').replace(/\/$/, '')}${rel.startsWith('/') ? '' : '/'}${rel}`;
+}
 // E-mail do CLIENTE inativo: folder de ofertas (produtos aleatórios)
 function templateEmailOfertas(usuario, produtos) {
-    const cards = (produtos || []).map((p) => `
+    const cards = (produtos || []).map((p) => {
+        const foto = fotoAbsolutaEmail(p);
+        return `
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;background-color:#0e1428;border:1px solid rgba(255,255,255,0.09);border-radius:12px;">
 <tr><td style="padding:14px 16px;">
-<div style="font-size:15px;font-weight:bold;color:#f2f5ff;">${p.nome}</div>
+${foto ? `<a href="${FRONT_URL}/produto.html?id=${p._id}"><img src="${foto}" alt="${p.nome}" width="120" style="display:block;max-width:120px;border-radius:8px;border:0;"></a>` : ''}
+<div style="font-size:15px;font-weight:bold;color:#f2f5ff;margin-top:8px;">${p.nome}</div>
 <div style="margin-top:6px;font-size:17px;font-weight:bold;color:#ffb224;">R$ ${Number(p.preco || 0).toFixed(2)}</div>
 <a href="${FRONT_URL}/produto.html?id=${p._id}" style="display:inline-block;margin-top:10px;background-color:#ffb224;color:#1a1000;font-weight:bold;font-size:13px;padding:9px 22px;border-radius:999px;text-decoration:none;">Ver oferta</a>
-</td></tr></table>`).join('');
+</td></tr></table>`;
+    }).join('');
     const corpo = `<p>Olá, <strong>${usuario?.nome || 'cliente'}</strong>! Sentimos sua falta — separamos ofertas que podem interessar:</p>${cards || '<p style="color:#9aa4c7;">Novidades a caminho, volte em breve!</p>'}`;
     return layoutEmailCliente('Sentimos sua falta · ofertas para você', 'Ofertas selecionadas para você na PlacaCerta.', corpo);
 }
