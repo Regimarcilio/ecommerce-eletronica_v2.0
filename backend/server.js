@@ -1729,8 +1729,36 @@ function canonicoEmail(e) {
     return norm;
 }
 
+// Cache de MX por domínio (evita bounce p/ domínio inexistente, ex.: BadRcptDomain)
+const mxCache = new Map();
+async function dominioTemMx(email) {
+    const dom = String(email || '').trim().toLowerCase().split('@')[1] || '';
+    if (!dom) return false;
+    if (mxCache.has(dom)) return mxCache.get(dom);
+    try {
+        const dns = require('dns').promises;
+        const mx = await Promise.race([
+            dns.resolveMx(dom),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('mx-timeout')), 3000))
+        ]);
+        const ok = Array.isArray(mx) && mx.length > 0;
+        mxCache.set(dom, ok);
+        return ok;
+    } catch {
+        mxCache.set(dom, false);
+        return false;
+    }
+}
+
 // Envio central com auditoria: dispatch SMTP/Gmail + registra em Notificacoes
 async function enviarEmailNotificacao(s, service, { pedidoId, tipo, to, subject, html }) {
+    if (!(await dominioTemMx(to))) {
+        console.warn(`[email] dominio sem MX, envio pulado (${tipo} -> ${to})`);
+        try {
+            if (pedidoId) await Notificacao.create({ pedidoId, canal: 'email', destino: `${tipo}:${to}`, status: 'falha', erro: 'dominio sem MX' });
+        } catch (error) { console.error('notificacao email:', error.message); }
+        return;
+    }
     if (service === 'google') await enviaEmailGmail(s, { to, subject, html });
     else {
         if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
