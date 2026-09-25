@@ -139,7 +139,7 @@
                 <div class="col-md-4 mb-3"><label class="form-label">Modelo TV compatível</label><input type="text" id="prodModeloTV" class="form-control" maxlength="120" placeholder="43UJ6525..."></div>
             </div>
             <div class="mb-3"><label class="form-label">Descrição</label><textarea id="prodDescricao" class="form-control" rows="3" maxlength="2000" placeholder="Detalhes do produto exibidos na página principal"></textarea></div>
-            <div class="mb-3"><label class="form-label">Foto do produto (URL)</label><input type="url" id="prodImagem" class="form-control" placeholder="https://... ou /fotos/..." oninput="previewProdImagem()"><div class="mt-2 d-flex gap-2 align-items-center flex-wrap"><input type="file" id="prodImagemFile" class="form-control" accept="image/jpeg,image/png,image/webp" style="max-width:280px"><button type="button" class="btn btn-sm btn-outline-light" onclick="uploadFotoProduto()"><i class="fas fa-upload"></i> Enviar foto</button></div><div class="mt-2 text-center"><img id="prodImagemPrev" style="max-height:120px;max-width:100%;display:none;border-radius:8px;" alt="Prévia da foto"></div><small class="text-muted">Envie JPG/PNG/WebP até 3MB ou cole a URL. Salva em /fotos/; no banco vai só o caminho.</small></div>
+            <div class="mb-3"><label class="form-label">Fotos do produto (máx 3)</label><input type="url" id="prodImagem" class="form-control" placeholder="https://... ou /fotos/..." oninput="previewProdImagem()"><div class="mt-2 d-flex gap-2 align-items-center flex-wrap"><input type="file" id="prodImagemFile" class="form-control" accept="image/jpeg,image/png,image/webp" multiple style="max-width:280px"><button type="button" class="btn btn-sm btn-outline-light" onclick="uploadFotoProduto()"><i class="fas fa-upload"></i> Enviar foto(s)</button></div><div id="prodImagensList" class="mt-2 d-flex gap-2 flex-wrap"></div><div class="mt-2 text-center"><img id="prodImagemPrev" style="max-height:120px;max-width:100%;display:none;border-radius:8px;" alt="Prévia da foto"></div><small class="text-muted">Envie JPG/PNG/WebP até 3MB cada ou cole a URL e salve. Salva em /fotos/; no banco vai só o caminho.</small></div>
             <div class="mb-3"><label class="form-label">Status</label><select id="prodStatus" class="form-select"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select></div>
             <div class="mb-3 form-check"><input type="checkbox" id="prodDestaque" class="form-check-input"><label class="form-check-label" for="prodDestaque">Destaque na página principal</label></div>
         </div>
@@ -421,7 +421,9 @@
                 document.getElementById('prodMarca').value = produto.marca || '';
                 document.getElementById('prodModeloTV').value = produto.modeloTV || '';
                 document.getElementById('prodDescricao').value = produto.descricao || '';
-                document.getElementById('prodImagem').value = produto.imagemUrl || '';
+                document.getElementById('prodImagem').value = (produto.imagens && produto.imagens[0]) || produto.imagemUrl || '';
+                prodImagens = Array.isArray(produto.imagens) && produto.imagens.length ? [...produto.imagens] : (produto.imagemUrl ? [produto.imagemUrl] : []);
+                renderProdImagens();
                 previewProdImagem();
                 document.getElementById('prodDestaque').checked = !!produto.destaque;
                 document.getElementById('prodStatus').value = produto.status;
@@ -440,6 +442,8 @@
                 document.getElementById('prodDescricao').value = '';
                 document.getElementById('prodImagem').value = '';
                 document.getElementById('prodImagemPrev').style.display = 'none';
+                prodImagens = [];
+                renderProdImagens();
                 document.getElementById('prodDestaque').checked = false;
                 document.getElementById('prodStatus').value = 'ativo';
             }
@@ -455,6 +459,17 @@
             } catch(e) { showToast('Erro ao carregar produto', true); }
         }
         
+        let prodImagens = [];
+        function renderProdImagens() {
+            const box = document.getElementById('prodImagensList');
+            box.innerHTML = prodImagens.map((u, i) => `<span class="position-relative d-inline-block"><img src="${window.escapeHtml(u)}" style="height:64px;border-radius:8px;border:1px solid var(--line)" alt="Foto ${i + 1}" onerror="this.remove()"><button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0" style="padding:0 6px" onclick="removerProdImagem(${i})">✕</button>${i === 0 ? '<br><small class="text-muted">principal</small>' : ''}</span>`).join('') || '<small class="text-muted">Nenhuma foto (máx 3).</small>';
+            const first = document.getElementById('prodImagem');
+            if (prodImagens.length && !first.value.trim()) { first.value = prodImagens[0]; previewProdImagem(); }
+        }
+        function removerProdImagem(i) {
+            prodImagens.splice(i, 1);
+            renderProdImagens();
+        }
         function previewProdImagem() {
             const url = window.safeImg(document.getElementById('prodImagem').value);
             const img = document.getElementById('prodImagemPrev');
@@ -464,18 +479,20 @@
 
         async function uploadFotoProduto() {
             const input = document.getElementById('prodImagemFile');
-            const file = input && input.files && input.files[0];
-            if (!file) { showToast('Escolha um arquivo JPG/PNG/WebP', true); return; }
-            if (file.size > 3 * 1024 * 1024) { showToast('Foto até 3MB', true); return; }
+            const files = input && input.files ? [...input.files] : [];
+            if (!files.length) { showToast('Escolha um arquivo JPG/PNG/WebP', true); return; }
+            if (prodImagens.length + files.length > 3) { showToast('Máximo 3 fotos por produto', true); return; }
+            if (files.some((f) => f.size > 3 * 1024 * 1024)) { showToast('Cada foto até 3MB', true); return; }
             const fd = new FormData();
-            fd.append('foto', file);
+            for (const f of files.slice(0, 3 - prodImagens.length)) fd.append('fotos', f);
             try {
                 const res = await fetch(API + '/produtos/foto', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
                 const data = await res.json();
                 if (!res.ok || !data.success) { showToast(data.message || 'Erro ao enviar foto', true); return; }
-                document.getElementById('prodImagem').value = data.url;
-                previewProdImagem();
-                showToast('Foto enviada!');
+                prodImagens = [...prodImagens, ...(data.urls || [])].slice(0, 3);
+                input.value = '';
+                renderProdImagens();
+                showToast('Foto(s) enviada(s)! Salve o produto.');
             } catch { showToast('Erro ao conectar', true); }
         }
 
@@ -497,12 +514,16 @@
             if (descricao.length > 2000) { showToast('Descrição com no máximo 2000 caracteres!', true); return; }
             const imagemUrl = window.safeImg(document.getElementById('prodImagem').value);
             if (document.getElementById('prodImagem').value.trim() && !imagemUrl) { showToast('URL da foto inválida (use http/https)!', true); return; }
+            const imagens = [...prodImagens];
+            if (imagemUrl && !imagens.includes(imagemUrl)) imagens.unshift(imagemUrl);
+            if (imagens.length > 3) { showToast('Máximo 3 fotos por produto', true); return; }
 
             const produto = {
                 nome: document.getElementById('prodNome').value.trim(),
                 sku: document.getElementById('prodSku').value.trim(),
                 descricao,
-                imagemUrl,
+                imagemUrl: imagens[0] || '',
+                imagens,
                 preco,
                 quantidade,
                 ...(peso !== undefined ? { peso } : {}),

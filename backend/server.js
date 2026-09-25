@@ -194,6 +194,14 @@ const ProdutoSchema = new mongoose.Schema({
             message: 'URL de imagem invalida'
         }
     },
+    // Galeria: até 3 fotos (imagemUrl legado migra p/ imagens[0] na escrita)
+    imagens: {
+        type: [String], default: [],
+        validate: [
+            { validator: (v) => (v || []).length <= 3, message: 'Máximo 3 fotos por produto' },
+            { validator: (v) => (v || []).every((u) => /^(https?:\/\/[^ "]+|\/[^ "]*)$/.test(u || '')), message: 'URL de imagem invalida' }
+        ]
+    },
     preco: { type: Number, required: true, min: 0 },
     peso: { type: Number, min: 0, default: 0.1 },
     quantidade: { type: Number, required: true, min: 0, default: 0 },
@@ -573,6 +581,7 @@ function enriquecerPreco(p, cfg) {
     const taxa = Number(cfg?.descontoPix ?? 5) / 100;
     const parc = Math.max(1, Number(cfg?.parcelasMax ?? 12));
     const base = p.toObject ? p.toObject() : { ...p };
+    if (!base.imagemUrl && Array.isArray(base.imagens) && base.imagens.length) base.imagemUrl = base.imagens[0];
     return {
         ...base,
         precoPix: +(Number(base.preco) * (1 - taxa)).toFixed(2),
@@ -592,6 +601,17 @@ const pickProduto = (b) => {
     const out = {};
     for (const k of ['nome', 'sku', 'descricao', 'imagemUrl', 'preco', 'peso', 'quantidade', 'status', 'destaque', 'categoria', 'tipoPlaca', 'marca', 'modeloTV']) {
         if (b[k] !== undefined) out[k] = b[k];
+    }
+    // Galeria até 3 fotos; imagemUrl legado migra p/ imagens[0]
+    if (b.imagens !== undefined) {
+        if (!Array.isArray(b.imagens)) throw Object.assign(new Error('imagens deve ser uma lista'), { statusCode: 400, code: 'VALIDATION' });
+        out.imagens = b.imagens.map((u) => String(u ?? '').trim()).filter(Boolean).slice(0, 3);
+        if (b.imagens.filter((u) => String(u ?? '').trim()).length > 3) {
+            throw Object.assign(new Error('Máximo 3 fotos por produto'), { statusCode: 400, code: 'VALIDATION' });
+        }
+        out.imagemUrl = out.imagens[0] || '';
+    } else if (out.imagemUrl) {
+        out.imagens = [out.imagemUrl];
     }
     if (out.categoria === '') delete out.categoria;
     if (out.tipoPlaca !== undefined) {
@@ -676,20 +696,22 @@ const uploadFoto = multer({
             cb(null, `${base}-${Date.now()}.${ext}`);
         }
     }),
-    limits: { fileSize: 3 * 1024 * 1024, files: 1 },
+    limits: { fileSize: 3 * 1024 * 1024, files: 3 },
     fileFilter: (req, file, cb) => {
         if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) return cb(null, true);
         cb(Object.assign(new Error('Tipo inválido (só JPG/PNG/WebP)'), { statusCode: 400, code: 'VALIDATION' }));
     }
 });
 
-// Admin: upload de foto do produto (disco; no banco vai só a URL)
+// Admin: upload de fotos do produto (até 3 por vez; disco; no banco vai só a URL)
 app.post('/api/produtos/foto', auth, admin, (req, res) => {
-    uploadFoto.single('foto')(req, res, (e) => {
-        if (e) return err(res, e.statusCode || 400, e.code === 'LIMIT_FILE_SIZE' ? 'Foto até 3MB' : (e.message || 'Upload inválido'), e.code || 'VALIDATION');
-        if (!req.file) return err(res, 400, 'Arquivo foto obrigatório', 'VALIDATION');
-        console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'foto_enviada', por: req.usuarioId, arquivo: req.file.filename }));
-        res.json({ success: true, url: `/fotos/${req.file.filename}` });
+    uploadFoto.fields([{ name: 'fotos', maxCount: 3 }, { name: 'foto', maxCount: 1 }])(req, res, (e) => {
+        if (e) return err(res, e.statusCode || 400, e.code === 'LIMIT_FILE_SIZE' ? 'Foto até 3MB' : e.code === 'LIMIT_UNEXPECTED_FILE' ? 'Máximo 3 fotos por vez' : (e.message || 'Upload inválido'), e.code || 'VALIDATION');
+        const files = [...(req.files?.fotos || []), ...(req.files?.foto || [])].slice(0, 3);
+        if (!files.length) return err(res, 400, 'Arquivo foto obrigatório', 'VALIDATION');
+        const urls = files.map((f) => `/fotos/${f.filename}`);
+        for (const f of files) console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'foto_enviada', por: req.usuarioId, arquivo: f.filename }));
+        res.json({ success: true, urls, url: urls[0] });
     });
 });
 

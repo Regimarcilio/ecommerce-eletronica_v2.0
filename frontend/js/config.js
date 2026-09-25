@@ -96,6 +96,15 @@
     if (/^(https?:\/\/[^ "]+|\/[^ "]*)$/i.test(s)) return s;
     return '';
   };
+  // Foto principal do produto (galeria imagens[0] ou legado imagemUrl)
+  window.fotoPrincipal = function (p) {
+    if (!p) return '';
+    if (Array.isArray(p.imagens) && p.imagens.length) {
+      const u = window.safeImg(p.imagens[0]);
+      if (u) return u;
+    }
+    return window.safeImg(p.imagemUrl);
+  };
 
   // Biblioteca de icones por segmento (Font Awesome; multi-ramo: o cliente
   // escolhe o que representa o negocio dele na hora de criar a categoria)

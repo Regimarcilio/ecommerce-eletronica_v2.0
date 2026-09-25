@@ -431,7 +431,7 @@ function updateAuth(){
   document.getElementById('authLink').innerHTML = window.userLink()
     || `<a href="/auth.html" class="btn btn-ghost" style="padding:9px 18px">Entrar</a>`;
 }
-function foto(p,icon){const u=window.safeImg(p.imagemUrl);
+function foto(p,icon){const u=window.fotoPrincipal(p);
   return u?`<img src="${u}" alt="${esc(p.nome)}" loading="lazy" onerror="this.remove()">`:`<i class="fa-solid ${p.tipoPlaca&&TIPO_ICON[p.tipoPlaca]?'fa-solid '+TIPO_ICON[p.tipoPlaca]:'fa-tv'}"></i>`;}
 function compat(p){const b=[];if(p.marca)b.push(esc(p.marca));if(p.modeloTV)b.push('comp. '+esc(p.modeloTV));return b.join(' · ')}
 function buy(id){

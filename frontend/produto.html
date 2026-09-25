@@ -143,11 +143,11 @@ async function load(){
     const p = d.produto; PROD = p;
     document.title = p.nome + ' | PlacaCerta';
     document.getElementById('crumbName').textContent = p.nome;
-    const url = window.safeImg(p.imagemUrl);
+    const fotos = (Array.isArray(p.imagens) && p.imagens.length ? p.imagens : (p.imagemUrl ? [p.imagemUrl] : [])).map((u) => window.safeImg(u)).filter(Boolean).slice(0, 3);
     const dim = p.dimensoes ? `${p.dimensoes.c||'-'} × ${p.dimensoes.l||'-'} × ${p.dimensoes.a||'-'} cm` : '—';
     const ok = Number(p.quantidade) > 0;
     box.innerHTML = `
-      <div class="gallery">${url?`<img src="${url}" alt="${esc(p.nome)}" onerror="this.remove()">`:'<i class="fa-solid fa-tv"></i>'}</div>
+      <div class="gallery"><img id="fotoMain" src="${fotos[0] || ''}" alt="${esc(p.nome)}" style="${fotos.length ? '' : 'display:none'}" onerror="this.style.display='none'">${fotos.length ? '' : '<i class="fa-solid fa-tv"></i>'}<div id="fotoThumbs" style="display:flex;gap:8px;margin-top:10px">${fotos.map((u, i) => `<img src="${u}" alt="Foto ${i + 1}" style="height:56px;border-radius:8px;cursor:pointer;border:1px solid var(--line)" onclick="document.getElementById('fotoMain').src='${u}'" onerror="this.remove()">`).join('')}</div></div>
       <div class="info">
         <div class="ptype">${esc(TIPO_LABEL[p.tipoPlaca]||'Peça')}</div>
         <h1>${esc(p.nome)}</h1>
@@ -185,7 +185,7 @@ async function loadRelated(p){
     if(!rel.length) return;
     document.getElementById('relBlock').style.display='';
     document.getElementById('relGrid').innerHTML = rel.map(x=>{
-      const u = window.safeImg(x.imagemUrl);
+      const u = window.fotoPrincipal(x);
       return `<a class="pcard" href="/produto.html?id=${x._id}">
         <div class="foto">${u?`<img src="${u}" alt="${esc(x.nome)}" loading="lazy" onerror="this.remove()">`:'<i class="fa-solid fa-tv"></i>'}</div>
         <div class="body"><h3>${esc(x.nome)}</h3><div class="now">${money(x.preco)}</div></div></a>`;

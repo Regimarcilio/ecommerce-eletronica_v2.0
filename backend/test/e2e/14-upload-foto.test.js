@@ -45,8 +45,20 @@ describe('e2e upload de foto (disco; banco só com URL)', () => {
     const r = await up(atok, fd());
     assert.equal(r.status, 200);
     assert.match(r.data.url, /^\/fotos\/[a-zA-Z0-9_-]+\.png$/);
+    assert.deepEqual(r.data.urls, [r.data.url]);
     const pub = await fetch(`http://localhost:8083${r.data.url}`);
     assert.equal(pub.status, 200);
     assert.match(pub.headers.get('content-type') || '', /image\/png/);
+  });
+
+  it('ate 3 fotos por vez; 4a retorna 400', async () => {
+    const tres = new FormData();
+    for (let i = 0; i < 3; i++) tres.append('fotos', new Blob([PNG], { type: 'image/png' }), `f${i}.png`);
+    const ok = await up(atok, tres);
+    assert.equal(ok.status, 200);
+    assert.equal(ok.data.urls.length, 3);
+    const quatro = new FormData();
+    for (let i = 0; i < 4; i++) quatro.append('fotos', new Blob([PNG], { type: 'image/png' }), `g${i}.png`);
+    assert.equal((await up(atok, quatro)).status, 400);
   });
 });

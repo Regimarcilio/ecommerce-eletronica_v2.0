@@ -100,6 +100,32 @@ describe('e2e catalogo + rbac + paging', () => {
     assert.equal(parcial.data.produto.imagemUrl, 'https://cdn.t/img/fone.png');
   });
 
+  it('galeria: legado migra p/ imagens; maximo 3 fotos', async () => {
+    const g = await api('GET', '/api/produtos?limit=100');
+    const pid = g.data.produtos.find((p) => String(p.sku || '').startsWith('E2EFI-'))?._id;
+    assert.ok(pid);
+    const get1 = await api('GET', `/api/produtos/${pid}`);
+    assert.deepEqual(get1.data.produto.imagens, ['https://cdn.t/img/fone.png']);
+    const quatro = await api('PUT', `/api/produtos/${pid}`, {
+      token: atok,
+      body: { imagens: ['/fotos/1.png', '/fotos/2.png', '/fotos/3.png', '/fotos/4.png'] },
+    });
+    assert.equal(quatro.status, 400);
+    const ruim = await api('PUT', `/api/produtos/${pid}`, {
+      token: atok,
+      body: { imagens: ['javascript:alert(1)'] },
+    });
+    assert.equal(ruim.status, 400);
+    const ok = await api('PUT', `/api/produtos/${pid}`, {
+      token: atok,
+      body: { imagens: ['/fotos/1.png', '/fotos/2.png', '/fotos/3.png'] },
+    });
+    assert.equal(ok.status, 200);
+    assert.deepEqual(ok.data.produto.imagens, ['/fotos/1.png', '/fotos/2.png', '/fotos/3.png']);
+    const get2 = await api('GET', `/api/produtos/${pid}`);
+    assert.equal(get2.data.produto.imagemUrl, '/fotos/1.png');
+  });
+
   it('paging: 14 itens -> p1=12 p2=2 pages=2', async () => {
     for (let i = 1; i <= 12; i++) {
       const p = await api('POST', '/api/produtos', {

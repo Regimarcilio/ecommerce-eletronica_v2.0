@@ -171,7 +171,7 @@ async function enrich(item){
   return null;
 }
 function thumb(p){
-  const u = p && window.safeImg(p.imagemUrl);
+  const u = p && window.fotoPrincipal(p);
   if (u) return `<img src="${u}" alt="" onerror="this.remove()">`;
   return '<i class="fa-solid fa-tv"></i>';
 }
