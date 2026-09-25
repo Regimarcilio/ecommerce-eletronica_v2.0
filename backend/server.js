@@ -314,7 +314,8 @@ const PagamentoSchema = new mongoose.Schema({
     pgsQrText: { type: String, default: '' },
     initPoint: { type: String, default: '' },
     modo: { type: String, enum: ['real', 'mock'], default: 'mock' },
-    status: { type: String, enum: ['criado', 'aprovado', 'recusado'], default: 'criado' }
+    status: { type: String, enum: ['criado', 'aprovado', 'recusado'], default: 'criado' },
+    emailVendaEnviadoEm: { type: Date, default: null }
 }, { timestamps: true });
 
 const NotificacaoSchema = new mongoose.Schema({
@@ -902,6 +903,7 @@ app.put('/api/pedidos/:id/rastreio', auth, admin, asyncHandler(async (req, res) 
     const pedido = await Pedido.findById(req.params.id);
     if (!pedido) return err(res, 404, 'Pedido não encontrado', 'NOT_FOUND');
     if (!['pendente', 'pago'].includes(pedido.status)) return err(res, 422, `Só informa rastreio de pedido pendente/pago (atual: ${pedido.status})`, 'STATE');
+    if (pedido.trackingCode === code) return res.json({ success: true, pedido });
     pedido.trackingCode = code;
     pedido.status = 'enviado';
     await pedido.save();
@@ -1507,8 +1509,9 @@ async function enviaEmailPedidoNovo(pedido) {
         const s = await getSettings().catch(() => null);
         const service = s?.emailService || 'smtp';
         const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
-        const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? (process.env.EMAIL_FROM || s.emailLoja) : '';
-        const clienteEmail = emailOk(pedido.cliente?.email) ? pedido.cliente.email : '';
+        const norm = (e) => String(e || '').trim().toLowerCase();
+        const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? norm(process.env.EMAIL_FROM || s.emailLoja) : '';
+        const clienteEmail = emailOk(pedido.cliente?.email) ? norm(pedido.cliente.email) : '';
         if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (novo pedido)'); return; }
         const enviar = (to, subject, html) => {
             if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
@@ -1585,9 +1588,10 @@ async function enviaEmailVenda(pedido) {
         const s = await getSettings().catch(() => null);
         const service = s?.emailService || 'smtp';
         // Loja SEMPRE recebe a venda; cliente recebe a confirmação de compra
+        const norm = (e) => String(e || '').trim().toLowerCase();
         const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
-        const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? (process.env.EMAIL_FROM || s.emailLoja) : '';
-        const clienteEmail = emailOk(pedido.cliente?.email) ? pedido.cliente.email : '';
+        const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? norm(process.env.EMAIL_FROM || s.emailLoja) : '';
+        const clienteEmail = emailOk(pedido.cliente?.email) ? norm(pedido.cliente.email) : '';
         if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (cliente e loja sem e-mail)'); return; }
         const enviar = (to, subject, html) => {
             if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
@@ -1627,7 +1631,7 @@ async function enviaEmailSmtp(s, { to, subject, html }) {
         auth: { user: smtpUser, pass: smtpPass }
     });
     const info = await transporter.sendMail({ from, to, subject, html });
-    console.log('[email] enviado via SMTP:', info.messageId);
+    console.log('[email] enviado via SMTP:', info.messageId, '->', to);
 }
 
 // Envia via Gmail REST API (users.messages.send) com OAuth2 + refresh token.
@@ -1652,7 +1656,7 @@ async function enviaEmailGmail(s, { to, subject, html }) {
     ).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     try {
         const r = await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
-        console.log('[email] enviado via Gmail API:', r.data?.id);
+        console.log('[email] enviado via Gmail API:', r.data?.id, '->', to);
     } catch (error) {
         const msg = String(error?.message || error);
         if (/invalid_grant/i.test(msg)) {
@@ -1678,8 +1682,17 @@ async function confirmaPagamento(pedidoId, aprovado, provedorId = '', provedor =
     console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'pagamento_aprovado', pedido: pedido.numero }));
     try { await enviaWhatsApp(pedido); } catch (error) { console.error('whatsapp:', error.message); }
     // E-mail só p/ venda real (modo mock = teste/webhook de teste: sem notificação)
+    // Trava anti-duplicidade: mesmo com webhook repetido/concorrente, envia 1x
     if (pgto?.modo === 'real') {
-        try { await enviaEmailVenda(pedido); } catch (error) { console.error('email:', error.message); }
+        const claimed = await Pagamento.findOneAndUpdate(
+            { pedidoId: pedido._id, emailVendaEnviadoEm: null },
+            { $set: { emailVendaEnviadoEm: new Date() } }
+        );
+        if (!claimed) {
+            console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'email_ja_enviado', pedido: pedido.numero }));
+        } else {
+            try { await enviaEmailVenda(pedido); } catch (error) { console.error('email:', error.message); }
+        }
     } else {
         console.log(JSON.stringify({ ts: new Date().toISOString(), evento: 'email_ignorado_mock', pedido: pedido.numero }));
     }
