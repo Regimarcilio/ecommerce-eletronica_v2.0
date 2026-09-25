@@ -21,7 +21,7 @@ describe('e2e rotinas automaticas + rastreio + recebido', () => {
     catId = c.data.categoria._id;
     const p = await api('POST', '/api/produtos', {
       token: atok,
-      body: { nome: 'E2E Rot Item', sku: `E2ERT-${tag}`, preco: 40, quantidade: 10, categoria: catId },
+      body: { nome: 'E2E Rot Item', sku: `E2ERT-${tag}`, preco: 40, quantidade: 50, categoria: catId },
     });
     prodId = p.data.produto._id;
   });
@@ -118,6 +118,34 @@ describe('e2e rotinas automaticas + rastreio + recebido', () => {
     assert.equal(g2.data.pedido.status, 'entregue');
     const st1 = await api('GET', '/api/admin/rotinas/status', { token: atok });
     assert.ok(st1.data.rotinas.ultima && typeof st1.data.rotinas.ultima.ms === 'number');
+  });
+
+  it('winback: inativo 15+d recebe ofertas 1x (cooldown)', async () => {
+    const r = await register(`e2e-win-${tag}@t.t`, 'E2E Win');
+    assert.equal(r.status, 200);
+    const wtok = r.data.token;
+    const o = await api('POST', '/api/pedidos', {
+      token: wtok,
+      body: {
+        cliente: { nome: 'E2E Win' },
+        endereco: { logradouro: 'Rua W', numero: '1' },
+        pagamento: 'card',
+        items: [{ produtoId: prodId, quantity: 1 }],
+      },
+    });
+    assert.equal(o.status, 201);
+    // pedido recente: nada a fazer
+    const run0 = await api('POST', '/api/admin/rotinas/executar', { token: atok, body: { pedidoIds: [o.data.pedido._id] } });
+    assert.equal(run0.status, 200);
+    assert.equal(run0.data.rotinas.winback, 0);
+    // 16 dias depois: winback dispara 1x e grava cooldown
+    const futuro = new Date(Date.now() + 16 * 24 * 3600 * 1000).toISOString();
+    const run1 = await api('POST', `/api/admin/rotinas/executar?agora=${futuro}`, { token: atok, body: { pedidoIds: [o.data.pedido._id] } });
+    assert.equal(run1.status, 200);
+    assert.equal(run1.data.rotinas.winback, 1);
+    const run2 = await api('POST', `/api/admin/rotinas/executar?agora=${futuro}`, { token: atok, body: { pedidoIds: [o.data.pedido._id] } });
+    assert.equal(run2.data.rotinas.winback, 0);
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { diasWinbackInativo: 99 } })).status, 400);
   });
 
   after(async () => {

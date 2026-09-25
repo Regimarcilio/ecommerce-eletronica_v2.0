@@ -149,7 +149,8 @@ const UsuarioSchema = new mongoose.Schema({
     telefone: { type: String, trim: true, default: '' },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     status: { type: String, enum: ['ativo', 'inativo', 'bloqueado'], default: 'ativo' },
-    enderecos: { type: [EnderecoSchema], default: [] }
+    enderecos: { type: [EnderecoSchema], default: [] },
+    ultimoWinbackEm: { type: Date, default: null }
 }, { timestamps: true });
 
 // Sessoes (refresh opaco com rotacao) e reset de senha (token unico, 1 uso)
@@ -261,6 +262,7 @@ const SettingsSchema = new mongoose.Schema({
     // Rotinas automáticas (dias; 0 = desliga a respectiva rotina)
     diasEntregaAuto: { type: Number, min: 0, max: 90, default: 15 },
     diasCancelaPendente: { type: Number, min: 0, max: 30, default: 3 },
+    diasWinbackInativo: { type: Number, min: 0, max: 90, default: 15 },
     faixasFrete: [{
         uf: { type: String, trim: true, uppercase: true, maxlength: 2, default: '' },
         atePeso: { type: Number, min: 0, default: 30 },
@@ -913,11 +915,10 @@ app.put('/api/pedidos/:id/rastreio', auth, admin, asyncHandler(async (req, res) 
         const pgto = await Pagamento.findOne({ pedidoId: pedido._id }).lean();
         if (pgto?.modo === 'real' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
             const s = await getSettings().catch(() => null);
-            const service = s?.emailService || 'smtp';
-            const html = templateEmailRastreio(pedido);
-            const subject = `Pedido enviado · ${pedido.numero} - código ${code}`;
-            if (service === 'google') await enviaEmailGmail(s, { to: pedido.cliente.email, subject, html });
-            else await enviaEmailSmtp(s, { to: pedido.cliente.email, subject, html });
+            await enviarEmailNotificacao(s, s?.emailService || 'smtp', {
+                pedidoId: pedido._id, tipo: 'rastreio', to: pedido.cliente.email,
+                subject: `Pedido enviado · ${pedido.numero} - código ${code}`, html: templateEmailRastreio(pedido)
+            });
         }
     } catch (error) { console.error('email rastreio:', error.message); }
     res.json({ success: true, pedido });
@@ -939,8 +940,10 @@ app.put('/api/pedidos/:id/recebido', auth, asyncHandler(async (req, res) => {
         const lojaEmail = s?.emailLoja || process.env.EMAIL_FROM || '';
         if (pgto?.modo === 'real' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lojaEmail)) {
             const html = templateEmailStatus(pedido, `Entrega confirmada · ${pedido.numero}`, `O cliente confirmou o recebimento do pedido ${pedido.numero}.`, `<p>O cliente <strong>${pedido.cliente?.nome || ''}</strong> confirmou o recebimento do pedido <strong>${pedido.numero}</strong>.</p>`);
-            if ((s?.emailService || 'smtp') === 'google') await enviaEmailGmail(s, { to: lojaEmail, subject: `Entrega confirmada · ${pedido.numero}`, html });
-            else await enviaEmailSmtp(s, { to: lojaEmail, subject: `Entrega confirmada · ${pedido.numero}`, html });
+            await enviarEmailNotificacao(s, s?.emailService || 'smtp', {
+                pedidoId: pedido._id, tipo: 'entrega-confirmada', to: lojaEmail,
+                subject: `Entrega confirmada · ${pedido.numero}`, html
+            });
         }
     } catch (error) { console.error('email entregue/loja:', error.message); }
     res.json({ success: true, pedido });
@@ -1102,7 +1105,7 @@ async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
     const diasEntrega = Number(s?.diasEntregaAuto ?? 15);
     const diasCancela = Number(s?.diasCancelaPendente ?? 3);
     const escopo = Array.isArray(pedidoIds) && pedidoIds.length ? { _id: { $in: pedidoIds.filter(isValidId) } } : {};
-    const out = { reconciliados: 0, entregues: 0, cancelados: 0, erros: 0 };
+    const out = { reconciliados: 0, entregues: 0, cancelados: 0, winback: 0, erros: 0 };
     const t0 = Date.now();
     // 1) Pendentes com intenção real há +30min: confere nos provedores
     try {
@@ -1141,9 +1144,11 @@ async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
                 try {
                     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
                         const st = s || await getSettings().catch(() => null);
-                        const html = templateEmailStatus(pedido, `Pedido entregue · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi marcado como entregue.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi marcado como <strong style="color:#6ee7b7;">entregue</strong>. Obrigado pela compra!</p>`);
-                        if ((st?.emailService || 'smtp') === 'google') await enviaEmailGmail(st, { to: pedido.cliente.email, subject: `Pedido entregue · ${pedido.numero}`, html });
-                        else await enviaEmailSmtp(st, { to: pedido.cliente.email, subject: `Pedido entregue · ${pedido.numero}`, html });
+                        await enviarEmailNotificacao(st, st?.emailService || 'smtp', {
+                            pedidoId: pedido._id, tipo: 'entregue',
+                            to: pedido.cliente.email, subject: `Pedido entregue · ${pedido.numero}`,
+                            html: templateEmailStatus(pedido, `Pedido entregue · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi marcado como entregue.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi marcado como <strong style="color:#6ee7b7;">entregue</strong>. Obrigado pela compra!</p>`)
+                        });
                     }
                 } catch (error) { console.error('email entregue:', error.message); }
             } catch (error) { out.erros++; console.error('rotina entrega:', error.message); }
@@ -1163,13 +1168,53 @@ async function executarRotinas({ agora = new Date(), pedidoIds = null } = {}) {
                 try {
                     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pedido.cliente?.email || '')) {
                         const st = s || await getSettings().catch(() => null);
-                        const html = templateEmailStatus(pedido, `Pedido cancelado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi cancelado por falta de pagamento.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi <strong style="color:#f87171;">cancelado</strong> por falta de pagamento. Se ainda quiser, refaça a compra no site.</p>`);
-                        if ((st?.emailService || 'smtp') === 'google') await enviaEmailGmail(st, { to: pedido.cliente.email, subject: `Pedido cancelado · ${pedido.numero}`, html });
-                        else await enviaEmailSmtp(st, { to: pedido.cliente.email, subject: `Pedido cancelado · ${pedido.numero}`, html });
+                        await enviarEmailNotificacao(st, st?.emailService || 'smtp', {
+                            pedidoId: pedido._id, tipo: 'cancelado',
+                            to: pedido.cliente.email, subject: `Pedido cancelado · ${pedido.numero}`,
+                            html: templateEmailStatus(pedido, `Pedido cancelado · ${pedido.numero}`, `Seu pedido ${pedido.numero} foi cancelado por falta de pagamento.`, `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi <strong style="color:#f87171;">cancelado</strong> por falta de pagamento. Se ainda quiser, refaça a compra no site.</p>`)
+                        });
                     }
                 } catch (error) { console.error('email cancelado:', error.message); }
             } catch (error) { out.erros++; console.error('rotina cancela:', error.message); }
         }
+    }
+    // 4) Winback: clientes com última compra há +diasWinback (e sem winback recente)
+    const diasWin = Number(s?.diasWinbackInativo ?? 15);
+    if (diasWin > 0) {
+        const limite = new Date(agora.getTime() - diasWin * 24 * 3600 * 1000);
+        try {
+            const ultimas = await Pedido.aggregate([
+                { $group: { _id: '$usuarioId', ultimaCompra: { $max: '$createdAt' } } },
+                { $match: { ultimaCompra: { $lt: limite } } }
+            ]);
+            let escopoUsuarios = null;
+            if (escopo._id) {
+                const donos = await Pedido.find({ _id: { $in: escopo._id.$in } }).select('usuarioId').lean();
+                escopoUsuarios = new Set(donos.map((d) => String(d.usuarioId)));
+            }
+            for (const u of ultimas) {
+                try {
+                    if (escopoUsuarios && !escopoUsuarios.has(String(u._id))) continue;
+                    const cli = await Usuario.findOne({ _id: u._id, role: 'user', status: 'ativo' }).select('nome email ultimoWinbackEm');
+                    if (!cli || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cli.email || '')) continue;
+                    if (cli.ultimoWinbackEm && new Date(cli.ultimoWinbackEm).getTime() > limite.getTime()) continue;
+                    const ofertas = await Produto.aggregate([
+                        { $match: { status: 'ativo', deletedAt: null, quantidade: { $gt: 0 } } },
+                        { $sample: { size: 4 } },
+                        { $project: { nome: 1, preco: 1 } }
+                    ]);
+                    const st = s || await getSettings().catch(() => null);
+                    await enviarEmailNotificacao(st, st?.emailService || 'smtp', {
+                        pedidoId: null, tipo: 'winback', to: cli.email,
+                        subject: 'Sentimos sua falta · ofertas para você',
+                        html: templateEmailOfertas(cli, ofertas)
+                    });
+                    cli.ultimoWinbackEm = agora;
+                    await cli.save();
+                    out.winback++;
+                } catch (error) { out.erros++; console.error('rotina winback:', error.message); }
+            }
+        } catch (error) { out.erros++; console.error('rotina winback lista:', error.message); }
     }
     const ms = Date.now() - t0;
     rotinasEstado.ultima = { em: new Date().toISOString(), ms, ...out };
@@ -1513,17 +1558,14 @@ async function enviaEmailPedidoNovo(pedido) {
         const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? norm(process.env.EMAIL_FROM || s.emailLoja) : '';
         const clienteEmail = emailOk(pedido.cliente?.email) ? norm(pedido.cliente.email) : '';
         if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (novo pedido)'); return; }
-        const enviar = (to, subject, html) => {
-            if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
-            if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
-            return enviaEmailSmtp(s, { to, subject, html });
-        };
-        if (clienteEmail && clienteEmail !== lojaEmail) {
-            try { await enviar(clienteEmail, `Pedido #${pedido.numero} recebido - aguardando pagamento`, templateEmailPedidoRecebido(pedido)); }
+        // Mesma caixa (ex.: alias Gmail) recebe 1x
+        const enviar = (to, subject, html, tipo) => enviarEmailNotificacao(s, service, { pedidoId: pedido._id, tipo, to, subject, html });
+        if (clienteEmail && canonicoEmail(clienteEmail) !== canonicoEmail(lojaEmail)) {
+            try { await enviar(clienteEmail, `Pedido #${pedido.numero} recebido - aguardando pagamento`, templateEmailPedidoRecebido(pedido), 'pedido-novo-cliente'); }
             catch (error) { console.error('email pedido/cliente:', error.message); }
         }
         if (lojaEmail) {
-            try { await enviar(lojaEmail, `Novo pedido #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailPedidoNovo(pedido)); }
+            try { await enviar(lojaEmail, `Novo pedido #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailPedidoNovo(pedido), 'pedido-novo-loja'); }
             catch (error) { console.error('email pedido/loja:', error.message); }
         }
     } catch (error) {
@@ -1574,6 +1616,18 @@ function templateEmailStatus(pedido, titulo, preheader, mensagemHtml) {
     return layoutEmailCliente(titulo, preheader, `${mensagemHtml}
 <p style="font-size:13px;color:#9aa4c7;"><strong style="color:#f2f5ff;">Pedido:</strong> ${pedido.numero} · ${new Date(pedido.updatedAt || pedido.createdAt).toLocaleString('pt-BR')}</p>`);
 }
+// E-mail do CLIENTE inativo: folder de ofertas (produtos aleatórios)
+function templateEmailOfertas(usuario, produtos) {
+    const cards = (produtos || []).map((p) => `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;background-color:#0e1428;border:1px solid rgba(255,255,255,0.09);border-radius:12px;">
+<tr><td style="padding:14px 16px;">
+<div style="font-size:15px;font-weight:bold;color:#f2f5ff;">${p.nome}</div>
+<div style="margin-top:6px;font-size:17px;font-weight:bold;color:#ffb224;">R$ ${Number(p.preco || 0).toFixed(2)}</div>
+<a href="${FRONT_URL}/produto.html?id=${p._id}" style="display:inline-block;margin-top:10px;background-color:#ffb224;color:#1a1000;font-weight:bold;font-size:13px;padding:9px 22px;border-radius:999px;text-decoration:none;">Ver oferta</a>
+</td></tr></table>`).join('');
+    const corpo = `<p>Olá, <strong>${usuario?.nome || 'cliente'}</strong>! Sentimos sua falta — separamos ofertas que podem interessar:</p>${cards || '<p style="color:#9aa4c7;">Novidades a caminho, volte em breve!</p>'}`;
+    return layoutEmailCliente('Sentimos sua falta · ofertas para você', 'Ofertas selecionadas para você na PlacaCerta.', corpo);
+}
 // E-mail do CLIENTE: código de rastreio (só ele recebe)
 function templateEmailRastreio(pedido) {
     const corpo = `<p>Olá, <strong>${pedido.cliente?.nome || 'cliente'}</strong>! Seu pedido foi <strong style="color:#38e1ff;">enviado</strong>. Acompanhe a entrega com o código abaixo:</p>
@@ -1593,19 +1647,16 @@ async function enviaEmailVenda(pedido) {
         const lojaEmail = emailOk(process.env.EMAIL_FROM || s?.emailLoja) ? norm(process.env.EMAIL_FROM || s.emailLoja) : '';
         const clienteEmail = emailOk(pedido.cliente?.email) ? norm(pedido.cliente.email) : '';
         if (!lojaEmail && !clienteEmail) { console.warn('[email] sem destinatarios (cliente e loja sem e-mail)'); return; }
-        const enviar = (to, subject, html) => {
-            if (service === 'google') return enviaEmailGmail(s, { to, subject, html });
-            if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
-            return enviaEmailSmtp(s, { to, subject, html });
-        };
+        const enviar = (to, subject, html, tipo) => enviarEmailNotificacao(s, service, { pedidoId: pedido._id, tipo, to, subject, html });
         // Cliente: confirmação de compra do site (além do recibo do provedor)
-        if (clienteEmail && clienteEmail !== lojaEmail) {
-            try { await enviar(clienteEmail, `Seu pedido #${pedido.numero} foi confirmado`, templateEmailCompra(pedido)); }
+        // Mesma caixa (ex.: alias Gmail) recebe 1x
+        if (clienteEmail && canonicoEmail(clienteEmail) !== canonicoEmail(lojaEmail)) {
+            try { await enviar(clienteEmail, `Seu pedido #${pedido.numero} foi confirmado`, templateEmailCompra(pedido), 'compra'); }
             catch (error) { console.error('email compra:', error.message); }
         }
         // Loja: notificação de venda com os dados da venda
         if (lojaEmail) {
-            try { await enviar(lojaEmail, `Nova venda #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailVenda(pedido)); }
+            try { await enviar(lojaEmail, `Nova venda #${pedido.numero} - R$ ${totaisPedido(pedido).total.toFixed(2)}`, templateEmailVenda(pedido), 'venda'); }
             catch (error) { console.error('email venda:', error.message); }
         } else {
             console.warn('[email] e-mail da loja nao configurado (venda nao notificada)');
@@ -1665,6 +1716,29 @@ async function enviaEmailGmail(s, { to, subject, html }) {
         }
         throw error;
     }
+}
+
+// E-mail canônico p/ deduplicar (Gmail ignora pontos e +tag: a.b+x@gmail == ab@gmail)
+function canonicoEmail(e) {
+    const norm = String(e || '').trim().toLowerCase();
+    const [local, dom] = norm.split('@');
+    if (!local || !dom) return norm;
+    if (dom === 'gmail.com' || dom === 'googlemail.com') {
+        return local.split('+')[0].replace(/\./g, '') + '@' + dom.replace('googlemail.com', 'gmail.com');
+    }
+    return norm;
+}
+
+// Envio central com auditoria: dispatch SMTP/Gmail + registra em Notificacoes
+async function enviarEmailNotificacao(s, service, { pedidoId, tipo, to, subject, html }) {
+    if (service === 'google') await enviaEmailGmail(s, { to, subject, html });
+    else {
+        if (service === 'outlook') console.warn('[email] servico Outlook ainda nao implementado (usando SMTP)');
+        await enviaEmailSmtp(s, { to, subject, html });
+    }
+    try {
+        if (pedidoId) await Notificacao.create({ pedidoId, canal: 'email', destino: `${tipo}:${to}`, status: 'enviada' });
+    } catch (error) { console.error('notificacao email:', error.message); }
 }
 
 // Confirma pagamento de forma idempotente; WhatsApp + Email nunca quebra o fluxo
@@ -2126,6 +2200,7 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             descontoPix: s.descontoPix ?? 5,
             diasEntregaAuto: s.diasEntregaAuto ?? 15,
             diasCancelaPendente: s.diasCancelaPendente ?? 3,
+            diasWinbackInativo: s.diasWinbackInativo ?? 15,
             faixasFrete: s.faixasFrete || [],
             redesSociais: {
                 instagram: s.redesSociais?.instagram || '',
@@ -2193,6 +2268,11 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         const v = Number(b.diasCancelaPendente);
         if (!Number.isInteger(v) || v < 0 || v > 30) return err(res, 400, 'diasCancelaPendente entre 0 e 30 (0 desliga)', 'VALIDATION');
         s.diasCancelaPendente = v;
+    }
+    if (b.diasWinbackInativo !== undefined) {
+        const v = Number(b.diasWinbackInativo);
+        if (!Number.isInteger(v) || v < 0 || v > 90) return err(res, 400, 'diasWinbackInativo entre 0 e 90 (0 desliga)', 'VALIDATION');
+        s.diasWinbackInativo = v;
     }
     if (b.faixasFrete !== undefined) {
         if (!Array.isArray(b.faixasFrete) || b.faixasFrete.length > 50) return err(res, 400, 'Faixas inválidas (máx 50)', 'VALIDATION');
