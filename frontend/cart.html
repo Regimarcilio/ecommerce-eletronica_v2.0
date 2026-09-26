@@ -81,7 +81,7 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 2
 </style>
 </head>
 <body>
-<div class="announce"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 100 &nbsp;·&nbsp; 5% OFF no PIX</div>
+<div class="announce" id="announceFrete"><i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ 399 &nbsp;·&nbsp; 5% OFF no PIX</div>
 <header>
   <div class="wrap nav">
     <a class="brand" href="/placas.html"><span class="bolt"><i class="fa-solid fa-bolt"></i></span>Placa<em>Certa</em></a>
@@ -108,7 +108,9 @@ footer.site{border-top:1px solid var(--line);background:#070b16;padding:40px 0 2
         <div class="srow"><span>Subtotal</span><b id="subtotal">R$ 0,00</b></div>
         <div class="srow"><span>Frete</span><b id="frete">—</b></div>
         <div class="srow total"><span>TOTAL</span><b id="total">R$ 0,00</b></div>
+        <div id="freteProg" style="margin:12px 0"><div style="height:8px;border-radius:999px;background:#0e1428;overflow:hidden"><div id="freteBar" style="height:100%;width:0;background:linear-gradient(120deg,#ffb224,#ff8a00);transition:width .3s"></div></div><p id="freteMsg" style="font-size:.82rem;color:var(--mut);margin-top:6px"></p></div>
         <button class="btn btn-fire" id="btnCheckout" onclick="finalizarCompra()"><i class="fa-solid fa-circle-check"></i> Finalizar compra</button>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="compartilharCarrinho()"><i class="fa-solid fa-share-nodes"></i> Compartilhar carrinho</button>
         <a href="/placas.html" class="btn btn-ghost" style="width:100%;justify-content:center"><i class="fa-solid fa-arrow-left"></i> Continuar comprando</a>
         <p class="pix-note"><i class="fa-solid fa-bolt"></i> 5% OFF pagando no PIX no checkout</p>
       </aside>
@@ -209,9 +211,18 @@ async function renderCart(){
       <div class="line-total">R$ ${(price*qty).toFixed(2)}</div>
     </div>`;
   }).join('');
-  const frete = sub > 100 ? 0 : 20;
+  const frete = sub >= LIMIAR_FRETE ? 0 : 20;
   subEl.textContent = `R$ ${sub.toFixed(2)}`;
   frEl.innerHTML = frete === 0 ? '<span style="color:#6ee7b7">Grátis</span>' : `R$ ${frete.toFixed(2)}`;
+  const falta = Math.max(0, LIMIAR_FRETE - sub);
+  const bar = document.getElementById('freteBar'), msg = document.getElementById('freteMsg');
+  if (bar && msg) {
+    const pct = Math.min(100, Math.round((sub / LIMIAR_FRETE) * 100));
+    bar.style.width = pct + '%';
+    msg.innerHTML = falta <= 0
+      ? '<i class="fa-solid fa-gift"></i> Você ganhou <b>frete grátis</b>!'
+      : `Faltam <b>R$ ${falta.toFixed(2)}</b> para você ganhar <b>frete grátis</b>`;
+  }
   totEl.textContent = `R$ ${(sub+frete).toFixed(2)}`;
 }
 function toast(msg){
@@ -224,12 +235,56 @@ function finalizarCompra(){
   localStorage.setItem('checkoutCart', JSON.stringify(cart));
   window.location.href = '/checkout.html';
 }
+// Compartilha via link: só id+qtd na URL; preço/estoque sempre do servidor
+function compartilharCarrinho() {
+  const cart = getCart();
+  if (!cart.length) { toast('Seu carrinho está vazio'); return; }
+  const compacto = cart.map((i) => ({ id: String(i.id), quantity: Math.min(99, Math.max(1, Number(i.quantity) || 1)) }));
+  const cod = btoa(unescape(encodeURIComponent(JSON.stringify(compacto)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  if (cod.length > 2000) { toast('Carrinho grande demais: finalize neste aparelho', true); return; }
+  const url = location.origin + location.pathname + '?c=' + cod;
+  const done = () => toast('Link copiado!');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done).catch(() => prompt('Copie o link:', url));
+  else prompt('Copie o link:', url);
+}
+async function importarCarrinhoLink() {
+  const cod = new URLSearchParams(location.search).get('c');
+  if (!cod) return;
+  try {
+    const lista = JSON.parse(decodeURIComponent(escape(atob(cod.replace(/-/g, '+').replace(/_/g, '/')))));
+    if (!Array.isArray(lista) || !lista.length || lista.length > 50) throw new Error('link inválido');
+    const atual = getCart();
+    for (const it of lista) {
+      if (!/^[a-f0-9]{24}$/i.test(String(it.id || ''))) continue;
+      const qtd = Math.min(99, Math.max(1, Number(it.quantity) || 1));
+      const ex = atual.find((x) => String(x.id) === String(it.id));
+      // Valida existência/estoque no servidor antes de aceitar
+      const det = await enrich({ id: String(it.id) });
+      if (!det || det.status !== 'ativo') continue;
+      if (ex) ex.quantity = Math.min(99, ex.quantity + qtd);
+      else atual.push({ id: String(it.id), quantity: qtd, name: det.nome, price: det.preco });
+    }
+    window.cartSave(atual);
+    window.history.replaceState({}, '', location.pathname);
+    toast('Carrinho compartilhado importado!');
+  } catch { toast('Link de carrinho inválido', true); }
+}
 function updateAuthUI(){
   document.getElementById('authLink').innerHTML = window.userLink()
     || `<a href="/auth.html" class="btn btn-fire" style="padding:9px 18px">Entrar</a>`;
 }
 function logout(){ window.logoutAll(); window.location.href = '/placas.html'; }
-renderCart(); updateCartCount(); updateAuthUI(); window.renderSocial('socialFooter');
+importarCarrinhoLink().finally(() => { carregarLimiarFrete().finally(() => { renderCart(); }); updateCartCount(); updateAuthUI(); window.renderSocial('socialFooter'); });
+let LIMIAR_FRETE = 399;
+async function carregarLimiarFrete() {
+  try {
+    const r = await fetch(API + '/config/loja/public');
+    const d = await r.json();
+    if (r.ok && d.success && Number(d.config.limiarFreteGratis) >= 0) LIMIAR_FRETE = Number(d.config.limiarFreteGratis);
+  } catch { /* mantém padrão */ }
+  const an = document.getElementById('announceFrete');
+  if (an) an.innerHTML = `<i class="fa-solid fa-truck-fast"></i>&nbsp; Frete grátis acima de R$ ${LIMIAR_FRETE} &nbsp;·&nbsp; 5% OFF no PIX`;
+}
 </script>
 </body>
 </html>

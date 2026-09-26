@@ -226,7 +226,7 @@ const user = safeJSON('user', {});
 if (!token) window.location.href = '/auth.html';
 let cart = safeJSON('checkoutCart', null) || safeJSON('cart', []);
 let selectedPayment = 'pix';
-let cfgPix = 5, cfgParc = 12;
+let cfgPix = 5, cfgParc = 12, cfgLimiarFrete = 399;
 
 async function loadCondicoes() {
     try {
@@ -235,6 +235,7 @@ async function loadCondicoes() {
         if (res.ok && data.success) {
             cfgPix = Number(data.config.descontoPix ?? 5);
             cfgParc = Number(data.config.parcelasMax ?? 12);
+            if (Number(data.config.limiarFreteGratis) >= 0) cfgLimiarFrete = Number(data.config.limiarFreteGratis);
             cfgMpAtivo = data.config.mpAtivo !== false;
             cfgPgsAtivo = !!data.config.pagseguroAtivo;
             document.getElementById('cardParcLabel').textContent = `Em até ${cfgParc}x via Mercado Pago`;
@@ -364,7 +365,7 @@ function selectPayment(method) {
 }
 function calcularTotal() {
     subtotal = cart.reduce((sum, item) => sum + ((Number(item.price)||0) * (Number(item.quantity)||0)), 0);
-    const frete = cotFrete != null ? cotFrete : (subtotal > 100 ? 0 : 20);
+    const frete = cotFrete != null ? cotFrete : (subtotal >= cfgLimiarFrete ? 0 : 20);
     let desconto = 0;
     if (selectedPayment === 'pix') { desconto = subtotal * (cfgPix / 100); document.getElementById('discountRow').style.display = 'flex'; document.getElementById('discountLabel').textContent = `Desconto PIX (${cfgPix}%)`; }
     else { document.getElementById('discountRow').style.display = 'none'; }

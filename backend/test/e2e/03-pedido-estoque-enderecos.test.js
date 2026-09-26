@@ -63,15 +63,15 @@ describe('e2e pedido + estoque + enderecos', () => {
     assert.ok(aud.data.total >= 1);
   });
 
-  it('total adulterado e ignorado: 2x60 card = 120', async () => {
+  it('total adulterado e ignorado: 2x60 card = 140 (frete 20, abaixo de 399)', async () => {
     const r = await api('POST', '/api/pedidos', {
       token: utok,
       body: pedidoBase([{ produtoId: prodId, quantity: 2 }], { total: 1, subtotal: 1 }),
     });
     assert.equal(r.status, 201);
     assert.equal(r.data.pedido.subtotal, 120);
-    assert.equal(r.data.pedido.frete, 0);
-    assert.equal(r.data.pedido.total, 120);
+    assert.equal(r.data.pedido.frete, 20);
+    assert.equal(r.data.pedido.total, 140);
   });
 
   it('pix 1x60 = 77 (60+20-3)', async () => {

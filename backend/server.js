@@ -111,10 +111,10 @@ const parsePaging = (q) => {
 };
 
 // Frete por tabela (Settings) com fallback na regra legada; fonte unica p/ cotacao e pedido
-function cotarFrete(uf, subtotal, peso, faixas) {    const candidatas = (faixas || []).filter((f) =>
+function cotarFrete(uf, subtotal, peso, faixas, limiar = 399) {    const candidatas = (faixas || []).filter((f) =>
         (!f.uf || f.uf === uf) && Number(peso) <= Number(f.atePeso ?? Infinity));
     if (!candidatas.length) {
-        const valor = subtotal > 100 ? 0 : 20;
+        const valor = subtotal >= limiar ? 0 : 20;
         return { nome: 'Padrão', valor, prazoDias: 5 };
     }
     let melhor = null;
@@ -259,6 +259,8 @@ const SettingsSchema = new mongoose.Schema({
     pgsSandbox: { type: Boolean, default: undefined },
     parcelasMax: { type: Number, min: 1, max: 21, default: 12 },
     descontoPix: { type: Number, min: 0, max: 100, default: 5 },
+    // Frete grátis na regra padrão a partir deste subtotal (0 = sempre grátis)
+    limiarFreteGratis: { type: Number, min: 0, max: 1000000, default: 399 },
     // Rotinas automáticas (dias; 0 = desliga a respectiva rotina)
     diasEntregaAuto: { type: Number, min: 0, max: 90, default: 15 },
     diasCancelaPendente: { type: Number, min: 0, max: 30, default: 3 },
@@ -338,6 +340,15 @@ const ContatoSchema = new mongoose.Schema({
     status: { type: String, enum: ['nova', 'lida', 'respondida'], default: 'nova' }
 }, { timestamps: true });
 
+// Newsletter (LGPD: consentimento explícito + descadastro)
+const NewsletterSchema = new mongoose.Schema({
+    nome: { type: String, trim: true, maxlength: 120, default: '' },
+    email: { type: String, required: true, trim: true, lowercase: true, maxlength: 160, unique: true },
+    origem: { type: String, trim: true, maxlength: 40, default: 'site' },
+    ativo: { type: Boolean, default: true },
+    consentidoEm: { type: Date, default: Date.now }
+}, { timestamps: true });
+
 // Unicidade vale só p/ registros visíveis (soft-delete libera nome/sku/slug)
 ProdutoSchema.index({ sku: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
 CategoriaSchema.index({ nome: 1 }, { unique: true, partialFilterExpression: { deletedAt: null } });
@@ -352,6 +363,7 @@ const Settings = mongoose.model('Settings', SettingsSchema);
 const Pagamento = mongoose.model('Pagamento', PagamentoSchema);
 const Notificacao = mongoose.model('Notificacao', NotificacaoSchema);
 const Contato = mongoose.model('Contato', ContatoSchema);
+const Newsletter = mongoose.model('Newsletter', NewsletterSchema);
 
 // Middleware de autenticação (valida usuario ativo)
 const auth = async (req, res, next) => {
@@ -819,7 +831,8 @@ app.post('/api/pedidos', auth, asyncHandler(async (req, res) => {
         String(endereco?.estado || '').toUpperCase(),
         subtotal,
         pesoDosItens(itemsCalc),
-        freteCfg.faixasFrete
+        freteCfg.faixasFrete,
+        Number(freteCfg.limiarFreteGratis ?? 399)
     );
     const frete = cot.valor;
     const taxaPix = pagamento === 'pix' ? (Number(freteCfg.descontoPix ?? 5) / 100) : 0;
@@ -2134,7 +2147,7 @@ app.post('/api/frete/cotacao', asyncHandler(async (req, res) => {
         calc.push({ peso: Number(prod.peso) || 0, quantity: qtd });
     }
     const cfg = await getSettings();
-    const cot = cotarFrete(UF, subtotal, pesoDosItens(calc), cfg.faixasFrete);
+    const cot = cotarFrete(UF, subtotal, pesoDosItens(calc), cfg.faixasFrete, Number(cfg.limiarFreteGratis ?? 399));
     res.json({ success: true, subtotal, peso: pesoDosItens(calc), ...cot });
 }));
 
@@ -2201,6 +2214,7 @@ app.get('/api/config/loja/public', asyncHandler(async (req, res) => {
             condicoesPagamento: s.condicoesPagamento || '',
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
+            limiarFreteGratis: s.limiarFreteGratis ?? 399,
             mpPublicKey: s.mpPublicKey || '',
             mpAtivo: await mpAtivoReal(),
             pagseguroAtivo: pgsAtivo,
@@ -2237,6 +2251,7 @@ app.get('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
             pgsSandbox: typeof s.pgsSandbox === 'boolean' ? s.pgsSandbox : null,
             parcelasMax: s.parcelasMax ?? 12,
             descontoPix: s.descontoPix ?? 5,
+            limiarFreteGratis: s.limiarFreteGratis ?? 399,
             diasEntregaAuto: s.diasEntregaAuto ?? 15,
             diasCancelaPendente: s.diasCancelaPendente ?? 3,
             diasWinbackInativo: s.diasWinbackInativo ?? 15,
@@ -2297,6 +2312,11 @@ app.put('/api/config/loja', auth, admin, asyncHandler(async (req, res) => {
         const v = Number(b.descontoPix);
         if (Number.isNaN(v) || v < 0 || v > 100) return err(res, 400, 'Desconto entre 0 e 100', 'VALIDATION');
         s.descontoPix = v;
+    }
+    if (b.limiarFreteGratis !== undefined) {
+        const v = Number(b.limiarFreteGratis);
+        if (!Number.isInteger(v) || v < 0 || v > 1000000) return err(res, 400, 'Limiar entre 0 e 1000000 (0 = sempre grátis)', 'VALIDATION');
+        s.limiarFreteGratis = v;
     }
     if (b.diasEntregaAuto !== undefined) {
         const v = Number(b.diasEntregaAuto);
@@ -2366,6 +2386,41 @@ app.post('/api/contato', contatoLimiter, asyncHandler(async (req, res) => {
     if (!mensagem || mensagem.length < 10) return err(res, 400, 'Mensagem muito curta (mín. 10 caracteres)', 'VALIDATION');
     const c = await Contato.create({ nome, email, assunto, mensagem });
     res.json({ success: true, protocolo: String(c._id) });
+}));
+
+// Newsletter (pública; LGPD: exige aceite explícito; idempotente por e-mail)
+app.post('/api/newsletter', contatoLimiter, asyncHandler(async (req, res) => {
+    const b = req.body || {};
+    const nome = String(b.nome ?? '').trim().slice(0, 120);
+    const email = String(b.email ?? '').trim().toLowerCase().slice(0, 160);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err(res, 400, 'E-mail inválido', 'VALIDATION');
+    if (b.aceite !== true) return err(res, 400, 'É preciso aceitar receber as ofertas (LGPD)', 'VALIDATION');
+    const origem = String(b.origem ?? 'site').trim().slice(0, 40) || 'site';
+    await Newsletter.findOneAndUpdate(
+        { email },
+        { $set: { nome, origem, ativo: true, consentidoEm: new Date() } },
+        { upsert: true }
+    );
+    res.json({ success: true });
+}));
+
+// Newsletter: descadastro público (direito LGPD)
+app.delete('/api/newsletter', contatoLimiter, asyncHandler(async (req, res) => {
+    const email = String(req.body?.email ?? req.query.email ?? '').trim().toLowerCase().slice(0, 160);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err(res, 400, 'E-mail inválido', 'VALIDATION');
+    await Newsletter.findOneAndUpdate({ email }, { $set: { ativo: false } });
+    res.json({ success: true });
+}));
+
+// Admin: lista base da newsletter
+app.get('/api/newsletter', auth, admin, asyncHandler(async (req, res) => {
+    const { page, limit, skip } = parsePaging(req.query);
+    const query = req.query.ativo === 'false' ? { ativo: false } : req.query.ativo === 'true' ? { ativo: true } : {};
+    const [lista, total] = await Promise.all([
+        Newsletter.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Newsletter.countDocuments(query)
+    ]);
+    res.json({ success: true, inscritos: lista, page, limit, total, pages: Math.ceil(total / limit) });
 }));
 
 // Admin: lista mensagens de contato

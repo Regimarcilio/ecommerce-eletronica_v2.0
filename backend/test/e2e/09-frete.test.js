@@ -74,6 +74,24 @@ describe('e2e frete por tabela', () => {
     assert.equal(r.data.pedido.total, 75);
   });
 
+  it('limiar configuravel: 399 padrão, 50 zera 60, valida e restaura', async () => {
+    const pub0 = await api('GET', '/api/config/loja/public');
+    assert.equal(pub0.data.config.limiarFreteGratis, 399);
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { limiarFreteGratis: -1 } })).status, 400);
+    assert.equal((await api('PUT', '/api/config/loja', { token: utok, body: { limiarFreteGratis: 50 } })).status, 403);
+    await api('PUT', '/api/config/loja', { token: atok, body: { faixasFrete: [] } });
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { limiarFreteGratis: 50 } })).status, 200);
+    const r = await api('POST', '/api/frete/cotacao', {
+      body: { uf: 'SP', items: [{ produtoId: prodId, quantity: 2 }] },
+    });
+    assert.equal(r.data.valor, 0);
+    assert.equal((await api('PUT', '/api/config/loja', { token: atok, body: { limiarFreteGratis: 399 } })).status, 200);
+    const r2 = await api('POST', '/api/frete/cotacao', {
+      body: { uf: 'SP', items: [{ produtoId: prodId, quantity: 2 }] },
+    });
+    assert.equal(r2.data.valor, 20);
+  });
+
   it('faixa invalida retorna 400', async () => {
     const r = await api('PUT', '/api/config/loja', {
       token: atok,
